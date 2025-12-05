@@ -52,12 +52,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if ($existing_request) {
                         $error_message = '您已经提交了忘记密码申请，请等待管理员审核';
                     } else {
-                        // 加密新密码
-                        $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
+                        // 使用正确的密码哈希方式（与User.php一致）
+                        $hashed_password = password_hash($new_password, PASSWORD_DEFAULT, ['cost' => 12]);
                         
                         // 插入忘记密码申请
                         $stmt = $conn->prepare("INSERT INTO forget_password_requests (username, email, new_password) VALUES (?, ?, ?)");
                         $stmt->execute([$username, $email, $hashed_password]);
+                        
+                        // 调试：记录插入结果
+                        error_log("Forget password request inserted for username: $username, email: $email");
+                        error_log("SQL Query: INSERT INTO forget_password_requests (username, email, new_password) VALUES (?, ?, ?)");
+                        error_log("Rows affected: " . $stmt->rowCount());
                         
                         $success_message = '忘记密码申请已提交，请等待管理员审核';
                     }
