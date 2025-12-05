@@ -352,6 +352,263 @@ class Group {
     }
     
     /**
+     * 检查用户是否是群成员
+     * @param int $group_id 群聊ID
+     * @param int $user_id 用户ID
+     * @return bool 是否是群成员
+     */
+    public function isUserInGroup($group_id, $user_id) {
+        $stmt = $this->conn->prepare("SELECT id FROM group_members WHERE group_id = ? AND user_id = ?");
+        $stmt->execute([$group_id, $user_id]);
+        return $stmt->fetch() !== false;
+    }
+    
+    /**
+     * 获取用户的好友列表中不在群里的好友
+     * @param int $user_id 用户ID
+     * @param int $group_id 群聊ID
+     * @return array 不在群里的好友列表
+     */
+    public function getUserFriendsNotInGroup($user_id, $group_id) {
+        $stmt = $this->conn->prepare("SELECT u.id, u.username, u.avatar, u.status FROM users u
+                                     JOIN friends f ON u.id = f.friend_id
+                                     WHERE f.user_id = ? AND f.status = 'accepted'
+                                     AND u.id NOT IN (SELECT user_id FROM group_members WHERE group_id = ?)
+                                     ORDER BY u.username ASC");
+        $stmt->execute([$user_id, $group_id]);
+        return $stmt->fetchAll();
+    }
+    
+    /**
+     * 邀请好友加入群聊
+     * @param int $group_id 群聊ID
+     * @param int $inviter_id 邀请者ID
+     * @param int $invitee_id 被邀请者ID
+     * @return bool 是否成功
+     */
+    public function inviteFriendToGroup($group_id, $inviter_id, $invitee_id) {
+        try {
+            // 检查邀请者是否是群成员
+            if (!$this->isUserInGroup($group_id, $inviter_id)) {
+                return false;
+            }
+            
+            // 检查被邀请者是否已经是群成员
+            if ($this->isUserInGroup($group_id, $invitee_id)) {
+                return false;
+            }
+            
+            // 检查是否已经发送过邀请
+            $stmt = $this->conn->prepare("SELECT id FROM group_invitations WHERE group_id = ? AND inviter_id = ? AND invitee_id = ? AND status = 'pending'");
+            $stmt->execute([$group_id, $inviter_id, $invitee_id]);
+            if ($stmt->fetch()) {
+                return false;
+            }
+            
+            // 发送邀请
+            $stmt = $this->conn->prepare("INSERT INTO group_invitations (group_id, inviter_id, invitee_id) VALUES (?, ?, ?)");
+            return $stmt->execute([$group_id, $inviter_id, $invitee_id]);
+        } catch (PDOException $e) {
+            error_log("Invite friend to group error: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * 获取群聊邀请列表
+     * @param int $user_id 用户ID
+     * @return array 群聊邀请列表
+     */
+    public function getGroupInvitations($user_id) {
+        $stmt = $this->conn->prepare("SELECT gi.*, g.name as group_name, u.username as inviter_name, u.avatar as inviter_avatar FROM group_invitations gi
+                                     JOIN groups g ON gi.group_id = g.id
+                                     JOIN users u ON gi.inviter_id = u.id
+                                     WHERE gi.invitee_id = ?
+                                     ORDER BY gi.created_at DESC");
+        $stmt->execute([$user_id]);
+        return $stmt->fetchAll();
+    }
+    
+    /**
+     * 接受群聊邀请
+     * @param int $invitation_id 邀请ID
+     * @param int $user_id 用户ID
+     * @return array 结果数组，包含success和message
+     */
+    public function acceptGroupInvitation($invitation_id, $user_id) {
+        try {
+            $this->conn->beginTransaction();
+            
+            // 获取邀请信息
+            $stmt = $this->conn->prepare("SELECT * FROM group_invitations WHERE id = ? AND invitee_id = ? AND status = 'pending'");
+            $stmt->execute([$invitation_id, $user_id]);
+            $invitation = $stmt->fetch();
+            
+            if (!$invitation) {
+                $this->conn->rollBack();
+                return [
+                    'success' => false,
+                    'message' => '邀请不存在或已过期'
+                ];
+            }
+            
+            $group_id = $invitation['group_id'];
+            $inviter_id = $invitation['inviter_id'];
+            
+            // 检查邀请者是否是管理员或群主
+            $inviter_role = $this->getMemberRole($group_id, $inviter_id);
+            if (!$inviter_role) {
+                $this->conn->rollBack();
+                return [
+                    'success' => false,
+                    'message' => '邀请者不是群成员'
+                ];
+            }
+            
+            $is_inviter_admin_or_owner = $inviter_role['is_admin'] || $inviter_role['owner_id'] == $inviter_id;
+            
+            if ($is_inviter_admin_or_owner) {
+                // 邀请者是管理员或群主，直接添加被邀请者为群成员
+                $stmt = $this->conn->prepare("INSERT INTO group_members (group_id, user_id) VALUES (?, ?)");
+                $stmt->execute([$group_id, $user_id]);
+            } else {
+                // 邀请者不是管理员或群主，发送入群申请
+                $stmt = $this->conn->prepare("INSERT INTO group_join_requests (group_id, user_id) VALUES (?, ?)");
+                $stmt->execute([$group_id, $user_id]);
+            }
+            
+            // 更新邀请状态为已接受
+            $stmt = $this->conn->prepare("UPDATE group_invitations SET status = 'accepted' WHERE id = ?");
+            $stmt->execute([$invitation_id]);
+            
+            $this->conn->commit();
+            return [
+                'success' => true,
+                'message' => $is_inviter_admin_or_owner ? '已成功加入群聊' : '入群申请已发送，等待管理员或群主批准'
+            ];
+        } catch (PDOException $e) {
+            $this->conn->rollBack();
+            error_log("Accept group invitation error: " . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => '操作失败，请稍后重试'
+            ];
+        }
+    }
+    
+    /**
+     * 拒绝群聊邀请
+     * @param int $invitation_id 邀请ID
+     * @param int $user_id 用户ID
+     * @return bool 是否成功
+     */
+    public function rejectGroupInvitation($invitation_id, $user_id) {
+        try {
+            $stmt = $this->conn->prepare("UPDATE group_invitations SET status = 'rejected' WHERE id = ? AND invitee_id = ? AND status = 'pending'");
+            return $stmt->execute([$invitation_id, $user_id]);
+        } catch (PDOException $e) {
+            error_log("Reject group invitation error: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * 发送入群申请
+     * @param int $group_id 群聊ID
+     * @param int $user_id 用户ID
+     * @return bool 是否成功
+     */
+    public function sendJoinRequest($group_id, $user_id) {
+        try {
+            // 检查用户是否已经是群成员
+            if ($this->isUserInGroup($group_id, $user_id)) {
+                return false;
+            }
+            
+            // 检查是否已经发送过入群申请
+            $stmt = $this->conn->prepare("SELECT id FROM group_join_requests WHERE group_id = ? AND user_id = ? AND status = 'pending'");
+            $stmt->execute([$group_id, $user_id]);
+            if ($stmt->fetch()) {
+                return false;
+            }
+            
+            // 发送入群申请
+            $stmt = $this->conn->prepare("INSERT INTO group_join_requests (group_id, user_id) VALUES (?, ?)");
+            return $stmt->execute([$group_id, $user_id]);
+        } catch (PDOException $e) {
+            error_log("Send join request error: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * 获取入群申请列表
+     * @param int $group_id 群聊ID
+     * @return array 入群申请列表
+     */
+    public function getJoinRequests($group_id) {
+        $stmt = $this->conn->prepare("SELECT gjr.*, u.username, u.avatar FROM group_join_requests gjr
+                                     JOIN users u ON gjr.user_id = u.id
+                                     WHERE gjr.group_id = ? AND gjr.status = 'pending'
+                                     ORDER BY gjr.created_at DESC");
+        $stmt->execute([$group_id]);
+        return $stmt->fetchAll();
+    }
+    
+    /**
+     * 批准入群申请
+     * @param int $request_id 申请ID
+     * @param int $group_id 群聊ID
+     * @return bool 是否成功
+     */
+    public function approveJoinRequest($request_id, $group_id) {
+        try {
+            $this->conn->beginTransaction();
+            
+            // 获取申请信息
+            $stmt = $this->conn->prepare("SELECT * FROM group_join_requests WHERE id = ? AND group_id = ? AND status = 'pending'");
+            $stmt->execute([$request_id, $group_id]);
+            $request = $stmt->fetch();
+            
+            if (!$request) {
+                $this->conn->rollBack();
+                return false;
+            }
+            
+            // 添加用户为群成员
+            $stmt = $this->conn->prepare("INSERT INTO group_members (group_id, user_id) VALUES (?, ?)");
+            $stmt->execute([$group_id, $request['user_id']]);
+            
+            // 更新申请状态为已批准
+            $stmt = $this->conn->prepare("UPDATE group_join_requests SET status = 'approved' WHERE id = ?");
+            $stmt->execute([$request_id]);
+            
+            $this->conn->commit();
+            return true;
+        } catch (PDOException $e) {
+            $this->conn->rollBack();
+            error_log("Approve join request error: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * 拒绝入群申请
+     * @param int $request_id 申请ID
+     * @param int $group_id 群聊ID
+     * @return bool 是否成功
+     */
+    public function rejectJoinRequest($request_id, $group_id) {
+        try {
+            $stmt = $this->conn->prepare("UPDATE group_join_requests SET status = 'rejected' WHERE id = ? AND group_id = ? AND status = 'pending'");
+            return $stmt->execute([$request_id, $group_id]);
+        } catch (PDOException $e) {
+            error_log("Reject join request error: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
      * 获取所有群聊信息（管理员功能）
      * @return array 所有群聊列表
      */
