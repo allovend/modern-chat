@@ -43,7 +43,7 @@ class Feedback {
      * @return array 反馈列表
      */
     public function getAllFeedback() {
-        $stmt = $this->conn->prepare("SELECT f.*, u.username FROM feedback f JOIN users u ON f.user_id = u.id ORDER BY f.created_at DESC");
+        $stmt = $this->conn->prepare("SELECT f.*, u.username, u.avatar FROM feedback f JOIN users u ON f.user_id = u.id ORDER BY f.created_at DESC");
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
