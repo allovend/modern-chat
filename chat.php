@@ -2250,70 +2250,75 @@ $user->updateStatus($user_id, 'online');
             fetchGroupInvitations();
         });
         
+        // 已处理的邀请ID列表，用于避免重复显示
+        let processedInvitations = new Set();
+        
         // 获取新的群聊邀请
         function fetchGroupInvitations() {
             fetch('get_group_invitations.php')
                 .then(response => response.json())
                 .then(data => {
                     if (data.success && data.invitations.length > 0) {
-                        // 显示新的群聊邀请通知
                         const notificationsContainer = document.getElementById('group-invitation-notifications');
-                        notificationsContainer.innerHTML = '';
                         
                         data.invitations.forEach(invitation => {
-                            const notification = document.createElement('div');
-                            notification.style.cssText = `
-                                background: white;
-                                border-radius: 8px;
-                                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-                                padding: 15px;
-                                margin-bottom: 10px;
-                                max-width: 300px;
-                                animation: slideInRight 0.3s ease-out;
-                            `;
-                            
-                            notification.innerHTML = `
-                                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
-                                    <div>
-                                        <h4 style="margin: 0 0 5px 0; font-size: 14px; font-weight: 600;">${invitation.inviter_name}邀请您加入群聊</h4>
-                                        <p style="margin: 0; font-size: 12px; color: #666;">${invitation.group_name}</p>
+                            // 只显示未处理的邀请
+                            if (!processedInvitations.has(invitation.id)) {
+                                const notification = document.createElement('div');
+                                notification.id = `invitation-${invitation.id}`;
+                                notification.style.cssText = `
+                                    background: white;
+                                    border-radius: 8px;
+                                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                                    padding: 15px;
+                                    margin-bottom: 10px;
+                                    max-width: 300px;
+                                    animation: slideInRight 0.3s ease-out;
+                                `;
+                                
+                                notification.innerHTML = `
+                                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+                                        <div>
+                                            <h4 style="margin: 0 0 5px 0; font-size: 14px; font-weight: 600;">${invitation.inviter_name}邀请您加入群聊</h4>
+                                            <p style="margin: 0; font-size: 12px; color: #666;">${invitation.group_name}</p>
+                                        </div>
+                                        <button onclick="this.parentElement.parentElement.remove(); processedInvitations.add(${invitation.id});" style="
+                                            background: none;
+                                            border: none;
+                                            font-size: 16px;
+                                            cursor: pointer;
+                                            color: #666;
+                                            padding: 0;
+                                        ">×</button>
                                     </div>
-                                    <button onclick="this.parentElement.parentElement.remove()" style="
-                                        background: none;
-                                        border: none;
-                                        font-size: 16px;
-                                        cursor: pointer;
-                                        color: #666;
-                                        padding: 0;
-                                    ">×</button>
-                                </div>
-                                <div style="display: flex; gap: 8px;">
-                                    <button onclick="acceptGroupInvitation(${invitation.id}, this)" style="
-                                        flex: 1;
-                                        padding: 6px;
-                                        background: #4caf50;
-                                        color: white;
-                                        border: none;
-                                        border-radius: 4px;
-                                        font-size: 12px;
-                                        font-weight: 600;
-                                        cursor: pointer;
-                                    ">接受</button>
-                                    <button onclick="rejectGroupInvitation(${invitation.id}, this)" style="
-                                        flex: 1;
-                                        padding: 6px;
-                                        background: #ff4757;
-                                        color: white;
-                                        border: none;
-                                        border-radius: 4px;
-                                        font-size: 12px;
-                                        font-weight: 600;
-                                        cursor: pointer;
-                                    ">拒绝</button>
-                                </div>
-                            `;
-                            
-                            notificationsContainer.appendChild(notification);
+                                    <div style="display: flex; gap: 8px;">
+                                        <button onclick="acceptGroupInvitation(${invitation.id}, this)" style="
+                                            flex: 1;
+                                            padding: 6px;
+                                            background: #4caf50;
+                                            color: white;
+                                            border: none;
+                                            border-radius: 4px;
+                                            font-size: 12px;
+                                            font-weight: 600;
+                                            cursor: pointer;
+                                        ">接受</button>
+                                        <button onclick="rejectGroupInvitation(${invitation.id}, this)" style="
+                                            flex: 1;
+                                            padding: 6px;
+                                            background: #ff4757;
+                                            color: white;
+                                            border: none;
+                                            border-radius: 4px;
+                                            font-size: 12px;
+                                            font-weight: 600;
+                                            cursor: pointer;
+                                        ">拒绝</button>
+                                    </div>
+                                `;
+                                
+                                notificationsContainer.appendChild(notification);
+                            }
                         });
                     }
                 })
@@ -2334,12 +2339,15 @@ $user->updateStatus($user_id, 'online');
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    // 显示成功消息
-                    alert(data.message);
                     // 移除通知
-                    button.parentElement.parentElement.remove();
-                    // 刷新页面或更新群聊列表
-                    location.reload();
+                    const notification = document.getElementById(`invitation-${invitationId}`);
+                    if (notification) {
+                        notification.remove();
+                    }
+                    // 添加到已处理列表，避免重复显示
+                    processedInvitations.add(invitationId);
+                    // 不刷新页面，直接更新群聊列表
+                    updateGroupList();
                 } else {
                     alert(data.message);
                 }
@@ -2363,7 +2371,12 @@ $user->updateStatus($user_id, 'online');
             .then(data => {
                 if (data.success) {
                     // 移除通知
-                    button.parentElement.parentElement.remove();
+                    const notification = document.getElementById(`invitation-${invitationId}`);
+                    if (notification) {
+                        notification.remove();
+                    }
+                    // 添加到已处理列表，避免重复显示
+                    processedInvitations.add(invitationId);
                 } else {
                     alert(data.message);
                 }
@@ -2372,6 +2385,59 @@ $user->updateStatus($user_id, 'online');
                 console.error('拒绝群聊邀请失败:', error);
                 alert('拒绝群聊邀请失败，请稍后重试');
             });
+        }
+        
+        // 更新群聊列表
+        function updateGroupList() {
+            // 重新获取群聊列表
+            fetch(`get_user_groups.php?user_id=<?php echo $user_id; ?>`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // 更新群聊列表UI
+                        const groupsList = document.getElementById('groups-list');
+                        if (groupsList) {
+                            // 移除旧的群聊列表
+                            groupsList.innerHTML = '';
+                            
+                            // 添加新的群聊列表
+                            data.groups.forEach(group => {
+                                const groupItem = document.createElement('div');
+                                groupItem.className = `friend-item ${chat_type === 'group' && selectedId == group.id ? 'active' : ''}`;
+                                groupItem.dataset.groupId = group.id;
+                                groupItem.innerHTML = `
+                                    <div class="friend-avatar" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                                        👥
+                                    </div>
+                                    <div class="friend-info">
+                                        <h3>${group.name}</h3>
+                                        <p>${group.member_count} 成员</p>
+                                    </div>
+                                    <div style="position: relative;">
+                                        <button class="btn-icon" style="width: 30px; height: 30px; font-size: 12px;" onclick="toggleGroupMenu(event, ${group.id});">
+                                            ⋮
+                                        </button>
+                                        <!-- 群聊菜单 -->
+                                        <div class="group-menu" id="group-menu-${group.id}" style="display: none; position: absolute; top: 0; right: 0; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); z-index: 1000; min-width: 150px;">
+                                            <button class="group-menu-item" onclick="showGroupMembers(${group.id});">查看成员</button>
+                                            <button class="group-menu-item" onclick="inviteFriendsToGroup(${group.id});">邀请好友</button>
+                                            <?php if ($group['owner_id'] == $user_id): ?>
+                                                <button class="group-menu-item" onclick="transferGroupOwnership(${group.id});">转让群主</button>
+                                                <button class="group-menu-item" onclick="deleteGroup(${group.id});">解散群聊</button>
+                                            <?php else: ?>
+                                                <button class="group-menu-item" onclick="leaveGroup(${group.id});">退出群聊</button>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                `;
+                                groupsList.appendChild(groupItem);
+                            });
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('更新群聊列表失败:', error);
+                });
         }
         
         // 添加动画样式
