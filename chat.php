@@ -1,6 +1,5 @@
 <?php
 // 检查用户是否登录
-session_start();
 require_once 'config.php';
 require_once 'db.php';
 require_once 'User.php';
@@ -1579,7 +1578,7 @@ $user->updateStatus($user_id, 'online');
                         imgContainer.innerHTML = '';
                         const errorMessage = document.createElement('div');
                         errorMessage.style.cssText = 'color: #999; font-size: 14px; padding: 10px; background: #f8f9fa; border-radius: 8px;';
-                        errorMessage.textContent = '文件已被清理，每15天清理一次uploads目录';
+                        errorMessage.textContent = '文件已被清理，每7天清理一次uploads目录';
                         imgContainer.appendChild(errorMessage);
                     };
                     
@@ -1896,7 +1895,7 @@ $user->updateStatus($user_id, 'online');
                         audioContainer.innerHTML = '';
                         const errorMessage = document.createElement('div');
                         errorMessage.style.cssText = 'color: #999; font-size: 14px; padding: 10px; background: #f8f9fa; border-radius: 8px;';
-                        errorMessage.textContent = '文件已被清理，每15天清理一次uploads目录';
+                        errorMessage.textContent = '文件已被清理，每7天清理一次uploads目录';
                         audioContainer.appendChild(errorMessage);
                     };
                     
@@ -1944,7 +1943,7 @@ $user->updateStatus($user_id, 'online');
                                 fileLinkContainer.innerHTML = '';
                                 const errorMessage = document.createElement('div');
                                 errorMessage.style.cssText = 'color: #999; font-size: 14px; padding: 10px; background: #f8f9fa; border-radius: 8px;';
-                                errorMessage.textContent = '文件已被清理，每15天清理一次uploads目录';
+                                errorMessage.textContent = '文件已被清理，每7天清理一次uploads目录';
                                 fileLinkContainer.appendChild(errorMessage);
                             }
                         } catch (error) {
