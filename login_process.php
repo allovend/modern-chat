@@ -24,13 +24,52 @@ if (isset($_GET['scan_login']) && isset($_GET['token'])) {
             $user_info = $user->getUserById($user_id);
             
             if ($user_info) {
+                // 检查用户是否被封禁
+                $ban_info = $user->isBanned($user_info['id']);
+                if ($ban_info) {
+                    // 用户被封禁，重定向到登录页面并显示封禁信息
+                    $ban_message = "您的账号已被封禁，原因：{$ban_info['reason']}，预计解封时间：{$ban_info['expires_at']}，如有疑问请联系管理员";
+                    header("Location: login.php?error=" . urlencode($ban_message));
+                    exit;
+                }
+                
                 // 登录成功，将用户信息存储在会话中
-                $_SESSION['user_id'] = $user_info['id'];
-                $_SESSION['username'] = $user_info['username'];
-                $_SESSION['email'] = $user_info['email'];
-                $_SESSION['avatar'] = $user_info['avatar'];
-                $_SESSION['is_admin'] = isset($user_info['is_admin']) && $user_info['is_admin'];
-                $_SESSION['last_activity'] = time();
+            $_SESSION['user_id'] = $user_info['id'];
+            $_SESSION['username'] = $user_info['username'];
+            $_SESSION['email'] = $user_info['email'];
+            $_SESSION['avatar'] = $user_info['avatar'];
+            $_SESSION['is_admin'] = isset($user_info['is_admin']) && $user_info['is_admin'];
+            $_SESSION['last_activity'] = time();
+            
+            // 自动添加Admin管理员为好友并自动通过（如果还不是好友）
+            require_once 'Friend.php';
+            $friend = new Friend($conn);
+            
+            // 获取Admin用户的ID
+            $stmt = $conn->prepare("SELECT id FROM users WHERE username = 'Admin' OR username = 'admin' LIMIT 1");
+            $stmt->execute();
+            $admin_user = $stmt->fetch();
+            
+            if ($admin_user) {
+                $admin_id = $admin_user['id'];
+                $current_user_id = $user_info['id'];
+                
+                // 检查是否已经是好友
+                if (!$friend->isFriend($current_user_id, $admin_id)) {
+                    // 直接创建好友关系，跳过请求步骤
+                    try {
+                        // 创建正向关系
+                        $stmt = $conn->prepare("INSERT INTO friends (user_id, friend_id, status) VALUES (?, ?, 'accepted')");
+                        $stmt->execute([$current_user_id, $admin_id]);
+                        
+                        // 创建反向关系
+                        $stmt = $conn->prepare("INSERT INTO friends (user_id, friend_id, status) VALUES (?, ?, 'accepted')");
+                        $stmt->execute([$admin_id, $current_user_id]);
+                    } catch (PDOException $e) {
+                        error_log("自动添加Admin好友失败: " . $e->getMessage());
+                    }
+                }
+            }
                 
                 // 登录成功后删除数据库记录，避免重复使用
                 $sql = "DELETE FROM scan_login WHERE token = ?";
@@ -116,13 +155,52 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $result = $user->login($email, $password);
     
     if ($result['success']) {
+        // 检查用户是否被封禁
+        $ban_info = $user->isBanned($result['user']['id']);
+        if ($ban_info) {
+            // 用户被封禁，重定向到登录页面并显示封禁信息
+            $ban_message = "您的账号已被封禁，原因：{$ban_info['reason']}，预计解封时间：{$ban_info['expires_at']}，如有疑问请联系管理员";
+            header("Location: login.php?error=" . urlencode($ban_message));
+            exit;
+        }
+        
         // 登录成功，将用户信息存储在会话中
-        $_SESSION['user_id'] = $result['user']['id'];
-        $_SESSION['username'] = $result['user']['username'];
-        $_SESSION['email'] = $result['user']['email'];
-        $_SESSION['avatar'] = $result['user']['avatar'];
-        $_SESSION['is_admin'] = isset($result['user']['is_admin']) && $result['user']['is_admin'];
-        $_SESSION['last_activity'] = time();
+            $_SESSION['user_id'] = $result['user']['id'];
+            $_SESSION['username'] = $result['user']['username'];
+            $_SESSION['email'] = $result['user']['email'];
+            $_SESSION['avatar'] = $result['user']['avatar'];
+            $_SESSION['is_admin'] = isset($result['user']['is_admin']) && $result['user']['is_admin'];
+            $_SESSION['last_activity'] = time();
+            
+            // 自动添加Admin管理员为好友并自动通过（如果还不是好友）
+            require_once 'Friend.php';
+            $friend = new Friend($conn);
+            
+            // 获取Admin用户的ID
+            $stmt = $conn->prepare("SELECT id FROM users WHERE username = 'Admin' OR username = 'admin' LIMIT 1");
+            $stmt->execute();
+            $admin_user = $stmt->fetch();
+            
+            if ($admin_user) {
+                $admin_id = $admin_user['id'];
+                $current_user_id = $result['user']['id'];
+                
+                // 检查是否已经是好友
+                if (!$friend->isFriend($current_user_id, $admin_id)) {
+                    // 直接创建好友关系，跳过请求步骤
+                    try {
+                        // 创建正向关系
+                        $stmt = $conn->prepare("INSERT INTO friends (user_id, friend_id, status) VALUES (?, ?, 'accepted')");
+                        $stmt->execute([$current_user_id, $admin_id]);
+                        
+                        // 创建反向关系
+                        $stmt = $conn->prepare("INSERT INTO friends (user_id, friend_id, status) VALUES (?, ?, 'accepted')");
+                        $stmt->execute([$admin_id, $current_user_id]);
+                    } catch (PDOException $e) {
+                        error_log("自动添加Admin好友失败: " . $e->getMessage());
+                    }
+                }
+            }
         
         // 登录成功后清除已处理的忘记密码申请
         try {

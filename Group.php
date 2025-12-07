@@ -316,6 +316,14 @@ class Group {
             return false;
         }
         
+        // 检查是否是全员群聊，如果是则禁止退出
+        $stmt = $this->conn->prepare("SELECT all_user_group FROM groups WHERE id = ?");
+        $stmt->execute([$group_id]);
+        $group = $stmt->fetch();
+        if ($group && $group['all_user_group'] > 0) {
+            return false;
+        }
+        
         $stmt = $this->conn->prepare("DELETE FROM group_members WHERE group_id = ? AND user_id = ?");
         return $stmt->execute([$group_id, $user_id]);
     }
@@ -658,6 +666,14 @@ class Group {
             }
         }
         
+        // 检查是否是全员群聊，如果是则禁止删除
+        $stmt = $this->conn->prepare("SELECT all_user_group FROM groups WHERE id = ?");
+        $stmt->execute([$group_id]);
+        $group = $stmt->fetch();
+        if ($group && $group['all_user_group'] > 0) {
+            return false;
+        }
+        
         try {
             $this->conn->beginTransaction();
             
@@ -678,6 +694,132 @@ class Group {
         } catch (PDOException $e) {
             $this->conn->rollBack();
             error_log("Delete group error: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * 创建全员群聊
+     * @param int $creator_id 创建者ID
+     * @param int $group_number 群聊编号
+     * @return int|false 群聊ID或false
+     */
+    public function createAllUserGroup($creator_id, $group_number) {
+        try {
+            $this->conn->beginTransaction();
+            
+            // 创建群聊
+            $group_name = "全员群聊-{$group_number}";
+            $stmt = $this->conn->prepare("INSERT INTO groups (name, creator_id, owner_id, all_user_group) VALUES (?, ?, ?, ?)");
+            $stmt->execute([$group_name, $creator_id, $creator_id, $group_number]);
+            $group_id = $this->conn->lastInsertId();
+            
+            // 添加创建者为成员和群主
+            $stmt = $this->conn->prepare("INSERT INTO group_members (group_id, user_id, is_admin) VALUES (?, ?, ?)");
+            $stmt->execute([$group_id, $creator_id, true]);
+            
+            // 获取所有用户
+            $stmt = $this->conn->prepare("SELECT id FROM users WHERE id != ?");
+            $stmt->execute([$creator_id]);
+            $users = $stmt->fetchAll();
+            
+            // 添加所有用户为成员
+            $stmt = $this->conn->prepare("INSERT INTO group_members (group_id, user_id) VALUES (?, ?)");
+            foreach ($users as $user) {
+                $stmt->execute([$group_id, $user['id']]);
+            }
+            
+            $this->conn->commit();
+            return $group_id;
+        } catch (PDOException $e) {
+            $this->conn->rollBack();
+            error_log("Create all user group error: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * 获取所有全员群聊
+     * @return array 全员群聊列表
+     */
+    public function getAllUserGroups() {
+        $stmt = $this->conn->prepare("SELECT * FROM groups WHERE all_user_group > 0 ORDER BY all_user_group ASC");
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
+    
+    /**
+     * 将用户添加到所有全员群聊
+     * @param int $user_id 用户ID
+     * @return bool 是否成功
+     */
+    public function addUserToAllUserGroups($user_id) {
+        try {
+            // 获取所有全员群聊
+            $all_user_groups = $this->getAllUserGroups();
+            
+            // 将用户添加到每个全员群聊
+            foreach ($all_user_groups as $group) {
+                // 检查用户是否已经在群里
+                if (!$this->isUserInGroup($group['id'], $user_id)) {
+                    $stmt = $this->conn->prepare("INSERT INTO group_members (group_id, user_id) VALUES (?, ?)");
+                    $stmt->execute([$group['id'], $user_id]);
+                }
+            }
+            
+            return true;
+        } catch (PDOException $e) {
+            error_log("Add user to all user groups error: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * 获取当前全员群聊的数量
+     * @return int 当前全员群聊的数量
+     */
+    public function getCurrentAllUserGroupNumber() {
+        $stmt = $this->conn->prepare("SELECT MAX(all_user_group) as max_group FROM groups WHERE all_user_group > 0");
+        $stmt->execute();
+        $result = $stmt->fetch();
+        return $result['max_group'] ? (int)$result['max_group'] : 0;
+    }
+    
+    /**
+     * 确保全员群聊存在并包含所有用户
+     * @param int $creator_id 创建者ID
+     * @return bool 是否成功
+     */
+    public function ensureAllUserGroups($creator_id) {
+        try {
+            // 获取所有用户数量
+            $stmt = $this->conn->prepare("SELECT COUNT(*) as user_count FROM users");
+            $stmt->execute();
+            $user_count = $stmt->fetch()['user_count'];
+            
+            // 计算需要的全员群聊数量（每2000人一个群）
+            $needed_groups = ceil($user_count / 2000);
+            
+            // 获取当前全员群聊数量
+            $current_groups = $this->getCurrentAllUserGroupNumber();
+            
+            // 如果需要创建新的全员群聊
+            for ($i = $current_groups + 1; $i <= $needed_groups; $i++) {
+                $this->createAllUserGroup($creator_id, $i);
+            }
+            
+            // 确保所有用户都在全员群聊中
+            $stmt = $this->conn->prepare("SELECT id FROM users");
+            $stmt->execute();
+            $users = $stmt->fetchAll();
+            
+            foreach ($users as $user) {
+                $this->addUserToAllUserGroups($user['id']);
+            }
+            
+            return true;
+        } catch (PDOException $e) {
+            error_log("Ensure all user groups error: " . $e->getMessage());
             return false;
         }
     }

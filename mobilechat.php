@@ -30,6 +30,28 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
+// 检查是否启用了全员群聊功能，如果启用了，确保全员群聊存在并包含所有用户
+$create_all_group = getConfig('Create_a_group_chat_for_all_members', false);
+if ($create_all_group) {
+    // 检查是否需要添加all_user_group字段
+    try {
+        $stmt = $conn->prepare("SHOW COLUMNS FROM groups LIKE 'all_user_group'");
+        $stmt->execute();
+        $column_exists = $stmt->fetch();
+        
+        if (!$column_exists) {
+            // 添加all_user_group字段
+            $conn->exec("ALTER TABLE groups ADD COLUMN all_user_group INT DEFAULT 0 AFTER owner_id");
+            error_log("Added all_user_group column to groups table");
+        }
+    } catch (PDOException $e) {
+        error_log("Error checking/adding all_user_group column: " . $e->getMessage());
+    }
+    
+    $group = new Group($conn);
+    $group->ensureAllUserGroups($_SESSION['user_id']);
+}
+
 $user_id = $_SESSION['user_id'];
 $username = $_SESSION['username'];
 
@@ -75,6 +97,9 @@ if ($selected_id) {
         $chat_history = $group->getGroupMessages($selected_id, $user_id);
     }
 }
+
+// 检查用户是否被封禁
+$ban_info = $user->isBanned($user_id);
 
 // 获取待处理的好友请求
 $pending_requests = $friend->getPendingRequests($user_id);
@@ -718,6 +743,17 @@ $user_ip = getUserIP();
         </div>
         <?php unset($_SESSION['feedback_received']); ?>
     <?php endif; ?>
+    
+    <!-- 封禁提示弹窗 -->
+    <div id="ban-notification-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); z-index: 5000; flex-direction: column; align-items: center; justify-content: center;">
+        <div style="background: white; padding: 30px; border-radius: 12px; width: 90%; max-width: 500px; text-align: center;">
+            <h2 style="color: #d32f2f; margin-bottom: 20px; font-size: 24px;">账号已被封禁</h2>
+            <p style="color: #666; margin-bottom: 15px; font-size: 16px;">您的账号已被封禁，即将退出登录</p>
+            <p id="ban-reason" style="color: #333; margin-bottom: 20px; font-weight: 500;"></p>
+            <p id="ban-countdown" style="color: #d32f2f; font-size: 36px; font-weight: bold; margin-bottom: 20px;">10</p>
+            <p style="color: #999; font-size: 14px;">如有疑问请联系管理员</p>
+        </div>
+    </div>
     <div class="chat-container">
     <!-- 顶部导航栏 -->
     <div class="top-nav">
@@ -831,7 +867,7 @@ $user_ip = getUserIP();
                         <?php } ?>
                     </div>
                     <div class="chat-header-info">
-                        <h2><?php echo $selected_friend ? $selected_friend['username'] : $selected_group['name']; ?></h2>
+                        <h2><?php echo $selected_friend ? $selected_friend['username'] : ($selected_group ? $selected_group['name'] : ''); ?></h2>
                         <p>
                             <?php if ($selected_friend) { ?>
                                 <?php echo $selected_friend['status'] == 'online' ? '在线' : '离线'; ?>
@@ -873,8 +909,12 @@ $user_ip = getUserIP();
                 <div class="input-area">
                     <form id="message-form" enctype="multipart/form-data">
                         <?php if ($selected_friend) { ?>
+                            <input type="hidden" name="chat_type" value="friend">
+                            <input type="hidden" name="id" value="<?php echo $selected_id; ?>">
                             <input type="hidden" name="friend_id" value="<?php echo $selected_id; ?>">
                         <?php } elseif ($selected_group) { ?>
+                            <input type="hidden" name="chat_type" value="group">
+                            <input type="hidden" name="id" value="<?php echo $selected_id; ?>">
                             <input type="hidden" name="group_id" value="<?php echo $selected_id; ?>">
                         <?php } ?>
                         <div class="input-wrapper">
@@ -1005,29 +1045,39 @@ $user_ip = getUserIP();
             e.preventDefault();
             
             const formData = new FormData(e.target);
-            const username = formData.get('username');
-            const message = formData.get('message') || '';
+            const username = formData.get('username').trim();
+            const message = formData.get('message')?.trim() || '';
+            
+            if (!username) {
+                alert('请输入好友用户名');
+                return;
+            }
             
             try {
-                const response = await fetch('friend.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: new URLSearchParams({
-                        action: 'send_request',
-                        username: username,
-                        message: message
-                    })
-                });
+                // 首先通过用户名获取用户ID
+                const userResponse = await fetch(`get_user_id.php?username=${encodeURIComponent(username)}`);
+                const userData = await userResponse.json();
                 
-                const result = await response.json();
-                
-                if (result.success) {
-                    alert('好友请求已发送');
-                    closeAddFriendModal();
+                if (userData.success) {
+                    // 发送好友请求
+                    const requestResponse = await fetch('send_friend_request.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: `friend_id=${userData.user_id}`
+                    });
+                    
+                    const requestResult = await requestResponse.json();
+                    
+                    if (requestResult.success) {
+                        alert('好友请求已发送');
+                        closeAddFriendModal();
+                    } else {
+                        alert(requestResult.message || '发送失败，请稍后重试');
+                    }
                 } else {
-                    alert(result.message || '发送失败，请稍后重试');
+                    alert(userData.message || '未找到该用户');
                 }
             } catch (error) {
                 console.error('添加好友请求失败:', error);
@@ -1499,17 +1549,18 @@ $user_ip = getUserIP();
             return text.replace(urlRegex, '<a href="$1" class="message-link" target="_blank" rel="noopener noreferrer">$1</a>');
         }
         
-        // 好友选择
-        document.querySelectorAll('.friend-item').forEach(item => {
-            item.addEventListener('click', () => {
-                const friendId = item.dataset.friendId;
-                const groupId = item.dataset.groupId;
+        // 好友和群聊选择 - 使用事件委托确保所有动态生成的元素都能被正确处理
+        document.addEventListener('click', (e) => {
+            const friendItem = e.target.closest('.friend-item');
+            if (friendItem) {
+                const friendId = friendItem.dataset.friendId;
+                const groupId = friendItem.dataset.groupId;
                 if (friendId) {
                     window.location.href = `mobilechat.php?chat_type=friend&id=${friendId}`;
                 } else if (groupId) {
                     window.location.href = `mobilechat.php?chat_type=group&id=${groupId}`;
                 }
-            });
+            }
         });
         
         // 显示好友列表
@@ -1774,6 +1825,55 @@ $user_ip = getUserIP();
             }
         });
         
+        // 封禁检查和处理
+        function checkBanStatus() {
+            fetch('check_ban_status.php')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.banned) {
+                        showBanNotification(data.reason, data.expires_at);
+                    }
+                })
+                .catch(error => {
+                    console.error('检查封禁状态失败:', error);
+                });
+        }
+        
+        // 显示封禁通知
+        function showBanNotification(reason, expires_at) {
+            const modal = document.getElementById('ban-notification-modal');
+            const reasonEl = document.getElementById('ban-reason');
+            const countdownEl = document.getElementById('ban-countdown');
+            
+            reasonEl.textContent = `原因：${reason}，预计解封时间：${expires_at}`;
+            modal.style.display = 'flex';
+            
+            // 倒计时退出
+            let countdown = 10;
+            countdownEl.textContent = countdown;
+            
+            const countdownInterval = setInterval(() => {
+                countdown--;
+                countdownEl.textContent = countdown;
+                
+                if (countdown <= 0) {
+                    clearInterval(countdownInterval);
+                    window.location.href = 'logout.php';
+                }
+            }, 1000);
+        }
+        
+        // 页面加载完成后立即检查一次封禁状态
+        document.addEventListener('DOMContentLoaded', () => {
+            // 初始封禁检查
+            <?php if ($ban_info): ?>
+                showBanNotification('<?php echo $ban_info['reason']; ?>', '<?php echo $ban_info['expires_at']; ?>');
+            <?php endif; ?>
+            
+            // 每30秒检查一次封禁状态
+            setInterval(checkBanStatus, 30000);
+        });
+        
         // 文件选择事件
         document.getElementById('file-input')?.addEventListener('change', (e) => {
             const file = e.target.files[0];
@@ -1781,7 +1881,66 @@ $user_ip = getUserIP();
                 document.getElementById('message-form').dispatchEvent(new Event('submit'));
             }
         });
+        
+        // 封禁检查和处理
+        function checkBanStatus() {
+            fetch('check_ban_status.php')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.banned) {
+                        showBanNotification(data.reason, data.expires_at);
+                    }
+                })
+                .catch(error => {
+                    console.error('检查封禁状态失败:', error);
+                });
+        }
+        
+        // 显示封禁通知
+        function showBanNotification(reason, expires_at) {
+            const modal = document.getElementById('ban-notification-modal');
+            const reasonEl = document.getElementById('ban-reason');
+            const countdownEl = document.getElementById('ban-countdown');
+            
+            reasonEl.textContent = `原因：${reason}，预计解封时间：${expires_at}`;
+            modal.style.display = 'flex';
+            
+            // 倒计时退出
+            let countdown = 10;
+            countdownEl.textContent = countdown;
+            
+            const countdownInterval = setInterval(() => {
+                countdown--;
+                countdownEl.textContent = countdown;
+                
+                if (countdown <= 0) {
+                    clearInterval(countdownInterval);
+                    window.location.href = 'logout.php';
+                }
+            }, 1000);
+        }
+        
+        // 页面加载完成后立即检查一次封禁状态
+        document.addEventListener('DOMContentLoaded', () => {
+            // 初始封禁检查
+            <?php if ($ban_info): ?>
+                showBanNotification('<?php echo $ban_info['reason']; ?>', '<?php echo $ban_info['expires_at']; ?>');
+            <?php endif; ?>
+            
+            // 每30秒检查一次封禁状态
+            setInterval(checkBanStatus, 30000);
+        });
     </script>
+    <!-- 封禁提示弹窗 -->
+    <div id="ban-notification-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); z-index: 5000; flex-direction: column; align-items: center; justify-content: center;">
+        <div style="background: white; padding: 30px; border-radius: 12px; width: 90%; max-width: 500px; text-align: center;">
+            <h2 style="color: #d32f2f; margin-bottom: 20px; font-size: 24px;">账号已被封禁</h2>
+            <p style="color: #666; margin-bottom: 15px; font-size: 16px;">您的账号已被封禁，即将退出登录</p>
+            <p id="ban-reason" style="color: #333; margin-bottom: 20px; font-weight: 500;"></p>
+            <p id="ban-countdown" style="color: #d32f2f; font-size: 36px; font-weight: bold; margin-bottom: 20px;">10</p>
+            <p style="color: #999; font-size: 14px;">如有疑问请联系管理员</p>
+        </div>
+    </div>
     </div>
 </body>
 </html>

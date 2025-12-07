@@ -43,3 +43,48 @@ date_default_timezone_set('Asia/Shanghai');
 if (!isset($_SESSION)) {
     session_start();
 }
+
+/**
+ * 读取配置文件
+ * @param string $key 配置项键名
+ * @param mixed $default 默认值
+ * @return mixed 配置值
+ */
+function getConfig($key = null, $default = null) {
+    $config_path = __DIR__ . '/config/config.json';
+    static $config = null;
+    
+    // 只读取一次配置文件
+    if ($config === null) {
+        // 检查配置文件是否存在
+        if (!file_exists($config_path)) {
+            $config = [];
+        } else {
+            // 读取配置文件
+            $config_content = file_get_contents($config_path);
+            // 解析配置文件
+            $config = json_decode($config_content, true);
+            
+            // 处理解析错误
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                $config = [];
+            }
+        }
+    }
+    
+    // 如果没有指定键名，返回所有配置
+    if ($key === null) {
+        return $config;
+    }
+    
+    // 返回指定键名的配置值，如果不存在则返回默认值
+    return isset($config[$key]) ? $config[$key] : $default;
+}
+
+/**
+ * 获取用户名最大长度
+ * @return int 用户名最大长度
+ */
+function getUserNameMaxLength() {
+    return getConfig('user_name_max', 12);
+}

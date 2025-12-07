@@ -66,15 +66,14 @@ function createGroupTables() {
     ";
     
     try {
-        $conn->exec($create_tables_sql);
+        if ($conn) {
+            $conn->exec($create_tables_sql);
+        }
         error_log("群聊相关数据表创建成功");
     } catch(PDOException $e) {
         error_log("创建群聊数据表失败：" . $e->getMessage());
     }
 }
-
-// 调用函数创建数据表
-createGroupTables();
 
 
 function isMobileDevice() {
@@ -97,6 +96,31 @@ if (isMobileDevice()) {
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
     exit;
+}
+
+// 调用函数创建数据表
+createGroupTables();
+
+// 检查是否启用了全员群聊功能，如果启用了，确保全员群聊存在并包含所有用户
+$create_all_group = getConfig('Create_a_group_chat_for_all_members', false);
+if ($create_all_group) {
+    // 检查是否需要添加all_user_group字段
+    try {
+        $stmt = $conn->prepare("SHOW COLUMNS FROM groups LIKE 'all_user_group'");
+        $stmt->execute();
+        $column_exists = $stmt->fetch();
+        
+        if (!$column_exists) {
+            // 添加all_user_group字段
+            $conn->exec("ALTER TABLE groups ADD COLUMN all_user_group INT DEFAULT 0 AFTER owner_id");
+            error_log("Added all_user_group column to groups table");
+        }
+    } catch (PDOException $e) {
+        error_log("Error checking/adding all_user_group column: " . $e->getMessage());
+    }
+    
+    $group = new Group($conn);
+    $group->ensureAllUserGroups($_SESSION['user_id']);
 }
 
 $user_id = $_SESSION['user_id'];
@@ -122,6 +146,9 @@ $chat_type = isset($_GET['chat_type']) ? $_GET['chat_type'] : 'friend'; // 'frie
 $selected_id = isset($_GET['id']) ? $_GET['id'] : null;
 $selected_friend = null;
 $selected_group = null;
+
+// 初始化变量
+$selected_friend_id = null;
 
 // 如果没有选中的聊天对象，自动选择第一个好友或群聊
 if (!$selected_id) {
@@ -153,6 +180,9 @@ if ($chat_type === 'friend' && $selected_id) {
 
 // 更新用户状态为在线
 $user->updateStatus($user_id, 'online');
+
+// 检查用户是否被封禁
+$ban_info = $user->isBanned($user_id);
 ?>
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -846,6 +876,17 @@ $user->updateStatus($user_id, 'online');
         <div style="position: fixed; top: 20px; right: 20px; background: #4caf50; color: white; padding: 15px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); z-index: 1000; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
             您的反馈已收到，正在修复中，感谢您的反馈！
         </div>
+    
+    <!-- 封禁提示弹窗 -->
+    <div id="ban-notification-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); z-index: 5000; flex-direction: column; align-items: center; justify-content: center;">
+        <div style="background: white; padding: 30px; border-radius: 12px; width: 90%; max-width: 500px; text-align: center;">
+            <h2 style="color: #d32f2f; margin-bottom: 20px; font-size: 24px;">账号已被封禁</h2>
+            <p style="color: #666; margin-bottom: 15px; font-size: 16px;">您的账号已被封禁，即将退出登录</p>
+            <p id="ban-reason" style="color: #333; margin-bottom: 20px; font-weight: 500;"></p>
+            <p id="ban-countdown" style="color: #d32f2f; font-size: 36px; font-weight: bold; margin-bottom: 20px;">10</p>
+            <p style="color: #999; font-size: 14px;">如有疑问请联系管理员</p>
+        </div>
+    </div>
         <?php unset($_SESSION['feedback_received']); ?>
     <?php endif; ?>
     
@@ -1090,7 +1131,6 @@ $user->updateStatus($user_id, 'online');
         <!-- 右侧边栏 -->
         <div class="right-sidebar">
             <div class="sidebar-section">
-                <a href="https://github.com/LzdqesjG/modern-chat" class="github-corner" aria-label="View source on GitHub"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#151513; color:#fff; position: absolute; top: 0; border: 0; right: 0;" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"/><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"/><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"/></svg></a><style>.github-corner:hover .octo-arm{animation:octocat-wave 560ms ease-in-out}@keyframes octocat-wave{0%,100%{transform:rotate(0)}20%,60%{transform:rotate(-25deg)}40%,80%{transform:rotate(10deg)}}@media (max-width:500px){.github-corner:hover .octo-arm{animation:none}.github-corner .octo-arm{animation:octocat-wave 560ms ease-in-out}}</style>
                 <div class="user-profile">
                         <div class="profile-avatar">
                             <?php if (!empty($current_user['avatar'])): ?>
@@ -1995,11 +2035,27 @@ $user->updateStatus($user_id, 'online');
             return messageDiv;
         }
         
-        // 选择好友
-        document.querySelectorAll('.friend-item').forEach(item => {
-            item.addEventListener('click', () => {
-                const friendId = item.dataset.friendId;
-                window.location.href = `chat.php?friend_id=${friendId}`;
+        // 确保DOM加载完成后执行点击事件绑定
+        document.addEventListener('DOMContentLoaded', function() {
+            // 使用事件委托处理好友和群聊项点击
+            document.addEventListener('click', function(e) {
+                // 查找点击的元素是否是friend-item或其子元素
+                const friendItem = e.target.closest('.friend-item');
+                if (friendItem) {
+                    // 检查点击的是否是菜单按钮或菜单内的元素，如果是则不执行导航
+                    if (e.target.closest('.btn-icon') || e.target.closest('.friend-menu') || e.target.closest('.group-menu')) {
+                        return;
+                    }
+                    
+                    const friendId = friendItem.dataset.friendId;
+                    const groupId = friendItem.dataset.groupId;
+                    
+                    if (friendId) {
+                        window.location.href = `chat.php?chat_type=friend&id=${friendId}`;
+                    } else if (groupId) {
+                        window.location.href = `chat.php?chat_type=group&id=${groupId}`;
+                    }
+                }
             });
         });
         
@@ -2537,6 +2593,55 @@ $user->updateStatus($user_id, 'online');
                 console.error('状态更新失败:', error);
             });
         }
+        
+        // 封禁检查和处理
+        function checkBanStatus() {
+            fetch('check_ban_status.php')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.banned) {
+                        showBanNotification(data.reason, data.expires_at);
+                    }
+                })
+                .catch(error => {
+                    console.error('检查封禁状态失败:', error);
+                });
+        }
+        
+        // 显示封禁通知
+        function showBanNotification(reason, expires_at) {
+            const modal = document.getElementById('ban-notification-modal');
+            const reasonEl = document.getElementById('ban-reason');
+            const countdownEl = document.getElementById('ban-countdown');
+            
+            reasonEl.textContent = `原因：${reason}，预计解封时间：${expires_at}`;
+            modal.style.display = 'flex';
+            
+            // 倒计时退出
+            let countdown = 10;
+            countdownEl.textContent = countdown;
+            
+            const countdownInterval = setInterval(() => {
+                countdown--;
+                countdownEl.textContent = countdown;
+                
+                if (countdown <= 0) {
+                    clearInterval(countdownInterval);
+                    window.location.href = 'logout.php';
+                }
+            }, 1000);
+        }
+        
+        // 页面加载完成后立即检查一次封禁状态
+        document.addEventListener('DOMContentLoaded', () => {
+            // 初始封禁检查
+            <?php if ($ban_info): ?>
+                showBanNotification('<?php echo $ban_info['reason']; ?>', '<?php echo $ban_info['expires_at']; ?>');
+            <?php endif; ?>
+            
+            // 每30秒检查一次封禁状态
+            setInterval(checkBanStatus, 30000);
+        });
         
         // 设置面板相关函数
         function toggleSettings() {

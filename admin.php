@@ -158,7 +158,10 @@ if (isset($_POST['action']) && in_array($_POST['action'], [
     'delete_group',
     'deactivate_user',
     'delete_user',
-    'change_password'
+    'change_password',
+    'change_username',
+    'ban_user',
+    'lift_ban'
 ])) {
     $action = $_POST['action'];
     $password = isset($_POST['password']) ? $_POST['password'] : '';
@@ -348,6 +351,87 @@ if (isset($_POST['action']) && in_array($_POST['action'], [
                 $stmt->execute([$hashed_password, $user_id]);
                 
                 header('Location: admin.php?success=用户密码已成功修改');
+                break;
+                
+        case 'change_username':
+                // 修改用户名称
+                $user_id = intval($_POST['user_id']);
+                $new_username = trim($_POST['new_username']);
+                
+                // 获取用户名最大长度配置
+                $user_name_max = getUserNameMaxLength();
+                
+                // 验证用户名
+                if (strlen($new_username) < 3 || strlen($new_username) > $user_name_max) {
+                    header('Location: admin.php?error=用户名长度必须在3-{$user_name_max}个字符之间');
+                    exit;
+                }
+                
+                // 检查用户名是否已被使用
+                $stmt = $conn->prepare("SELECT id FROM users WHERE username = ? AND id != ?");
+                $stmt->execute([$new_username, $user_id]);
+                if ($stmt->rowCount() > 0) {
+                    header('Location: admin.php?error=用户名已被使用');
+                    exit;
+                }
+                
+                // 更新用户名称
+                $stmt = $conn->prepare("UPDATE users SET username = ? WHERE id = ?");
+                $stmt->execute([$new_username, $user_id]);
+                
+                header('Location: admin.php?success=用户名称已成功修改');
+                break;
+                
+        case 'ban_user':
+                // 封禁用户
+                $user_id = intval($_POST['user_id']);
+                $reason = trim($_POST['ban_reason']);
+                $ban_duration = intval($_POST['ban_duration']);
+                
+                // 验证参数
+                if (empty($reason)) {
+                    header('Location: admin.php?error=请输入封禁理由');
+                    exit;
+                }
+                
+                if ($ban_duration <= 0) {
+                    header('Location: admin.php?error=封禁时长必须大于0');
+                    exit;
+                }
+                
+                // 检查用户是否是管理员，禁止封禁管理员
+                $stmt = $conn->prepare("SELECT is_admin FROM users WHERE id = ?");
+                $stmt->execute([$user_id]);
+                $user = $stmt->fetch();
+                if ($user && $user['is_admin']) {
+                    header('Location: admin.php?error=不能封禁管理员');
+                    exit;
+                }
+                
+                // 封禁用户
+                $user = new User($conn);
+                $success = $user->banUser($user_id, $current_user['id'], $reason, $ban_duration);
+                
+                if ($success) {
+                    header('Location: admin.php?success=用户已成功封禁');
+                } else {
+                    header('Location: admin.php?error=封禁失败，用户可能已经被封禁');
+                }
+                break;
+                
+        case 'lift_ban':
+                // 解除封禁
+                $user_id = intval($_POST['user_id']);
+                
+                // 解除封禁
+                $user = new User($conn);
+                $success = $user->liftBan($user_id, $current_user['id']);
+                
+                if ($success) {
+                    header('Location: admin.php?success=用户已成功解除封禁');
+                } else {
+                    header('Location: admin.php?error=解除封禁失败，用户可能未被封禁');
+                }
                 break;
                 
             case 'approve_password_request':
@@ -842,12 +926,26 @@ if (isset($_POST['action']) && in_array($_POST['action'], [
                             <p>角色: <?php echo $user_item['is_admin'] ? '管理员' : '普通用户'; ?></p>
                             <p>注册时间: <?php echo $user_item['created_at']; ?></p>
                             <p>最后活跃: <?php echo $user_item['last_active']; ?></p>
+                            <!-- 检查用户封禁状态 -->
+                            <?php 
+                            $ban_info = $user->isBanned($user_item['id']);
+                            if ($ban_info):
+                            ?>
+                                <div style="margin-top: 10px; padding: 8px; background: #ffebee; color: #d32f2f; border-radius: 4px; font-size: 12px;">
+                                    已封禁 - 截止时间: <?php echo $ban_info['expires_at']; ?><br>
+                                    原因: <?php echo $ban_info['reason']; ?>
+                                </div>
+                            <?php endif; ?>
                             <div style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
-                                <?php if ($user_item['id'] !== $current_user['id']): ?>
+                                <?php if ($user_item['id'] !== $current_user['id'] && !$user_item['is_admin']): ?>
                                     <button onclick="showClearDataModal('deactivate_user', <?php echo $user_item['id']; ?>)" style="padding: 6px 12px; background: #ffa726; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">注销用户</button>
                                     <button onclick="showClearDataModal('delete_user', <?php echo $user_item['id']; ?>)" style="padding: 6px 12px; background: #ef5350; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">强制删除</button>
-                                    <?php if (!$user_item['is_admin']): ?>
-                                        <button onclick="showChangePasswordModal(<?php echo $user_item['id']; ?>, '<?php echo $user_item['username']; ?>')" style="padding: 6px 12px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">修改密码</button>
+                                    <button onclick="showChangePasswordModal(<?php echo $user_item['id']; ?>, '<?php echo $user_item['username']; ?>')" style="padding: 6px 12px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">修改密码</button>
+                                    <button onclick="showChangeUsernameModal(<?php echo $user_item['id']; ?>, '<?php echo $user_item['username']; ?>')" style="padding: 6px 12px; background: #4caf50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">修改名称</button>
+                                    <?php if ($ban_info): ?>
+                                        <button onclick="showLiftBanModal(<?php echo $user_item['id']; ?>, '<?php echo $user_item['username']; ?>')" style="padding: 6px 12px; background: #81c784; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">解除封禁</button>
+                                    <?php else: ?>
+                                        <button onclick="showBanUserModal(<?php echo $user_item['id']; ?>, '<?php echo $user_item['username']; ?>')" style="padding: 6px 12px; background: #e57373; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">封禁用户</button>
                                     <?php endif; ?>
                                 <?php endif; ?>
                             </div>
@@ -1044,6 +1142,86 @@ if (isset($_POST['action']) && in_array($_POST['action'], [
                 <div style="display: flex; gap: 15px; justify-content: center; align-items: center;">
                     <button id="cancel-change-password-btn" style="padding: 12px 25px; background: #f5f5f5; color: #333; border: none; border-radius: 8px; cursor: pointer; font-weight: 500; flex: 1; font-size: 14px; transition: background-color 0.2s;">取消</button>
                     <button id="confirm-change-password-btn" style="padding: 12px 25px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 500; flex: 1; font-size: 14px; transition: all 0.2s;">确定</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 修改用户名称弹窗 -->
+        <div id="change-username-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 3000; flex-direction: column; align-items: center; justify-content: center;">
+            <div style="background: white; padding: 25px; border-radius: 12px; width: 90%; max-width: 500px;">
+                <h3 style="margin-bottom: 20px; color: #333; text-align: center;">修改用户名称</h3>
+                <p id="change-username-current" style="margin-bottom: 20px; color: #666; text-align: center;"></p>
+                
+                <div style="margin-bottom: 20px;">
+                    <label for="new-username" style="display: block; margin-bottom: 8px; color: #333; font-weight: 500;">新名称：</label>
+                    <input type="text" id="new-username" placeholder="输入新名称" style="width: 100%; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 14px; outline: none; transition: border-color 0.2s;">
+                    <p id="username-error" style="margin-top: 8px; color: #ff4757; font-size: 12px; display: none;"></p>
+                    <p id="username-requirements" style="margin-top: 8px; color: #888; font-size: 12px;">名称长度必须在3-<?php echo getUserNameMaxLength(); ?>个字符之间</p>
+                </div>
+                
+                <!-- 密码验证 -->
+                <div style="margin-bottom: 20px;">
+                    <label for="admin-password-username" style="display: block; margin-bottom: 8px; color: #333; font-weight: 500;">管理员密码：</label>
+                    <input type="password" id="admin-password-username" placeholder="输入管理员密码" style="width: 100%; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 14px; outline: none; transition: border-color 0.2s;">
+                    <p id="admin-password-error-username" style="margin-top: 8px; color: #ff4757; font-size: 12px; display: none;">密码错误，请重试</p>
+                </div>
+                
+                <div style="display: flex; gap: 15px; justify-content: center; align-items: center;">
+                    <button id="cancel-change-username-btn" style="padding: 12px 25px; background: #f5f5f5; color: #333; border: none; border-radius: 8px; cursor: pointer; font-weight: 500; flex: 1; font-size: 14px; transition: background-color 0.2s;">取消</button>
+                    <button id="confirm-change-username-btn" style="padding: 12px 25px; background: #4caf50; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 500; flex: 1; font-size: 14px; transition: all 0.2s;">确定</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 封禁用户弹窗 -->
+        <div id="ban-user-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 3000; flex-direction: column; align-items: center; justify-content: center;">
+            <div style="background: white; padding: 25px; border-radius: 12px; width: 90%; max-width: 500px;">
+                <h3 style="margin-bottom: 20px; color: #333; text-align: center;">封禁用户</h3>
+                <p id="ban-user-username" style="margin-bottom: 20px; color: #666; text-align: center;"></p>
+                
+                <div style="margin-bottom: 20px;">
+                    <label for="ban-reason" style="display: block; margin-bottom: 8px; color: #333; font-weight: 500;">封禁理由：</label>
+                    <textarea id="ban-reason" placeholder="请输入封禁理由" style="width: 100%; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 14px; outline: none; transition: border-color 0.2s; resize: vertical; min-height: 100px;"></textarea>
+                    <p id="ban-reason-error" style="margin-top: 8px; color: #ff4757; font-size: 12px; display: none;"></p>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label for="ban-duration" style="display: block; margin-bottom: 8px; color: #333; font-weight: 500;">封禁时长（小时）：</label>
+                    <input type="number" id="ban-duration" placeholder="输入封禁时长（小时）" min="1" style="width: 100%; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 14px; outline: none; transition: border-color 0.2s;">
+                    <p id="ban-duration-error" style="margin-top: 8px; color: #ff4757; font-size: 12px; display: none;"></p>
+                </div>
+                
+                <!-- 密码验证 -->
+                <div style="margin-bottom: 20px;">
+                    <label for="admin-password-ban" style="display: block; margin-bottom: 8px; color: #333; font-weight: 500;">请输入管理员密码：</label>
+                    <input type="password" id="admin-password-ban" placeholder="输入密码" style="width: 100%; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 14px; outline: none; transition: border-color 0.2s;">
+                    <p id="admin-password-error-ban" style="margin-top: 8px; color: #ff4757; font-size: 12px; display: none;">密码错误，请重试</p>
+                </div>
+                
+                <div style="display: flex; gap: 15px; justify-content: center; align-items: center;">
+                    <button id="cancel-ban-btn" style="padding: 12px 25px; background: #f5f5f5; color: #333; border: none; border-radius: 8px; cursor: pointer; font-weight: 500; flex: 1; font-size: 14px; transition: background-color 0.2s;">取消</button>
+                    <button id="confirm-ban-btn" style="padding: 12px 25px; background: #e57373; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 500; flex: 1; font-size: 14px; transition: all 0.2s;">确定</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 解除封禁弹窗 -->
+        <div id="lift-ban-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 3000; flex-direction: column; align-items: center; justify-content: center;">
+            <div style="background: white; padding: 25px; border-radius: 12px; width: 90%; max-width: 500px;">
+                <h3 style="margin-bottom: 20px; color: #333; text-align: center;">解除封禁</h3>
+                <p id="lift-ban-username" style="margin-bottom: 20px; color: #666; text-align: center;"></p>
+                <p style="margin-bottom: 20px; color: #333; text-align: center;">确定要解除该用户的封禁吗？</p>
+                
+                <!-- 密码验证 -->
+                <div style="margin-bottom: 20px;">
+                    <label for="admin-password-lift-ban" style="display: block; margin-bottom: 8px; color: #333; font-weight: 500;">请输入管理员密码：</label>
+                    <input type="password" id="admin-password-lift-ban" placeholder="输入密码" style="width: 100%; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 14px; outline: none; transition: border-color 0.2s;">
+                    <p id="admin-password-error-lift-ban" style="margin-top: 8px; color: #ff4757; font-size: 12px; display: none;">密码错误，请重试</p>
+                </div>
+                
+                <div style="display: flex; gap: 15px; justify-content: center; align-items: center;">
+                    <button id="cancel-lift-ban-btn" style="padding: 12px 25px; background: #f5f5f5; color: #333; border: none; border-radius: 8px; cursor: pointer; font-weight: 500; flex: 1; font-size: 14px; transition: background-color 0.2s;">取消</button>
+                    <button id="confirm-lift-ban-btn" style="padding: 12px 25px; background: #81c784; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 500; flex: 1; font-size: 14px; transition: all 0.2s;">确定</button>
                 </div>
             </div>
         </div>
@@ -1305,6 +1483,211 @@ if (isset($_POST['action']) && in_array($_POST['action'], [
         // 关闭操作结果弹窗
         function closeResultModal() {
             document.getElementById('result-modal').style.display = 'none';
+        }
+        
+        // 封禁用户相关变量
+        let currentBanUserId = '';
+        
+        // 显示封禁用户弹窗
+        function showBanUserModal(userId, username) {
+            currentBanUserId = userId;
+            
+            // 设置用户名
+            const usernameEl = document.getElementById('ban-user-username');
+            usernameEl.textContent = `用户: ${username}`;
+            
+            // 重置输入字段和错误提示
+            document.getElementById('ban-reason').value = '';
+            document.getElementById('ban-duration').value = '';
+            document.getElementById('admin-password-ban').value = '';
+            document.getElementById('ban-reason-error').style.display = 'none';
+            document.getElementById('ban-duration-error').style.display = 'none';
+            document.getElementById('admin-password-error-ban').style.display = 'none';
+            
+            // 显示弹窗
+            document.getElementById('ban-user-modal').style.display = 'flex';
+            
+            // 添加事件监听器
+            document.getElementById('cancel-ban-btn').addEventListener('click', closeBanUserModal);
+            document.getElementById('confirm-ban-btn').addEventListener('click', handleBanUser);
+        }
+        
+        // 关闭封禁用户弹窗
+        function closeBanUserModal() {
+            document.getElementById('ban-user-modal').style.display = 'none';
+            
+            // 移除事件监听器
+            document.getElementById('cancel-ban-btn').removeEventListener('click', closeBanUserModal);
+            document.getElementById('confirm-ban-btn').removeEventListener('click', handleBanUser);
+        }
+        
+        // 处理封禁用户
+        async function handleBanUser() {
+            const reason = document.getElementById('ban-reason').value.trim();
+            const duration = parseInt(document.getElementById('ban-duration').value);
+            const adminPassword = document.getElementById('admin-password-ban').value;
+            
+            // 验证输入
+            if (!reason) {
+                document.getElementById('ban-reason-error').textContent = '请输入封禁理由';
+                document.getElementById('ban-reason-error').style.display = 'block';
+                return;
+            }
+            
+            if (!duration || duration <= 0) {
+                document.getElementById('ban-duration-error').textContent = '请输入有效的封禁时长';
+                document.getElementById('ban-duration-error').style.display = 'block';
+                return;
+            }
+            
+            if (!adminPassword) {
+                document.getElementById('admin-password-error-ban').textContent = '请输入管理员密码';
+                document.getElementById('admin-password-error-ban').style.display = 'block';
+                return;
+            }
+            
+            // 验证管理员密码
+            const isValid = await validatePassword(adminPassword);
+            if (isValid) {
+                // 密码正确，执行封禁操作
+                executeBanUser(reason, duration, adminPassword);
+            } else {
+                // 密码错误，显示错误提示
+                document.getElementById('admin-password-error-ban').style.display = 'block';
+            }
+        }
+        
+        // 执行封禁用户操作
+        function executeBanUser(reason, duration, adminPassword) {
+            // 创建表单
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.style.display = 'none';
+            
+            // 添加表单字段
+            const actionInput = document.createElement('input');
+            actionInput.type = 'hidden';
+            actionInput.name = 'action';
+            actionInput.value = 'ban_user';
+            form.appendChild(actionInput);
+            
+            const userIdInput = document.createElement('input');
+            userIdInput.type = 'hidden';
+            userIdInput.name = 'user_id';
+            userIdInput.value = currentBanUserId;
+            form.appendChild(userIdInput);
+            
+            const reasonInput = document.createElement('input');
+            reasonInput.type = 'hidden';
+            reasonInput.name = 'ban_reason';
+            reasonInput.value = reason;
+            form.appendChild(reasonInput);
+            
+            const durationInput = document.createElement('input');
+            durationInput.type = 'hidden';
+            durationInput.name = 'ban_duration';
+            durationInput.value = duration;
+            form.appendChild(durationInput);
+            
+            const passwordInput = document.createElement('input');
+            passwordInput.type = 'hidden';
+            passwordInput.name = 'password';
+            passwordInput.value = adminPassword;
+            form.appendChild(passwordInput);
+            
+            // 添加到页面并提交
+            document.body.appendChild(form);
+            form.submit();
+            
+            // 关闭弹窗
+            closeBanUserModal();
+        }
+        
+        // 解除封禁相关变量
+        let currentLiftBanUserId = '';
+        
+        // 显示解除封禁弹窗
+        function showLiftBanModal(userId, username) {
+            currentLiftBanUserId = userId;
+            
+            // 设置用户名
+            const usernameEl = document.getElementById('lift-ban-username');
+            usernameEl.textContent = `用户: ${username}`;
+            
+            // 重置输入字段和错误提示
+            document.getElementById('admin-password-lift-ban').value = '';
+            document.getElementById('admin-password-error-lift-ban').style.display = 'none';
+            
+            // 显示弹窗
+            document.getElementById('lift-ban-modal').style.display = 'flex';
+            
+            // 添加事件监听器
+            document.getElementById('cancel-lift-ban-btn').addEventListener('click', closeLiftBanModal);
+            document.getElementById('confirm-lift-ban-btn').addEventListener('click', handleLiftBan);
+        }
+        
+        // 关闭解除封禁弹窗
+        function closeLiftBanModal() {
+            document.getElementById('lift-ban-modal').style.display = 'none';
+            
+            // 移除事件监听器
+            document.getElementById('cancel-lift-ban-btn').removeEventListener('click', closeLiftBanModal);
+            document.getElementById('confirm-lift-ban-btn').removeEventListener('click', handleLiftBan);
+        }
+        
+        // 处理解除封禁
+        async function handleLiftBan() {
+            const adminPassword = document.getElementById('admin-password-lift-ban').value;
+            
+            if (!adminPassword) {
+                document.getElementById('admin-password-error-lift-ban').textContent = '请输入管理员密码';
+                document.getElementById('admin-password-error-lift-ban').style.display = 'block';
+                return;
+            }
+            
+            // 验证管理员密码
+            const isValid = await validatePassword(adminPassword);
+            if (isValid) {
+                // 密码正确，执行解除封禁操作
+                executeLiftBan(adminPassword);
+            } else {
+                // 密码错误，显示错误提示
+                document.getElementById('admin-password-error-lift-ban').style.display = 'block';
+            }
+        }
+        
+        // 执行解除封禁操作
+        function executeLiftBan(adminPassword) {
+            // 创建表单
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.style.display = 'none';
+            
+            // 添加表单字段
+            const actionInput = document.createElement('input');
+            actionInput.type = 'hidden';
+            actionInput.name = 'action';
+            actionInput.value = 'lift_ban';
+            form.appendChild(actionInput);
+            
+            const userIdInput = document.createElement('input');
+            userIdInput.type = 'hidden';
+            userIdInput.name = 'user_id';
+            userIdInput.value = currentLiftBanUserId;
+            form.appendChild(userIdInput);
+            
+            const passwordInput = document.createElement('input');
+            passwordInput.type = 'hidden';
+            passwordInput.name = 'password';
+            passwordInput.value = adminPassword;
+            form.appendChild(passwordInput);
+            
+            // 添加到页面并提交
+            document.body.appendChild(form);
+            form.submit();
+            
+            // 关闭弹窗
+            closeLiftBanModal();
         }
         
         // 修改密码相关变量
@@ -1583,6 +1966,125 @@ if (isset($_POST['action']) && in_array($_POST['action'], [
             
             // 关闭弹窗
             closeRejectPasswordModal();
+        }
+        
+        // 修改用户名称相关变量
+        let currentUserIdChange = '';
+        let currentUsername = '';
+        
+        // 显示修改用户名称弹窗
+        function showChangeUsernameModal(userId, username) {
+            currentUserIdChange = userId;
+            currentUsername = username;
+            
+            // 设置当前用户名
+            const currentUsernameEl = document.getElementById('change-username-current');
+            currentUsernameEl.textContent = `当前名称: ${username}`;
+            
+            // 重置输入字段和错误提示
+            document.getElementById('new-username').value = '';
+            document.getElementById('admin-password-username').value = '';
+            document.getElementById('username-error').style.display = 'none';
+            document.getElementById('admin-password-error-username').style.display = 'none';
+            
+            // 显示弹窗
+            document.getElementById('change-username-modal').style.display = 'flex';
+            
+            // 添加事件监听器
+            document.getElementById('cancel-change-username-btn').addEventListener('click', closeChangeUsernameModal);
+            document.getElementById('confirm-change-username-btn').addEventListener('click', handleChangeUsername);
+        }
+        
+        // 关闭修改用户名称弹窗
+        function closeChangeUsernameModal() {
+            document.getElementById('change-username-modal').style.display = 'none';
+            
+            // 移除事件监听器
+            document.getElementById('cancel-change-username-btn').removeEventListener('click', closeChangeUsernameModal);
+            document.getElementById('confirm-change-username-btn').removeEventListener('click', handleChangeUsername);
+        }
+        
+        // 处理修改用户名称
+        async function handleChangeUsername() {
+            const newUsername = document.getElementById('new-username').value.trim();
+            const adminPassword = document.getElementById('admin-password-username').value;
+            
+            // 验证新名称
+            if (!newUsername) {
+                document.getElementById('username-error').textContent = '请输入新名称';
+                document.getElementById('username-error').style.display = 'block';
+                return;
+            }
+            
+            if (newUsername === currentUsername) {
+                document.getElementById('username-error').textContent = '新名称与当前名称相同';
+                document.getElementById('username-error').style.display = 'block';
+                return;
+            }
+            
+            // 检查名称长度
+            const maxLength = <?php echo getUserNameMaxLength(); ?>;
+            if (newUsername.length < 3 || newUsername.length > maxLength) {
+                document.getElementById('username-error').textContent = `名称长度必须在3-${maxLength}个字符之间`;
+                document.getElementById('username-error').style.display = 'block';
+                return;
+            }
+            
+            if (!adminPassword) {
+                document.getElementById('admin-password-error-username').textContent = '请输入管理员密码';
+                document.getElementById('admin-password-error-username').style.display = 'block';
+                return;
+            }
+            
+            // 验证管理员密码
+            const isValid = await validatePassword(adminPassword);
+            if (isValid) {
+                // 密码正确，执行修改名称操作
+                executeChangeUsername(newUsername, adminPassword);
+            } else {
+                // 密码错误，显示错误提示
+                document.getElementById('admin-password-error-username').style.display = 'block';
+            }
+        }
+        
+        // 执行修改用户名称操作
+        function executeChangeUsername(newUsername, adminPassword) {
+            // 创建表单
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.style.display = 'none';
+            
+            // 添加表单字段
+            const actionInput = document.createElement('input');
+            actionInput.type = 'hidden';
+            actionInput.name = 'action';
+            actionInput.value = 'change_username';
+            form.appendChild(actionInput);
+            
+            const userIdInput = document.createElement('input');
+            userIdInput.type = 'hidden';
+            userIdInput.name = 'user_id';
+            userIdInput.value = currentUserIdChange;
+            form.appendChild(userIdInput);
+            
+            const newUsernameInput = document.createElement('input');
+            newUsernameInput.type = 'hidden';
+            newUsernameInput.name = 'new_username';
+            newUsernameInput.value = newUsername;
+            form.appendChild(newUsernameInput);
+            
+            const passwordInput = document.createElement('input');
+            passwordInput.type = 'hidden';
+            passwordInput.name = 'password';
+            passwordInput.value = adminPassword;
+            form.appendChild(passwordInput);
+            
+            // 添加到页面并提交
+            document.body.appendChild(form);
+            form.submit();
+            
+            // 关闭弹窗
+            closeChangeUsernameModal();
         }
     </script>
 </body>

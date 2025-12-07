@@ -25,9 +25,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = trim($_POST['username']);
     $email = trim($_POST['email']);
     
+    // 获取用户名最大长度配置
+    $user_name_max = getUserNameMaxLength();
+    
     // 验证表单数据
-    if (strlen($username) < 3 || strlen($username) > 50) {
-        $errors[] = '用户名长度必须在3-50个字符之间';
+    if (strlen($username) < 3 || strlen($username) > $user_name_max) {
+        $errors[] = "用户名长度必须在3-{$user_name_max}个字符之间";
     }
     
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -301,7 +304,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <form method="POST" enctype="multipart/form-data">
             <div class="form-group">
                 <label for="username">用户名</label>
-                <input type="text" id="username" name="username" value="<?php echo htmlspecialchars($current_user['username']); ?>" required minlength="3" maxlength="50">
+                <input type="text" id="username" name="username" value="<?php echo htmlspecialchars($current_user['username']); ?>" required minlength="3" maxlength="<?php echo getUserNameMaxLength(); ?>">
             </div>
             
             <div class="form-group">
