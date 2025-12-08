@@ -89,18 +89,7 @@
 ```bash
 mysql -u root -p < db.sql
 ```
-
-接着执行 `create_group_invitation_tables.sql` 文件来创建群聊邀请相关表：
-
-```bash
-mysql -u root -p < create_group_invitation_tables.sql
-```
-最后执行 `create_ip_registration_table.sql` 文件来创建群聊邀请相关表：
-
-```bash
-mysql -u root -p < create_ip_registration_table.sql
-```
-或者在 phpMyAdmin 中分别导入 `db.sql`、 `create_group_invitation_tables.sql` 和 `create_ip_registration_table.sql` 文件。
+或者在 phpMyAdmin 中导入 `db.sql` 文件。
 
 ### 3. 配置数据库连接
 
