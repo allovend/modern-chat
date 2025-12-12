@@ -29,7 +29,7 @@ function createGroupTables() {
         id INT AUTO_INCREMENT PRIMARY KEY,
         group_id INT NOT NULL,
         user_id INT NOT NULL,
-        is_admin BOOLEAN DEFAULT FALSE,
+        role ENUM('admin', 'member') DEFAULT 'member',
         joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -999,10 +999,11 @@ $agreed_to_terms = $user->hasAgreedToTerms($user_id);
             <div class="friends-list" id="friends-list" style="<?php echo $chat_type === 'friend' ? 'display: block;' : 'display: none;'; ?>">
                 <?php foreach ($friends as $friend_item): ?>
                     <?php 
-                        $friend_unread_key = 'friend_' . $friend_item['id'];
+                        $friend_id = $friend_item['friend_id'] ?? $friend_item['id'] ?? 0;
+                        $friend_unread_key = 'friend_' . $friend_id;
                         $friend_unread_count = isset($unread_counts[$friend_unread_key]) ? $unread_counts[$friend_unread_key] : 0;
                     ?>
-                    <div class="friend-item <?php echo $chat_type === 'friend' && $selected_id == $friend_item['id'] ? 'active' : ''; ?>" data-friend-id="<?php echo $friend_item['id']; ?>">
+                    <div class="friend-item <?php echo $chat_type === 'friend' && $selected_id == $friend_id ? 'active' : ''; ?>" data-friend-id="<?php echo $friend_id; ?>">
                         <div class="friend-avatar">
                             <?php if (!empty($friend_item['avatar'])): ?>
                                 <img src="<?php echo $friend_item['avatar']; ?>" alt="<?php echo $friend_item['username']; ?>" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
@@ -1022,12 +1023,12 @@ $agreed_to_terms = $user->hasAgreedToTerms($user_id);
                         </div>
                         <!-- 三个点菜单 -->
                         <div style="position: relative;">
-                            <button class="btn-icon" style="width: 30px; height: 30px; font-size: 12px;" onclick="toggleFriendMenu(event, <?php echo $friend_item['id']; ?>, '<?php echo $friend_item['username']; ?>')">
+                            <button class="btn-icon" style="width: 30px; height: 30px; font-size: 12px;" onclick="toggleFriendMenu(event, <?php echo $friend_item['friend_id']; ?>, '<?php echo $friend_item['username']; ?>')">
                                 ⋮
                             </button>
                             <!-- 好友菜单 -->
-                            <div class="friend-menu" id="friend-menu-<?php echo $friend_item['id']; ?>" style="display: none; position: absolute; top: 0; right: 0; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); z-index: 1000; min-width: 120px;">
-                                <button class="group-menu-item" onclick="deleteFriend(<?php echo $friend_item['id']; ?>, '<?php echo $friend_item['username']; ?>')">删除好友</button>
+                            <div class="friend-menu" id="friend-menu-<?php echo $friend_item['friend_id']; ?>" style="display: none; position: absolute; top: 0; right: 0; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); z-index: 1000; min-width: 120px;">
+                                <button class="group-menu-item" onclick="deleteFriend(<?php echo $friend_item['friend_id']; ?>, '<?php echo $friend_item['username']; ?>')">删除好友</button>
                             </div>
                         </div>
                     </div>
@@ -2652,22 +2653,30 @@ $agreed_to_terms = $user->hasAgreedToTerms($user_id);
                     // 群聊消息，使用发送者的头像
                     const img = document.createElement('img');
                     img.src = message.avatar;
-                    img.alt = message.username || '未知用户';
+                    img.alt = message.sender_username || '未知用户';
                     img.style.cssText = 'width: 100%; height: 100%; border-radius: 50%; object-fit: cover;';
                     avatarDiv.appendChild(img);
                 } else {
-                    // 好友聊天，使用好友头像或用户名首字母
-                    const friendAvatar = '<?php echo $selected_friend && !empty($selected_friend['avatar']) ? $selected_friend['avatar'] : ''; ?>';
-                    const friendName = '<?php echo $selected_friend ? $selected_friend['username'] : ''; ?>';
-                    
-                    if (friendAvatar) {
-                        const img = document.createElement('img');
-                        img.src = friendAvatar;
-                        img.alt = friendName;
-                        img.style.cssText = 'width: 100%; height: 100%; border-radius: 50%; object-fit: cover;';
-                        avatarDiv.appendChild(img);
+                    // 检查是否是群聊消息
+                    const chatType = '<?php echo $chat_type; ?>';
+                    if (chatType === 'group') {
+                        // 群聊消息，没有头像时显示发送者用户名首字母
+                        const senderName = message.sender_username || '未知用户';
+                        avatarDiv.textContent = senderName.substring(0, 2);
                     } else {
-                        avatarDiv.textContent = friendName ? friendName.substring(0, 2) : '?';
+                        // 好友聊天，使用好友头像或用户名首字母
+                        const friendAvatar = '<?php echo $selected_friend && !empty($selected_friend['avatar']) ? $selected_friend['avatar'] : ''; ?>';
+                        const friendName = '<?php echo $selected_friend ? $selected_friend['username'] : ''; ?>';
+                        
+                        if (friendAvatar) {
+                            const img = document.createElement('img');
+                            img.src = friendAvatar;
+                            img.alt = friendName;
+                            img.style.cssText = 'width: 100%; height: 100%; border-radius: 50%; object-fit: cover;';
+                            avatarDiv.appendChild(img);
+                        } else {
+                            avatarDiv.textContent = friendName ? friendName.substring(0, 2) : '?';
+                        }
                     }
                 }
             }
@@ -2939,7 +2948,7 @@ $agreed_to_terms = $user->hasAgreedToTerms($user_id);
                                         margin-top: 5px;
                                         text-align: ${isSent ? 'right' : 'left'};
                                     `;
-                                    recallMessageDiv.textContent = `${new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}: ${isSent ? '您' : message.username}撤回了一条消息`;
+                                    recallMessageDiv.textContent = `${new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}: ${isSent ? '您' : message.sender_username}撤回了一条消息`;
                                     
                                     // 清空消息内容
                                     contentDiv.innerHTML = '';
@@ -4184,7 +4193,15 @@ $agreed_to_terms = $user->hasAgreedToTerms($user_id);
         
         // 好友项点击事件
         document.querySelectorAll('.friend-item[data-friend-id]').forEach(item => {
-            item.addEventListener('click', () => {
+            item.addEventListener('click', (e) => {
+                // 阻止事件冒泡
+                e.stopPropagation();
+                
+                // 如果点击的是菜单按钮，不跳转
+                if (e.target.closest('.btn-icon') || e.target.closest('.friend-menu')) {
+                    return;
+                }
+                
                 const friendId = item.dataset.friendId;
                 window.location.href = `chat.php?chat_type=friend&id=${friendId}`;
             });
@@ -4193,10 +4210,14 @@ $agreed_to_terms = $user->hasAgreedToTerms($user_id);
         // 群聊项点击事件
         document.querySelectorAll('.friend-item[data-group-id]').forEach(item => {
             item.addEventListener('click', (e) => {
+                // 阻止事件冒泡
+                e.stopPropagation();
+                
                 // 如果点击的是菜单按钮，不跳转
                 if (e.target.closest('.btn-icon') || e.target.closest('.group-menu')) {
                     return;
                 }
+                
                 const groupId = item.dataset.groupId;
                 window.location.href = `chat.php?chat_type=group&id=${groupId}`;
             });
