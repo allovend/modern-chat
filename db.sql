@@ -94,6 +94,7 @@ CREATE TABLE IF NOT EXISTS groups (
     description TEXT,
     creator_id INT NOT NULL,
     owner_id INT NOT NULL,
+    all_user_group INT DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (creator_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
@@ -149,9 +150,6 @@ CREATE TABLE IF NOT EXISTS feedback (
     status ENUM('pending', 'received', 'fixed') DEFAULT 'pending',
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- 修改groups表，添加all_user_group字段
-ALTER TABLE groups ADD COLUMN all_user_group INT DEFAULT 0 AFTER owner_id;
 
 -- 创建索引以提高查询性能
 CREATE INDEX idx_groups_all_user_group ON groups(all_user_group);
