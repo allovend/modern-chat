@@ -3,7 +3,6 @@ require_once 'config.php';
 require_once 'db.php';
 
 // 确保必要字段存在
-
 try {
     // 检查users表是否有is_deleted字段
     $stmt = $conn->prepare("SHOW COLUMNS FROM users LIKE 'is_deleted'");
@@ -30,14 +29,157 @@ try {
         $conn->exec("UPDATE users SET agreed_to_terms = TRUE WHERE is_admin = TRUE");
         error_log("Set admin users as agreed to terms");
     }
+    
+    // 确保IP相关表存在
+    // 不要直接包含db.sql文件，这会导致SQL内容被输出
+    // 已通过install_tables.php脚本或createGroupTables函数创建了所需表
 } catch (PDOException $e) {
     error_log("Field setup error: " . $e->getMessage());
+}
+
+// 获取客户端IP地址
+function getClientIP() {
+    if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
+        return $_SERVER['HTTP_CLIENT_IP'];
+    } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+        return $_SERVER['HTTP_X_FORWARDED_FOR'];
+    } else {
+        return $_SERVER['REMOTE_ADDR'];
+    }
+}
+
+// 记录登录尝试
+        function logLoginAttempt($conn, $ip_address, $is_successful = false) {
+            try {
+                // 将is_successful转换为整数
+                $is_successful_int = (int)$is_successful;
+                $stmt = $conn->prepare("INSERT INTO ip_login_attempts (ip_address, is_successful) VALUES (?, ?)");
+                $stmt->execute([$ip_address, $is_successful_int]);
+                return true;
+            } catch (PDOException $e) {
+                error_log("Log Login Attempt Error: " . $e->getMessage());
+                return false;
+            }
+        }
+
+// 更新过期的IP封禁
+function updateExpiredIpBans($conn) {
+    try {
+        $stmt = $conn->prepare("UPDATE ip_bans SET status = 'expired' WHERE status = 'active' AND ban_end <= NOW()");
+        $stmt->execute();
+        return true;
+    } catch (PDOException $e) {
+        error_log("Update Expired IP Bans Error: " . $e->getMessage());
+        return false;
+    }
+}
+
+// 检查IP是否被封禁
+function isIpBanned($conn, $ip_address) {
+    // 先更新过期的封禁
+    updateExpiredIpBans($conn);
+    
+    try {
+        $stmt = $conn->prepare("SELECT * FROM ip_bans WHERE ip_address = ? AND status = 'active'");
+        $stmt->execute([$ip_address]);
+        $ban = $stmt->fetch();
+        return $ban;
+    } catch (PDOException $e) {
+        error_log("Check IP Ban Error: " . $e->getMessage());
+        return false;
+    }
+}
+
+// 计算下一次封禁时长
+function calculateBanDuration($conn, $ip_address) {
+    try {
+        // 获取该IP的上一次封禁记录
+        $stmt = $conn->prepare("SELECT ban_duration, id FROM ip_bans WHERE ip_address = ? AND status = 'expired' ORDER BY ban_end DESC LIMIT 1");
+        $stmt->execute([$ip_address]);
+        $last_ban = $stmt->fetch();
+        
+        if ($last_ban) {
+            // 上一次封禁时长的2倍，最长不超过30天
+            $next_duration = min($last_ban['ban_duration'] * 2, 30 * 24 * 60 * 60);
+            return [$next_duration, $last_ban['id']];
+        } else {
+            // 第一次封禁，24小时
+            return [24 * 60 * 60, null];
+        }
+    } catch (PDOException $e) {
+        error_log("Calculate Ban Duration Error: " . $e->getMessage());
+        return [24 * 60 * 60, null]; // 默认24小时
+    }
+}
+
+// 封禁IP
+function banIpAddress($conn, $ip_address) {
+    try {
+        // 计算封禁时长
+        list($ban_duration, $last_ban_id) = calculateBanDuration($conn, $ip_address);
+        
+        // 计算封禁结束时间
+        $ban_end = date('Y-m-d H:i:s', time() + $ban_duration);
+        
+        // 封禁IP
+        $stmt = $conn->prepare("INSERT INTO ip_bans (ip_address, ban_duration, ban_end, last_ban_id) VALUES (?, ?, ?, ?)");
+        $stmt->execute([$ip_address, $ban_duration, $ban_end, $last_ban_id]);
+        
+        return true;
+    } catch (PDOException $e) {
+        error_log("Ban IP Address Error: " . $e->getMessage());
+        return false;
+    }
+}
+
+// 检查IP的失败登录尝试次数
+function checkFailedLoginAttempts($conn, $ip_address) {
+    try {
+        // 检查5分钟内的失败登录尝试次数
+        $stmt = $conn->prepare("SELECT COUNT(*) as count FROM ip_login_attempts WHERE ip_address = ? AND is_successful = 0 AND attempt_time >= DATE_SUB(NOW(), INTERVAL 5 MINUTE)");
+        $stmt->execute([$ip_address]);
+        $result = $stmt->fetch();
+        
+        return $result['count'];
+    } catch (PDOException $e) {
+        error_log("Check Failed Login Attempts Error: " . $e->getMessage());
+        return 0;
+    }
 }
 
 require_once 'User.php';
 
 // 创建User实例
 $user = new User($conn);
+
+// 获取客户端IP地址
+$client_ip = getClientIP();
+
+// 检查IP是否被封禁
+$ban_info = isIpBanned($conn, $client_ip);
+if ($ban_info) {
+    // IP被封禁，计算剩余封禁时间
+    $ban_end = new DateTime($ban_info['ban_end']);
+    $now = new DateTime();
+    $remaining = $now->diff($ban_end);
+    
+    $error_message = "您的IP地址已被封禁，剩余封禁时间：";
+    if ($remaining->d > 0) {
+        $error_message .= $remaining->d . "天";
+    }
+    if ($remaining->h > 0) {
+        $error_message .= $remaining->h . "小时";
+    }
+    if ($remaining->i > 0) {
+        $error_message .= $remaining->i . "分钟";
+    }
+    if ($remaining->s > 0) {
+        $error_message .= $remaining->s . "秒";
+    }
+    
+    header("Location: login.php?error=" . urlencode($error_message));
+    exit;
+}
 
 // 处理扫码登录
 if (isset($_GET['scan_login']) && isset($_GET['token'])) {
@@ -188,6 +330,9 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $result = $user->login($email, $password);
     
     if ($result['success']) {
+        // 登录成功，记录成功的登录尝试
+        logLoginAttempt($conn, $client_ip, true);
+        
         // 检查用户是否被封禁
         $ban_info = $user->isBanned($result['user']['id']);
         if ($ban_info) {
@@ -204,6 +349,15 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['avatar'] = $result['user']['avatar'];
             $_SESSION['is_admin'] = isset($result['user']['is_admin']) && $result['user']['is_admin'];
             $_SESSION['last_activity'] = time();
+            
+            // 确保用户有加密密钥（如果该方法存在）
+            if (method_exists($user, 'generateEncryptionKeys')) {
+                try {
+                    $user->generateEncryptionKeys($result['user']['id']);
+                } catch (Exception $e) {
+                    error_log("Generate Encryption Keys Error: " . $e->getMessage());
+                }
+            }
             
             // 自动添加Admin管理员为好友并自动通过（如果还不是好友）
             require_once 'Friend.php';
@@ -272,6 +426,20 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: chat.php');
         exit;
     } else {
+        // 登录失败，记录失败的登录尝试
+        logLoginAttempt($conn, $client_ip, false);
+        
+        // 检查失败尝试次数
+        $failed_attempts = checkFailedLoginAttempts($conn, $client_ip);
+        if ($failed_attempts >= 10) {
+            // 封禁IP
+            banIpAddress($conn, $client_ip);
+            
+            // 重定向到登录页面并显示封禁信息
+            header("Location: login.php?error=" . urlencode('登录失败次数过多，您的IP地址已被封禁24小时'));
+            exit;
+        }
+        
         // 登录失败，重定向回登录页面，并传递邮箱参数以便显示忘记密码申请状态
         $email = urlencode($email);
         header("Location: login.php?error=" . urlencode($result['message']) . "&email=" . $email);

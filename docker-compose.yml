@@ -1,11 +1,12 @@
-version: '3.8'
+
 
 services:
   # PHP-FPM服务
   app:
     build: .
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     environment:
       DB_HOST: db
       DB_NAME: chat
@@ -37,6 +38,7 @@ services:
     image: mysql:5.7.44
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-rootpassword}
+      MYSQL_ROOT_HOST: '%'
       MYSQL_DATABASE: chat
     volumes:
       - db_data:/var/lib/mysql
@@ -44,6 +46,12 @@ services:
     restart: always
     networks:
       - chat-network
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p${DB_PASSWORD:-rootpassword}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   # phpMyAdmin服务
   phpmyadmin:

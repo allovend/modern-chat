@@ -189,19 +189,16 @@ class User {
      */
     public function updateExpiredBans() {
         try {
-            // 开始事务
-            $this->conn->beginTransaction();
-            
             // 获取已过期的封禁，只处理有结束时间的封禁
             $stmt = $this->conn->prepare("SELECT id FROM bans WHERE status = 'active' AND ban_end IS NOT NULL AND ban_end <= NOW()");
             $stmt->execute();
             $expired_bans = $stmt->fetchAll();
             
             if (!empty($expired_bans)) {
-                // 删除已过期的封禁记录
+                // 将已过期的封禁记录状态更新为'expired'，而不是删除
                 $ban_ids = array_column($expired_bans, 'id');
                 $placeholders = rtrim(str_repeat('?,', count($ban_ids)), ',');
-                $stmt = $this->conn->prepare("DELETE FROM bans WHERE id IN ($placeholders)");
+                $stmt = $this->conn->prepare("UPDATE bans SET status = 'expired' WHERE id IN ($placeholders)");
                 $stmt->execute($ban_ids);
                 
                 // 记录封禁日志
@@ -210,12 +207,7 @@ class User {
                     $stmt->execute([$ban_id]);
                 }
             }
-            
-            // 提交事务
-            $this->conn->commit();
         } catch(PDOException $e) {
-            // 回滚事务
-            $this->conn->rollBack();
             error_log("Update Expired Bans Error: " . $e->getMessage());
         }
     }
@@ -230,20 +222,35 @@ class User {
      */
     public function banUser($user_id, $banned_by, $reason, $ban_duration) {
         try {
-            // 检查用户是否已经被封禁
-            $existing_ban = $this->isBanned($user_id);
-            if ($existing_ban) {
-                return false;
-            }
-            
             // 计算封禁结束时间，0表示永久封禁
             $ban_end = $ban_duration > 0 ? date('Y-m-d H:i:s', time() + $ban_duration) : null;
             
             // 开始事务
             $this->conn->beginTransaction();
             
-            // 插入封禁记录，存储秒数以便后续计算
-            $stmt = $this->conn->prepare("INSERT INTO bans (user_id, banned_by, reason, ban_duration, ban_end) VALUES (?, ?, ?, ?, ?)");
+            // 处理可能存在的旧封禁记录，删除或更新状态
+            // 先检查是否存在旧的封禁记录
+            $stmt = $this->conn->prepare("SELECT id FROM bans WHERE user_id = ? AND status IN ('lifted', 'expired')");
+            $stmt->execute([$user_id]);
+            $old_bans = $stmt->fetchAll();
+            
+            // 如果有旧的封禁记录，删除它们
+            if ($old_bans) {
+                $ban_ids = array_column($old_bans, 'id');
+                $placeholders = rtrim(str_repeat('?,', count($ban_ids)), ',');
+                $stmt = $this->conn->prepare("DELETE FROM bans WHERE id IN ($placeholders)");
+                $stmt->execute($ban_ids);
+            }
+            
+            // 检查用户是否已经被封禁
+            $existing_ban = $this->isBanned($user_id);
+            if ($existing_ban) {
+                $this->conn->rollBack();
+                return false;
+            }
+            
+            // 插入封禁记录，存储秒数以便后续计算，并显式设置status为active
+            $stmt = $this->conn->prepare("INSERT INTO bans (user_id, banned_by, reason, ban_duration, ban_end, status) VALUES (?, ?, ?, ?, ?, 'active')");
             $stmt->execute([$user_id, $banned_by, $reason, $ban_duration, $ban_end]);
             $ban_id = $this->conn->lastInsertId();
             
@@ -357,6 +364,143 @@ class User {
         } catch(PDOException $e) {
             error_log("Update Terms Agreement Error: " . $e->getMessage());
             return false;
+        }
+    }
+    
+    /**
+     * 用户同意协议
+     * @param int $user_id 用户ID
+     * @return bool 是否更新成功
+     */
+    public function agreeToTerms($user_id) {
+        // 直接调用updateTermsAgreement方法，设置为同意
+        return $this->updateTermsAgreement($user_id, true);
+    }
+    
+    /**
+     * 生成RSA密钥对
+     * @return array 包含public_key和private_key的数组
+     */
+    private function generateRSAKeys() {
+        $config = array(
+            "digest_alg" => "sha512",
+            "private_key_bits" => 2048,
+            "private_key_type" => OPENSSL_KEYTYPE_RSA,
+        );
+        
+        // 创建密钥对
+        $res = openssl_pkey_new($config);
+        
+        // 提取私钥
+        openssl_pkey_export($res, $private_key);
+        
+        // 提取公钥
+        $public_key = openssl_pkey_get_details($res);
+        $public_key = $public_key["key"];
+        
+        return array(
+            "public_key" => $public_key,
+            "private_key" => $private_key
+        );
+    }
+    
+    /**
+     * 为用户生成并存储加密密钥
+     * @param int $user_id 用户ID
+     * @return bool 是否成功
+     */
+    public function generateEncryptionKeys($user_id) {
+        try {
+            // 检查用户是否已经有密钥
+            $stmt = $this->conn->prepare("SELECT id FROM encryption_keys WHERE user_id = ?");
+            $stmt->execute([$user_id]);
+            if ($stmt->fetch()) {
+                // 用户已经有密钥，不需要重新生成
+                return true;
+            }
+            
+            // 生成密钥对
+            $keys = $this->generateRSAKeys();
+            
+            // 存储密钥
+            $stmt = $this->conn->prepare(
+                "INSERT INTO encryption_keys (user_id, public_key, private_key) 
+                 VALUES (?, ?, ?)"
+            );
+            $stmt->execute([$user_id, $keys["public_key"], $keys["private_key"]]);
+            
+            return true;
+        } catch(PDOException $e) {
+            error_log("Generate Encryption Keys Error: " . $e->getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * 获取用户的公钥
+     * @param int $user_id 用户ID
+     * @return string|null 公钥，如果不存在则返回null
+     */
+    public function getPublicKey($user_id) {
+        try {
+            $stmt = $this->conn->prepare("SELECT public_key FROM encryption_keys WHERE user_id = ?");
+            $stmt->execute([$user_id]);
+            $result = $stmt->fetch();
+            return $result ? $result["public_key"] : null;
+        } catch(PDOException $e) {
+            error_log("Get Public Key Error: " . $e->getMessage());
+            return null;
+        }
+    }
+    
+    /**
+     * 获取用户的私钥
+     * @param int $user_id 用户ID
+     * @return string|null 私钥，如果不存在则返回null
+     */
+    public function getPrivateKey($user_id) {
+        try {
+            $stmt = $this->conn->prepare("SELECT private_key FROM encryption_keys WHERE user_id = ?");
+            $stmt->execute([$user_id]);
+            $result = $stmt->fetch();
+            return $result ? $result["private_key"] : null;
+        } catch(PDOException $e) {
+            error_log("Get Private Key Error: " . $e->getMessage());
+            return null;
+        }
+    }
+    
+    /**
+     * 加密消息
+     * @param string $message 要加密的消息
+     * @param string $public_key 接收者的公钥
+     * @return string|null 加密后的消息，如果加密失败则返回null
+     */
+    public function encryptMessage($message, $public_key) {
+        try {
+            $encrypted = "";
+            openssl_public_encrypt($message, $encrypted, $public_key);
+            return base64_encode($encrypted);
+        } catch(Exception $e) {
+            error_log("Encrypt Message Error: " . $e->getMessage());
+            return null;
+        }
+    }
+    
+    /**
+     * 解密消息
+     * @param string $encrypted_message 加密后的消息
+     * @param string $private_key 接收者的私钥
+     * @return string|null 解密后的消息，如果解密失败则返回null
+     */
+    public function decryptMessage($encrypted_message, $private_key) {
+        try {
+            $decrypted = "";
+            openssl_private_decrypt(base64_decode($encrypted_message), $decrypted, $private_key);
+            return $decrypted;
+        } catch(Exception $e) {
+            error_log("Decrypt Message Error: " . $e->getMessage());
+            return null;
         }
     }
     

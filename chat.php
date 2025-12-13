@@ -29,7 +29,7 @@ function createGroupTables() {
         id INT AUTO_INCREMENT PRIMARY KEY,
         group_id INT NOT NULL,
         user_id INT NOT NULL,
-        role ENUM('admin', 'member') DEFAULT 'member',
+        is_admin BOOLEAN DEFAULT FALSE,
         joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -172,11 +172,11 @@ $selected_friend_id = null;
 
 // 如果没有选中的聊天对象，自动选择第一个好友或群聊
 if (!$selected_id) {
-    if ($chat_type === 'friend' && !empty($friends)) {
+    if ($chat_type === 'friend' && !empty($friends) && isset($friends[0]['id'])) {
         $selected_id = $friends[0]['id'];
         $selected_friend = $friends[0];
         $selected_friend_id = $selected_id;
-    } elseif ($chat_type === 'group' && !empty($groups)) {
+    } elseif ($chat_type === 'group' && !empty($groups) && isset($groups[0]['id'])) {
         $selected_id = $groups[0]['id'];
         $selected_group = $group->getGroupInfo($selected_id);
     }
@@ -991,8 +991,8 @@ $agreed_to_terms = $user->hasAgreedToTerms($user_id);
             
             <!-- 聊天类型切换 -->
             <div style="display: flex; background: white; border-bottom: 1px solid #e0e0e0;">
-                <button class="chat-type-btn <?php echo $chat_type === 'friend' ? 'active' : ''; ?>" onclick="switchChatType('friend')" style="flex: 1; padding: 12px; border: none; background: transparent; cursor: pointer; font-size: 14px; font-weight: 600; color: <?php echo $chat_type === 'friend' ? '#667eea' : '#666'; ?>; border-bottom: 2px solid <?php echo $chat_type === 'friend' ? '#667eea' : 'transparent'; ?>;">好友</button>
-                <button class="chat-type-btn <?php echo $chat_type === 'group' ? 'active' : ''; ?>" onclick="switchChatType('group')" style="flex: 1; padding: 12px; border: none; background: transparent; cursor: pointer; font-size: 14px; font-weight: 600; color: <?php echo $chat_type === 'group' ? '#667eea' : '#666'; ?>; border-bottom: 2px solid <?php echo $chat_type === 'group' ? '#667eea' : 'transparent'; ?>;">群聊</button>
+                <button class="chat-type-btn <?php echo $chat_type === 'friend' ? 'active' : ''; ?>" data-chat-type="friend" style="flex: 1; padding: 12px; border: none; background: transparent; cursor: pointer; font-size: 14px; font-weight: 600; color: <?php echo $chat_type === 'friend' ? '#667eea' : '#666'; ?>; border-bottom: 2px solid <?php echo $chat_type === 'friend' ? '#667eea' : 'transparent'; ?>;">好友</button>
+                <button class="chat-type-btn <?php echo $chat_type === 'group' ? 'active' : ''; ?>" data-chat-type="group" style="flex: 1; padding: 12px; border: none; background: transparent; cursor: pointer; font-size: 14px; font-weight: 600; color: <?php echo $chat_type === 'group' ? '#667eea' : '#666'; ?>; border-bottom: 2px solid <?php echo $chat_type === 'group' ? '#667eea' : 'transparent'; ?>;">群聊</button>
             </div>
             
             <!-- 好友列表 -->
@@ -1005,7 +1005,11 @@ $agreed_to_terms = $user->hasAgreedToTerms($user_id);
                     ?>
                     <div class="friend-item <?php echo $chat_type === 'friend' && $selected_id == $friend_id ? 'active' : ''; ?>" data-friend-id="<?php echo $friend_id; ?>">
                         <div class="friend-avatar">
-                            <?php if (!empty($friend_item['avatar'])): ?>
+                            <?php 
+                                // 检查是否是默认头像
+                                $is_default_avatar = !empty($friend_item['avatar']) && (strpos($friend_item['avatar'], 'default_avatar.png') !== false || $friend_item['avatar'] === 'default_avatar.png');
+                            ?>
+                            <?php if (!empty($friend_item['avatar']) && !$is_default_avatar): ?>
                                 <img src="<?php echo $friend_item['avatar']; ?>" alt="<?php echo $friend_item['username']; ?>" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
                             <?php else: ?>
                                 <?php echo substr($friend_item['username'], 0, 2); ?>
@@ -1094,10 +1098,12 @@ $agreed_to_terms = $user->hasAgreedToTerms($user_id);
                     <label style="display: block; margin-bottom: 8px; font-size: 13px; color: #555;">选择好友</label>
                     <div id="group-members-select" style="max-height: 200px; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 4px; padding: 10px;">
                         <?php foreach ($friends as $friend_item): ?>
-                            <div style="display: flex; align-items: center; margin-bottom: 10px;">
-                                <input type="checkbox" id="member-<?php echo $friend_item['id']; ?>" value="<?php echo $friend_item['id']; ?>" style="margin-right: 10px;">
-                                <label for="member-<?php echo $friend_item['id']; ?>" style="font-size: 14px; color: #333;"><?php echo $friend_item['username']; ?></label>
-                            </div>
+                            <?php if (isset($friend_item['id'])): ?>
+                                <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                                    <input type="checkbox" id="member-<?php echo $friend_item['id']; ?>" value="<?php echo $friend_item['id']; ?>" style="margin-right: 10px;">
+                                    <label for="member-<?php echo $friend_item['id']; ?>" style="font-size: 14px; color: #333;"><?php echo $friend_item['username']; ?></label>
+                                </div>
+                            <?php endif; ?>
                         <?php endforeach; ?>
                     </div>
                 </div>
@@ -1512,7 +1518,6 @@ $agreed_to_terms = $user->hasAgreedToTerms($user_id);
         if (chatType === 'group' && groupId) {
             checkGroupBanStatus(groupId);
         }
-        
     });
     
                     // 初始聊天记录数据
@@ -1754,6 +1759,22 @@ $agreed_to_terms = $user->hasAgreedToTerms($user_id);
                     <?php endforeach; ?>
                 <?php endif; ?>
             </div>
+            
+            <script>
+                // 接受好友请求 - 全局函数
+                function acceptRequest(requestId) {
+                    if (confirm('确定要接受这个好友请求吗？')) {
+                        window.location.href = `accept_request.php?request_id=${requestId}`;
+                    }
+                }
+                
+                // 拒绝好友请求 - 全局函数
+                function rejectRequest(requestId) {
+                    if (confirm('确定要拒绝这个好友请求吗？')) {
+                        window.location.href = `reject_request.php?request_id=${requestId}`;
+                    }
+                }
+            </script>
         </div>
     </div>
     
@@ -1962,13 +1983,19 @@ $agreed_to_terms = $user->hasAgreedToTerms($user_id);
         });
         
         // 文件选择事件监听 - 当选择文件后自动提交
-        document.getElementById('file-input').addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                console.log('文件已选择，自动提交表单');
-                document.getElementById('message-form').dispatchEvent(new Event('submit'));
-            }
-        });
+        const fileInput = document.getElementById('file-input');
+        if (fileInput) {
+            fileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    console.log('文件已选择，自动提交表单');
+                    const messageForm = document.getElementById('message-form');
+                    if (messageForm) {
+                        messageForm.dispatchEvent(new Event('submit'));
+                    }
+                }
+            });
+        }
         
         // 截图功能
         async function takeScreenshot() {
@@ -2064,171 +2091,188 @@ $agreed_to_terms = $user->hasAgreedToTerms($user_id);
         let isMentioning = false;
         let currentMentionIndex = -1;
         
-        // 获取群聊成员列表
-        async function fetchGroupMembers() {
-            <?php if ($chat_type === 'group'): ?>
-                try {
-                    const response = await fetch(`get_group_members.php?group_id=<?php echo $selected_id; ?>`);
-                    const data = await response.json();
-                    if (data.success) {
-                        groupMembers = data.members;
+        // 检查元素是否存在
+        if (!mentionDropdown || !messageInput) {
+            // 如果必要元素不存在，跳过@功能初始化
+            console.log('@功能初始化失败：未找到必要的DOM元素');
+        } else {
+            // 获取群聊成员列表
+            async function fetchGroupMembers() {
+                <?php if ($chat_type === 'group'): ?>
+                    try {
+                        const response = await fetch(`get_group_members.php?group_id=<?php echo $selected_id; ?>`);
+                        const data = await response.json();
+                        if (data.success) {
+                            groupMembers = data.members;
+                        }
+                    } catch (error) {
+                        console.error('获取群成员失败:', error);
                     }
-                } catch (error) {
-                    console.error('获取群成员失败:', error);
+                <?php endif; ?>
+            }
+            
+            // 初始化群成员数据
+            fetchGroupMembers();
+            
+            // 显示@下拉列表
+            function showMentionDropdown() {
+                mentionDropdown.style.display = 'block';
+            }
+            
+            // 隐藏@下拉列表
+            function hideMentionDropdown() {
+                if (mentionDropdown) {
+                    mentionDropdown.style.display = 'none';
                 }
-            <?php endif; ?>
-        }
-        
-        // 初始化群成员数据
-        fetchGroupMembers();
-        
-        // 显示@下拉列表
-        function showMentionDropdown() {
-            mentionDropdown.style.display = 'block';
-        }
-        
-        // 隐藏@下拉列表
-        function hideMentionDropdown() {
-            mentionDropdown.style.display = 'none';
-            isMentioning = false;
-            currentMentionIndex = -1;
-        }
-        
-        // 更新@下拉列表内容
-        function updateMentionDropdown(filter = '') {
-            if (!groupMembers.length) return;
-            
-            let filteredMembers = groupMembers;
-            if (filter) {
-                filteredMembers = groupMembers.filter(member => 
-                    member.username.toLowerCase().includes(filter.toLowerCase())
-                );
+                isMentioning = false;
+                currentMentionIndex = -1;
             }
             
-            // 显示全部成员，不再限制数量
-            // filteredMembers = filteredMembers.slice(0, 5);
-            
-            mentionDropdown.innerHTML = '';
-            
-            filteredMembers.forEach((member, index) => {
-                const memberItem = document.createElement('div');
-                memberItem.className = 'mention-item';
-                memberItem.innerHTML = `
-                    <div style="display: flex; align-items: center; padding: 10px; cursor: pointer; transition: background-color 0.2s;">
-                        <div style="width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 12px; margin-right: 10px;">
-                            ${member.username.charAt(0)}
-                        </div>
-                        <div>
-                            <div style="font-weight: 500; font-size: 14px;">${member.username}</div>
-                            ${member.is_owner ? '<div style="font-size: 12px; color: #ff4757;">群主</div>' : member.is_admin ? '<div style="font-size: 12px; color: #ffa502;">管理员</div>' : ''}
-                        </div>
-                    </div>
-                `;
+            // 更新@下拉列表内容
+            function updateMentionDropdown(filter = '') {
+                if (!groupMembers.length) return;
                 
-                // 添加悬停效果
-                memberItem.addEventListener('mouseenter', () => {
-                    memberItem.style.backgroundColor = '#f0f0f0';
+                let filteredMembers = groupMembers;
+                if (filter) {
+                    filteredMembers = groupMembers.filter(member => 
+                        member.username.toLowerCase().includes(filter.toLowerCase())
+                    );
+                }
+                
+                // 显示全部成员，不再限制数量
+                // filteredMembers = filteredMembers.slice(0, 5);
+                
+                mentionDropdown.innerHTML = '';
+                
+                filteredMembers.forEach((member, index) => {
+                    const memberItem = document.createElement('div');
+                    memberItem.className = 'mention-item';
+                    memberItem.innerHTML = `
+                        <div style="display: flex; align-items: center; padding: 10px; cursor: pointer; transition: background-color 0.2s;">
+                            <div style="width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 12px; margin-right: 10px;">
+                                ${member.username.charAt(0)}
+                            </div>
+                            <div>
+                                <div style="font-weight: 500; font-size: 14px;">${member.username}</div>
+                                ${member.is_owner ? '<div style="font-size: 12px; color: #ff4757;">群主</div>' : member.is_admin ? '<div style="font-size: 12px; color: #ffa502;">管理员</div>' : ''}
+                            </div>
+                        </div>
+                    `;
+                    
+                    // 添加悬停效果
+                    memberItem.addEventListener('mouseenter', () => {
+                        memberItem.style.backgroundColor = '#f0f0f0';
+                    });
+                    
+                    memberItem.addEventListener('mouseleave', () => {
+                        memberItem.style.backgroundColor = 'transparent';
+                    });
+                    
+                    // 添加点击事件
+                    memberItem.addEventListener('click', () => {
+                        insertMention(member.username);
+                        hideMentionDropdown();
+                    });
+                    
+                    mentionDropdown.appendChild(memberItem);
                 });
                 
-                memberItem.addEventListener('mouseleave', () => {
-                    memberItem.style.backgroundColor = 'transparent';
-                });
-                
-                // 添加点击事件
-                memberItem.addEventListener('click', () => {
-                    insertMention(member.username);
+                if (filteredMembers.length > 0) {
+                    showMentionDropdown();
+                } else {
                     hideMentionDropdown();
-                });
+                }
+            }
+            
+            // 插入@用户名到输入框
+            function insertMention(username) {
+                const cursorPos = messageInput.selectionStart;
+                const textBeforeCursor = messageInput.value.substring(0, cursorPos);
+                const textAfterCursor = messageInput.value.substring(cursorPos);
                 
-                mentionDropdown.appendChild(memberItem);
+                // 找到@符号的位置
+                const atIndex = textBeforeCursor.lastIndexOf('@');
+                if (atIndex !== -1) {
+                    // 替换@及之后的内容为@username
+                    const newText = textBeforeCursor.substring(0, atIndex) + '@' + username + ' ' + textAfterCursor;
+                    messageInput.value = newText;
+                    
+                    // 设置光标位置到@username之后
+                    const newCursorPos = atIndex + username.length + 2; // @ + username + 空格
+                    messageInput.focus();
+                    messageInput.setSelectionRange(newCursorPos, newCursorPos);
+                }
+            }
+            
+            // 消息输入框输入事件 - 处理@功能
+            messageInput.addEventListener('input', (e) => {
+                const cursorPos = messageInput.selectionStart;
+                const textBeforeCursor = messageInput.value.substring(0, cursorPos);
+                
+                // 检查最后一个@符号的位置
+                const lastAtIndex = textBeforeCursor.lastIndexOf('@');
+                
+                // 检查@符号后面是否有空格或其他字符
+                const textAfterAt = textBeforeCursor.substring(lastAtIndex + 1);
+                const hasSpaceAfterAt = textAfterAt.includes(' ');
+                
+                if (lastAtIndex !== -1 && !hasSpaceAfterAt) {
+                    // 用户正在输入@
+                    isMentioning = true;
+                    const filter = textAfterAt;
+                    updateMentionDropdown(filter);
+                } else {
+                    // 用户没有在输入@或者@后面有空格
+                    hideMentionDropdown();
+                }
             });
-            
-            if (filteredMembers.length > 0) {
-                showMentionDropdown();
-            } else {
-                hideMentionDropdown();
-            }
         }
-        
-        // 插入@用户名到输入框
-        function insertMention(username) {
-            const cursorPos = messageInput.selectionStart;
-            const textBeforeCursor = messageInput.value.substring(0, cursorPos);
-            const textAfterCursor = messageInput.value.substring(cursorPos);
-            
-            // 找到@符号的位置
-            const atIndex = textBeforeCursor.lastIndexOf('@');
-            if (atIndex !== -1) {
-                // 替换@及之后的内容为@username
-                const newText = textBeforeCursor.substring(0, atIndex) + '@' + username + ' ' + textAfterCursor;
-                messageInput.value = newText;
-                
-                // 设置光标位置到@username之后
-                const newCursorPos = atIndex + username.length + 2; // @ + username + 空格
-                messageInput.focus();
-                messageInput.setSelectionRange(newCursorPos, newCursorPos);
-            }
-        }
-        
-        // 消息输入框输入事件 - 处理@功能
-        messageInput.addEventListener('input', (e) => {
-            const cursorPos = messageInput.selectionStart;
-            const textBeforeCursor = messageInput.value.substring(0, cursorPos);
-            
-            // 检查最后一个@符号的位置
-            const lastAtIndex = textBeforeCursor.lastIndexOf('@');
-            
-            // 检查@符号后面是否有空格或其他字符
-            const textAfterAt = textBeforeCursor.substring(lastAtIndex + 1);
-            const hasSpaceAfterAt = textAfterAt.includes(' ');
-            
-            if (lastAtIndex !== -1 && !hasSpaceAfterAt) {
-                // 用户正在输入@
-                isMentioning = true;
-                const filter = textAfterAt;
-                updateMentionDropdown(filter);
-            } else {
-                // 用户没有在输入@或者@后面有空格
-                hideMentionDropdown();
-            }
-        });
         
         // 消息输入框键盘事件 - Enter发送，Shift+Enter换行
-        document.getElementById('message-input').addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                hideMentionDropdown();
-                document.getElementById('message-form').dispatchEvent(new Event('submit'));
-            } else if (e.key === 'Escape') {
-                // 按ESC键隐藏下拉列表
-                hideMentionDropdown();
-            } else if (e.key === 'ArrowUp') {
-                // 按上箭头选择上一个成员
-                e.preventDefault();
-                if (isMentioning && mentionDropdown.children.length > 0) {
-                    currentMentionIndex = Math.max(0, currentMentionIndex - 1);
-                    highlightMentionItem(currentMentionIndex);
-                }
-            } else if (e.key === 'ArrowDown') {
-                // 按下箭头选择下一个成员
-                e.preventDefault();
-                if (isMentioning && mentionDropdown.children.length > 0) {
-                    currentMentionIndex = Math.min(mentionDropdown.children.length - 1, currentMentionIndex + 1);
-                    highlightMentionItem(currentMentionIndex);
-                }
-            } else if (e.key === 'Tab' || e.key === 'Enter') {
-                // 按Tab或Enter键选择当前高亮的成员
-                if (isMentioning && currentMentionIndex >= 0 && mentionDropdown.children.length > 0) {
+        const messageInputElement = document.getElementById('message-input');
+        if (messageInputElement) {
+            messageInputElement.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
-                    const selectedMember = groupMembers[currentMentionIndex];
-                    insertMention(selectedMember.username);
                     hideMentionDropdown();
+                    const messageFormElement = document.getElementById('message-form');
+                    if (messageFormElement) {
+                        messageFormElement.dispatchEvent(new Event('submit'));
+                    }
+                } else if (e.key === 'Escape') {
+                    // 按ESC键隐藏下拉列表
+                    hideMentionDropdown();
+                } else if (e.key === 'ArrowUp') {
+                    // 按上箭头选择上一个成员
+                    e.preventDefault();
+                    if (isMentioning && mentionDropdown && mentionDropdown.children.length > 0) {
+                        currentMentionIndex = Math.max(0, currentMentionIndex - 1);
+                        highlightMentionItem(currentMentionIndex);
+                    }
+                } else if (e.key === 'ArrowDown') {
+                    // 按下箭头选择下一个成员
+                    e.preventDefault();
+                    if (isMentioning && mentionDropdown && mentionDropdown.children.length > 0) {
+                        currentMentionIndex = Math.min(mentionDropdown.children.length - 1, currentMentionIndex + 1);
+                        highlightMentionItem(currentMentionIndex);
+                    }
+                } else if (e.key === 'Tab' || e.key === 'Enter') {
+                    // 按Tab或Enter键选择当前高亮的成员
+                    if (isMentioning && currentMentionIndex >= 0 && mentionDropdown && mentionDropdown.children.length > 0) {
+                        e.preventDefault();
+                        const selectedMember = groupMembers[currentMentionIndex];
+                        insertMention(selectedMember.username);
+                        hideMentionDropdown();
+                    }
                 }
-            }
-        });
+            });
+        }
         
         // 高亮@列表中的当前选中项
         function highlightMentionItem(index) {
+            // 检查mentionDropdown是否存在
+            if (!mentionDropdown) return;
+            
             // 移除所有高亮
             Array.from(mentionDropdown.children).forEach(item => {
                 item.style.backgroundColor = 'transparent';
@@ -2244,7 +2288,7 @@ $agreed_to_terms = $user->hasAgreedToTerms($user_id);
         
         // 点击页面其他地方隐藏@下拉列表
         document.addEventListener('click', (e) => {
-            if (!messageInput.contains(e.target) && !mentionDropdown.contains(e.target)) {
+            if (messageInput && mentionDropdown && !messageInput.contains(e.target) && !mentionDropdown.contains(e.target)) {
                 hideMentionDropdown();
             }
         });
@@ -2252,6 +2296,8 @@ $agreed_to_terms = $user->hasAgreedToTerms($user_id);
         // 消息队列实现
         let isSending = false;
         const messageQueue = [];
+        // 定义lastMessageId变量，确保在processMessageQueue函数中可用
+        let lastMessageId = <?php echo end($chat_history)['id'] ?? 0; ?>;
         
         // 发送消息队列中的下一条消息
         async function processMessageQueue() {
@@ -2325,64 +2371,73 @@ $agreed_to_terms = $user->hasAgreedToTerms($user_id);
         }
         
         // 发送消息
-        document.getElementById('message-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            // 添加更多调试信息
-            console.log('表单提交事件触发');
-            
-            const formData = new FormData(e.target);
-            const messageInput = document.getElementById('message-input');
-            const messagesContainer = document.getElementById('messages-container');
-            
-            const messageText = messageInput.value.trim();
-            const file = document.getElementById('file-input').files[0];
-            
-            console.log('消息文本:', messageText);
-            console.log('文件:', file);
-            
-            if (!messageText && !file) {
-                console.log('没有消息文本和文件，不发送');
-                return;
-            }
-            
-            // 验证消息内容，禁止HTML标签
-            if (messageText && /<[^>]*>/.test(messageText)) {
-                showResultModal('发送失败', '消息中不能包含HTML标签', 'error');
-                return;
-            }
-            
-            // 文件大小验证（从配置中获取）
-            const maxFileSize = <?php echo getConfig('upload_files_max', 150); ?> * 1024 * 1024;
-            if (file && file.size > maxFileSize) {
-                showResultModal('文件大小超过限制', '文件大小不能超过' + <?php echo getConfig('upload_files_max', 150); ?> + 'MB', 'error');
-                return;
-            }
-            
-            // 添加临时消息
-            const tempMessage = createTempMessage(messageText, file);
-            messagesContainer.appendChild(tempMessage);
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-            
-            // 清空输入
-            messageInput.value = '';
-            document.getElementById('file-input').value = '';
-            
-            // 将消息添加到队列
-            messageQueue.push({
-                formData,
-                messageText,
-                file,
-                tempMessage,
-                messageInput,
-                messagesContainer
+        const messageFormElement = document.getElementById('message-form');
+        if (messageFormElement) {
+            messageFormElement.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                // 添加更多调试信息
+                console.log('表单提交事件触发');
+                
+                const formData = new FormData(e.target);
+                const messageInput = document.getElementById('message-input');
+                const messagesContainer = document.getElementById('messages-container');
+                const fileInput = document.getElementById('file-input');
+                
+                if (!messageInput || !messagesContainer || !fileInput) {
+                    console.error('发送消息失败：未找到必要的DOM元素');
+                    return;
+                }
+                
+                const messageText = messageInput.value.trim();
+                const file = fileInput.files[0];
+                
+                console.log('消息文本:', messageText);
+                console.log('文件:', file);
+                
+                if (!messageText && !file) {
+                    console.log('没有消息文本和文件，不发送');
+                    return;
+                }
+                
+                // 验证消息内容，禁止HTML标签（包括未闭合标签）
+                if (messageText && /<\s*[a-zA-Z][a-zA-Z0-9-_:.]*(\s+[^>]*|$)/i.test(messageText)) {
+                    showResultModal('发送失败', '消息中不能包含HTML标签', 'error');
+                    return;
+                }
+                
+                // 文件大小验证（从配置中获取）
+                const maxFileSize = <?php echo getConfig('upload_files_max', 150); ?> * 1024 * 1024;
+                if (file && file.size > maxFileSize) {
+                    showResultModal('文件大小超过限制', '文件大小不能超过' + <?php echo getConfig('upload_files_max', 150); ?> + 'MB', 'error');
+                    return;
+                }
+                
+                // 添加临时消息
+                const tempMessage = createTempMessage(messageText, file);
+                messagesContainer.appendChild(tempMessage);
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                
+                // 清空输入
+                messageInput.value = '';
+                fileInput.value = '';
+                
+                // 将消息添加到队列
+                messageQueue.push({
+                    formData,
+                    messageText,
+                    file,
+                    tempMessage,
+                    messageInput,
+                    messagesContainer
+                });
+                
+                console.log('消息已添加到队列，当前队列长度:', messageQueue.length);
+                
+                // 处理消息队列
+                processMessageQueue();
             });
-            
-            console.log('消息已添加到队列，当前队列长度:', messageQueue.length);
-            
-            // 处理消息队列
-            processMessageQueue();
-        });
+        }
         
         // 创建临时消息
         function createTempMessage(text, file) {
@@ -2629,6 +2684,8 @@ $agreed_to_terms = $user->hasAgreedToTerms($user_id);
         function createMessage(message, isSent) {
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${isSent ? 'sent' : 'received'}`;
+            // 添加消息ID属性，用于去重
+            messageDiv.setAttribute('data-message-id', message.id);
             
             const avatarDiv = document.createElement('div');
             avatarDiv.className = 'message-avatar';
@@ -2636,9 +2693,14 @@ $agreed_to_terms = $user->hasAgreedToTerms($user_id);
             // 获取当前用户头像
             const currentUserAvatar = '<?php echo !empty($current_user['avatar']) ? $current_user['avatar'] : ''; ?>';
             
+            // 辅助函数：检查是否是默认头像
+            function isDefaultAvatar(avatar) {
+                return avatar && (avatar.includes('default_avatar.png') || avatar === 'default_avatar.png');
+            }
+            
             if (isSent) {
                 // 发送的消息，使用当前用户头像
-                if (currentUserAvatar) {
+                if (currentUserAvatar && !isDefaultAvatar(currentUserAvatar)) {
                     const img = document.createElement('img');
                     img.src = currentUserAvatar;
                     img.alt = '<?php echo $username; ?>';
@@ -2649,7 +2711,7 @@ $agreed_to_terms = $user->hasAgreedToTerms($user_id);
                 }
             } else {
                 // 接收的消息，使用发送者头像（适用于群聊和好友聊天）
-                if (message.avatar) {
+                if (message.avatar && !isDefaultAvatar(message.avatar)) {
                     // 群聊消息，使用发送者的头像
                     const img = document.createElement('img');
                     img.src = message.avatar;
@@ -2668,7 +2730,7 @@ $agreed_to_terms = $user->hasAgreedToTerms($user_id);
                         const friendAvatar = '<?php echo $selected_friend && !empty($selected_friend['avatar']) ? $selected_friend['avatar'] : ''; ?>';
                         const friendName = '<?php echo $selected_friend ? $selected_friend['username'] : ''; ?>';
                         
-                        if (friendAvatar) {
+                        if (friendAvatar && !isDefaultAvatar(friendAvatar)) {
                             const img = document.createElement('img');
                             img.src = friendAvatar;
                             img.alt = friendName;
@@ -3053,11 +3115,13 @@ $agreed_to_terms = $user->hasAgreedToTerms($user_id);
         });
         
         // 搜索好友
-        document.getElementById('search-input').addEventListener('input', async (e) => {
-            const searchTerm = e.target.value.trim();
-            const searchResults = document.getElementById('search-results');
-            
-            if (searchTerm.length < 1) {
+        const searchInput = document.getElementById('search-input');
+        if (searchInput) {
+            searchInput.addEventListener('input', async (e) => {
+                const searchTerm = e.target.value.trim();
+                const searchResults = document.getElementById('search-results');
+                
+                if (searchTerm.length < 1) {
                 searchResults.style.display = 'none';
                 return;
             }
@@ -3158,20 +3222,6 @@ $agreed_to_terms = $user->hasAgreedToTerms($user_id);
             }
         }
         
-        // 接受好友请求
-        function acceptRequest(requestId) {
-            if (confirm('确定要接受这个好友请求吗？')) {
-                window.location.href = `accept_request.php?request_id=${requestId}`;
-            }
-        }
-        
-        // 拒绝好友请求
-        function rejectRequest(requestId) {
-            if (confirm('确定要拒绝这个好友请求吗？')) {
-                window.location.href = `reject_request.php?request_id=${requestId}`;
-            }
-        }
-        
         // 显示添加好友表单
         function showAddFriendForm() {
             document.getElementById('add-friend-form').style.display = 'block';
@@ -3259,14 +3309,20 @@ $agreed_to_terms = $user->hasAgreedToTerms($user_id);
                             let hasNewMessages = false;
                             
                             data.messages.forEach(msg => {
-                                // 添加所有新消息，包括自己发送的和其他成员发送的
-                                const isSent = msg.sender_id == <?php echo $user_id; ?>;
-                                const newMessage = createMessage(msg, isSent);
-                                messagesContainer.appendChild(newMessage);
-                                hasNewMessages = true;
-                                // 更新lastMessageId为最新消息ID
-                                if (msg.id > lastMessageId) {
-                                    lastMessageId = msg.id;
+                                // 检查消息是否已经存在于聊天容器中
+                                const existingMessage = document.querySelector(`[data-message-id="${msg.id}"]`);
+                                if (!existingMessage) {
+                                    // 只添加新消息，包括自己发送的和其他成员发送的
+                                    const isSent = msg.sender_id == <?php echo $user_id; ?>;
+                                    const newMessage = createMessage(msg, isSent);
+                                    messagesContainer.appendChild(newMessage);
+                                    hasNewMessages = true;
+                                    // 更新lastMessageId为最新消息ID
+                                    if (msg.id > lastMessageId) {
+                                        lastMessageId = msg.id;
+                                    }
+                                } else {
+                                    console.log('消息已存在，跳过:', msg.id);
                                 }
                             });
                             
@@ -3288,9 +3344,10 @@ $agreed_to_terms = $user->hasAgreedToTerms($user_id);
                     .catch(error => console.error('获取新消息失败:', error));
                 
                 // 定期检查群聊禁言状态
-                if (chatType === 'group') {
-                    loadChatMuteStatus();
-                }
+                // loadChatMuteStatus() 函数未定义，暂时注释掉
+                // if (chatType === 'group') {
+                //     loadChatMuteStatus();
+                // }
             }
         }
         
@@ -4120,33 +4177,6 @@ $agreed_to_terms = $user->hasAgreedToTerms($user_id);
         }
         
         // 切换聊天类型
-        function switchChatType(type) {
-            const friendsList = document.getElementById('friends-list');
-            const groupsList = document.getElementById('groups-list');
-            const friendBtn = document.querySelector('.chat-type-btn:nth-child(1)');
-            const groupBtn = document.querySelector('.chat-type-btn:nth-child(2)');
-            
-            if (type === 'friend') {
-                friendsList.style.display = 'block';
-                groupsList.style.display = 'none';
-                friendBtn.classList.add('active');
-                groupBtn.classList.remove('active');
-                friendBtn.style.color = '#667eea';
-                friendBtn.style.borderBottomColor = '#667eea';
-                groupBtn.style.color = '#666';
-                groupBtn.style.borderBottomColor = 'transparent';
-            } else {
-                friendsList.style.display = 'none';
-                groupsList.style.display = 'block';
-                friendBtn.classList.remove('active');
-                groupBtn.classList.add('active');
-                friendBtn.style.color = '#666';
-                friendBtn.style.borderBottomColor = 'transparent';
-                groupBtn.style.color = '#667eea';
-                groupBtn.style.borderBottomColor = '#667eea';
-            }
-        }
-        
         // 创建群聊
         async function createGroup() {
             const groupName = document.getElementById('group-name').value.trim();
@@ -4191,35 +4221,74 @@ $agreed_to_terms = $user->hasAgreedToTerms($user_id);
             }
         }
         
-        // 好友项点击事件
-        document.querySelectorAll('.friend-item[data-friend-id]').forEach(item => {
-            item.addEventListener('click', (e) => {
-                // 阻止事件冒泡
-                e.stopPropagation();
-                
-                // 如果点击的是菜单按钮，不跳转
-                if (e.target.closest('.btn-icon') || e.target.closest('.friend-menu')) {
-                    return;
-                }
-                
-                const friendId = item.dataset.friendId;
-                window.location.href = `chat.php?chat_type=friend&id=${friendId}`;
-            });
-        });
+        // 切换聊天类型函数
+        function switchChatType(type) {
+            const friendsList = document.getElementById('friends-list');
+            const groupsList = document.getElementById('groups-list');
+            const friendBtn = document.querySelector('.chat-type-btn[data-chat-type="friend"]');
+            const groupBtn = document.querySelector('.chat-type-btn[data-chat-type="group"]');
+            
+            if (type === 'friend') {
+                friendsList.style.display = 'block';
+                groupsList.style.display = 'none';
+                friendBtn.classList.add('active');
+                groupBtn.classList.remove('active');
+                friendBtn.style.color = '#667eea';
+                friendBtn.style.borderBottomColor = '#667eea';
+                groupBtn.style.color = '#666';
+                groupBtn.style.borderBottomColor = 'transparent';
+            } else {
+                friendsList.style.display = 'none';
+                groupsList.style.display = 'block';
+                friendBtn.classList.remove('active');
+                groupBtn.classList.add('active');
+                friendBtn.style.color = '#666';
+                friendBtn.style.borderBottomColor = 'transparent';
+                groupBtn.style.color = '#667eea';
+                groupBtn.style.borderBottomColor = '#667eea';
+            }
+        }
         
-        // 群聊项点击事件
-        document.querySelectorAll('.friend-item[data-group-id]').forEach(item => {
-            item.addEventListener('click', (e) => {
-                // 阻止事件冒泡
-                e.stopPropagation();
-                
-                // 如果点击的是菜单按钮，不跳转
-                if (e.target.closest('.btn-icon') || e.target.closest('.group-menu')) {
-                    return;
-                }
-                
-                const groupId = item.dataset.groupId;
-                window.location.href = `chat.php?chat_type=group&id=${groupId}`;
+        // 确保DOM加载完成后再绑定事件
+        window.addEventListener('load', () => {
+            // 聊天类型切换按钮点击事件
+            document.querySelectorAll('.chat-type-btn[data-chat-type]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const type = btn.dataset.chatType;
+                    switchChatType(type);
+                });
+            });
+            
+            // 好友项点击事件
+            document.querySelectorAll('.friend-item[data-friend-id]').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    // 阻止事件冒泡
+                    e.stopPropagation();
+                    
+                    // 如果点击的是菜单按钮，不跳转
+                    if (e.target.closest('.btn-icon') || e.target.closest('.friend-menu')) {
+                        return;
+                    }
+                    
+                    const friendId = item.dataset.friendId;
+                    window.location.href = `chat.php?chat_type=friend&id=${friendId}`;
+                });
+            });
+            
+            // 群聊项点击事件
+            document.querySelectorAll('.friend-item[data-group-id]').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    // 阻止事件冒泡
+                    e.stopPropagation();
+                    
+                    // 如果点击的是菜单按钮，不跳转
+                    if (e.target.closest('.btn-icon') || e.target.closest('.group-menu')) {
+                        return;
+                    }
+                    
+                    const groupId = item.dataset.groupId;
+                    window.location.href = `chat.php?chat_type=group&id=${groupId}`;
+                });
             });
         });
         
@@ -4389,12 +4458,30 @@ $agreed_to_terms = $user->hasAgreedToTerms($user_id);
                             const roleClass = member.is_owner ? 'background: #ff4757; color: white;' : (member.is_admin ? 'background: #ffa502; color: white;' : 'background: #667eea; color: white;');
                             const isCurrentUser = member.id == <?php echo $user_id; ?>;
                             
+                            // 检查是否是默认头像
+                            const isDefaultAvatar = member.avatar && (member.avatar.includes('default_avatar.png') || member.avatar === 'default_avatar.png');
+                            
+                            // 生成头像HTML
+                            let avatarHtml;
+                            if (member.avatar && !isDefaultAvatar) {
+                                // 显示自定义头像
+                                avatarHtml = `
+                                    <img src="${member.avatar}" alt="${member.username}" 
+                                         style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid #e0e0e0;" />
+                                `;
+                            } else {
+                                // 显示用户名首字母
+                                avatarHtml = `
+                                    <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 14px;">
+                                        ${member.username.substring(0, 2)}
+                                    </div>
+                                `;
+                            }
+                            
                             membersHtml += `
                                 <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px; background: #f8f9fa; border-radius: 8px; position: relative;">
                                     <div style="display: flex; align-items: center; gap: 12px;">
-                                        <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 14px;">
-                                            ${member.username.substring(0, 2)}
-                                        </div>
+                                        ${avatarHtml}
                                         <div>
                                             <h5 style="margin: 0 0 4px 0; font-size: 15px; color: #333;">${member.username}</h5>
                                             <p style="margin: 0; font-size: 12px; color: #666;">${member.email}</p>
@@ -4806,6 +4893,9 @@ $agreed_to_terms = $user->hasAgreedToTerms($user_id);
                 });
             }
         }
+        
+        // 修复括号不匹配问题
+    }
     </script>
     
     <!-- 群聊成员弹窗 -->
@@ -5079,5 +5169,6 @@ $agreed_to_terms = $user->hasAgreedToTerms($user_id);
             }
         });
     </script>
+
 </body>
 </html>

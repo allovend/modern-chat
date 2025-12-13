@@ -17,21 +17,35 @@ class Database {
     }
     
     public function connect() {
-        try {
-            $this->conn = new PDO(
-                "mysql:host={$this->host};dbname={$this->dbname};charset=utf8mb4",
-                $this->username,
-                $this->password,
-                [
-                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                    PDO::ATTR_EMULATE_PREPARES => false
-                ]
-            );
-            return $this->conn;
-        } catch(PDOException $e) {
-            error_log("Connection Error: " . $e->getMessage());
-            return null;
+        $max_retries = 5;
+        $retry_interval = 2; // 秒
+        
+        for ($i = 1; $i <= $max_retries; $i++) {
+            try {
+                $this->conn = new PDO(
+                    "mysql:host={$this->host};dbname={$this->dbname};charset=utf8mb4",
+                    $this->username,
+                    $this->password,
+                    [
+                        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                        PDO::ATTR_EMULATE_PREPARES => false
+                    ]
+                );
+                error_log("Database connected successfully on attempt $i");
+                return $this->conn;
+            } catch(PDOException $e) {
+                error_log("Connection attempt $i failed: " . $e->getMessage());
+                
+                if ($i < $max_retries) {
+                    error_log("Retrying in $retry_interval seconds...");
+                    sleep($retry_interval);
+                    $retry_interval *= 1.5; // 指数退避
+                } else {
+                    error_log("All $max_retries connection attempts failed");
+                    return null;
+                }
+            }
         }
     }
     
@@ -48,6 +62,5 @@ class Database {
 $db = new Database();
 $conn = $db->connect();
 
-if (!$conn) {
-    die("Database connection failed.");
-}
+// 数据库连接失败时不输出任何内容，API文件会处理连接错误
+// 移除die语句，避免返回HTML错误

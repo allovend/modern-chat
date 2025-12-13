@@ -68,9 +68,20 @@ class Group {
      * @return array 成员列表
      */
     public function getGroupMembers($group_id) {
-        $stmt = $this->conn->prepare("SELECT u.*, (gm.role = 'admin') as is_admin FROM users u 
-                                     JOIN group_members gm ON u.id = gm.user_id 
-                                     WHERE gm.group_id = ?");
+        // 兼容两种表结构
+        $stmt = $this->conn->prepare("SHOW COLUMNS FROM group_members LIKE 'is_admin'");
+        $stmt->execute();
+        $is_admin_exists = $stmt->fetch();
+        
+        if ($is_admin_exists) {
+            $stmt = $this->conn->prepare("SELECT u.*, gm.is_admin FROM users u 
+                                         JOIN group_members gm ON u.id = gm.user_id 
+                                         WHERE gm.group_id = ?");
+        } else {
+            $stmt = $this->conn->prepare("SELECT u.*, (gm.role = 'admin') as is_admin FROM users u 
+                                         JOIN group_members gm ON u.id = gm.user_id 
+                                         WHERE gm.group_id = ?");
+        }
         $stmt->execute([$group_id]);
         return $stmt->fetchAll();
     }
@@ -117,10 +128,20 @@ class Group {
      * @return bool 是否成功
      */
     public function setAdmin($group_id, $user_id, $is_admin = true) {
+        // 兼容两种表结构
+        $stmt = $this->conn->prepare("SHOW COLUMNS FROM group_members LIKE 'is_admin'");
+        $stmt->execute();
+        $is_admin_exists = $stmt->fetch();
+        
         // 检查管理员数量
         if ($is_admin) {
-            $stmt = $this->conn->prepare("SELECT COUNT(*) as count FROM group_members WHERE group_id = ? AND role = 'admin'");
-            $stmt->execute([$group_id]);
+            if ($is_admin_exists) {
+                $stmt = $this->conn->prepare("SELECT COUNT(*) as count FROM group_members WHERE group_id = ? AND is_admin = 1");
+                $stmt->execute([$group_id]);
+            } else {
+                $stmt = $this->conn->prepare("SELECT COUNT(*) as count FROM group_members WHERE group_id = ? AND role = 'admin'");
+                $stmt->execute([$group_id]);
+            }
             $admin_count = $stmt->fetch()['count'];
             
             // 管理员数量不能超过9个（不包括群主）
@@ -129,9 +150,14 @@ class Group {
             }
         }
         
-        $role = $is_admin ? 'admin' : 'member';
-        $stmt = $this->conn->prepare("UPDATE group_members SET role = ? WHERE group_id = ? AND user_id = ?");
-        return $stmt->execute([$role, $group_id, $user_id]);
+        if ($is_admin_exists) {
+            $stmt = $this->conn->prepare("UPDATE group_members SET is_admin = ? WHERE group_id = ? AND user_id = ?");
+            return $stmt->execute([$is_admin, $group_id, $user_id]);
+        } else {
+            $role = $is_admin ? 'admin' : 'member';
+            $stmt = $this->conn->prepare("UPDATE group_members SET role = ? WHERE group_id = ? AND user_id = ?");
+            return $stmt->execute([$role, $group_id, $user_id]);
+        }
     }
     
     /**
@@ -192,10 +218,8 @@ class Group {
             return ['success' => false, 'message' => '发送者不是群成员'];
         }
         
-
-        
         // 检查消息内容是否包含HTML标签
-        if (preg_match('/<[^>]*>/', $content)) {
+        if (preg_match('/<\s*[a-zA-Z][a-zA-Z0-9-_:.]*(\s+[^>]*|$)/i', $content)) {
             // 包含HTML标签，替换为"此消息无法被显示"
             $content = "此消息无法被显示";
         }
@@ -205,8 +229,11 @@ class Group {
         $file_size = isset($file_info['file_size']) ? $file_info['file_size'] : null;
         $file_type = isset($file_info['file_type']) ? $file_info['file_type'] : null;
         
-        $stmt = $this->conn->prepare("INSERT INTO group_messages (group_id, sender_id, content, file_path, file_name, file_size, file_type) VALUES (?, ?, ?, ?, ?, ?, ?)");
-        if ($stmt->execute([$group_id, $sender_id, $content, $file_path, $file_name, $file_size, $file_type])) {
+        // 群聊消息暂时不加密，因为涉及多个接收者
+        $is_encrypted = false;
+        
+        $stmt = $this->conn->prepare("INSERT INTO group_messages (group_id, sender_id, content, file_path, file_name, file_size, file_type, is_encrypted) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+        if ($stmt->execute([$group_id, $sender_id, $content, $file_path, $file_name, $file_size, $file_type, $is_encrypted])) {
             $message_id = $this->conn->lastInsertId();
             
             // 处理@提醒
@@ -356,17 +383,33 @@ class Group {
                                          ORDER BY gm.created_at ASC 
                                          LIMIT ?");
             $stmt->execute([$group_id, $last_message_id, $limit]);
-            return $stmt->fetchAll();
+            $messages = $stmt->fetchAll();
+        } else {
+            // 如果没有last_message_id，返回最新的消息
+            $stmt = $this->conn->prepare("SELECT gm.*, u.username as sender_username, u.avatar FROM group_messages gm 
+                                         JOIN users u ON gm.sender_id = u.id 
+                                         WHERE gm.group_id = ? 
+                                         ORDER BY gm.created_at ASC 
+                                         LIMIT ?");
+            $stmt->execute([$group_id, $limit]);
+            $messages = $stmt->fetchAll();
         }
         
-        // 如果没有last_message_id，返回最新的消息
-        $stmt = $this->conn->prepare("SELECT gm.*, u.username as sender_username, u.avatar FROM group_messages gm 
-                                     JOIN users u ON gm.sender_id = u.id 
-                                     WHERE gm.group_id = ? 
-                                     ORDER BY gm.created_at ASC 
-                                     LIMIT ?");
-        $stmt->execute([$group_id, $limit]);
-        return $stmt->fetchAll();
+        // 解密消息（如果需要）
+        require_once 'User.php';
+        $user = new User($this->conn);
+        $private_key = $user->getPrivateKey($user_id);
+        
+        foreach ($messages as &$message) {
+            if ($message['is_encrypted']) {
+                $decrypted_content = $user->decryptMessage($message['content'], $private_key);
+                if ($decrypted_content !== null) {
+                    $message['content'] = $decrypted_content;
+                }
+            }
+        }
+        
+        return $messages;
     }
     
     /**
@@ -417,12 +460,23 @@ class Group {
                 // 发送者可以撤回自己的消息
                 $can_remove = true;
             } else {
-                // 检查是否是管理员或群主
-                $stmt = $this->conn->prepare("SELECT role FROM group_members WHERE group_id = ? AND user_id = ?");
-                $stmt->execute([$message['group_id'], $user_id]);
-                $member = $stmt->fetch();
+                // 兼容两种表结构
+                $stmt = $this->conn->prepare("SHOW COLUMNS FROM group_members LIKE 'is_admin'");
+                $stmt->execute();
+                $is_admin_exists = $stmt->fetch();
                 
-                $can_remove = $user_id == $message['owner_id'] || ($member && $member['role'] == 'admin');
+                // 检查是否是管理员或群主
+                if ($is_admin_exists) {
+                    $stmt = $this->conn->prepare("SELECT is_admin FROM group_members WHERE group_id = ? AND user_id = ?");
+                    $stmt->execute([$message['group_id'], $user_id]);
+                    $member = $stmt->fetch();
+                    $can_remove = $user_id == $message['owner_id'] || ($member && $member['is_admin'] == 1);
+                } else {
+                    $stmt = $this->conn->prepare("SELECT role FROM group_members WHERE group_id = ? AND user_id = ?");
+                    $stmt->execute([$message['group_id'], $user_id]);
+                    $member = $stmt->fetch();
+                    $can_remove = $user_id == $message['owner_id'] || ($member && $member['role'] == 'admin');
+                }
             }
             
             if ($can_remove) {
@@ -487,10 +541,22 @@ class Group {
      * @return array 群聊列表
      */
     public function getUserGroups($user_id) {
-        $stmt = $this->conn->prepare("SELECT g.*, (gm.role = 'admin') as is_admin, (SELECT COUNT(*) FROM group_members WHERE group_id = g.id) as member_count 
-                                     FROM groups g 
-                                     JOIN group_members gm ON g.id = gm.group_id 
-                                     WHERE gm.user_id = ?");
+        // 兼容两种表结构
+        $stmt = $this->conn->prepare("SHOW COLUMNS FROM group_members LIKE 'is_admin'");
+        $stmt->execute();
+        $is_admin_exists = $stmt->fetch();
+        
+        if ($is_admin_exists) {
+            $stmt = $this->conn->prepare("SELECT g.*, gm.is_admin, (SELECT COUNT(*) FROM group_members WHERE group_id = g.id) as member_count 
+                                         FROM groups g 
+                                         JOIN group_members gm ON g.id = gm.group_id 
+                                         WHERE gm.user_id = ?");
+        } else {
+            $stmt = $this->conn->prepare("SELECT g.*, (gm.role = 'admin') as is_admin, (SELECT COUNT(*) FROM group_members WHERE group_id = g.id) as member_count 
+                                         FROM groups g 
+                                         JOIN group_members gm ON g.id = gm.group_id 
+                                         WHERE gm.user_id = ?");
+        }
         $stmt->execute([$user_id]);
         $groups = $stmt->fetchAll();
         
@@ -531,9 +597,20 @@ class Group {
      * @return array|false 角色信息或false
      */
     public function getMemberRole($group_id, $user_id) {
-        $stmt = $this->conn->prepare("SELECT (gm.role = 'admin') as is_admin, g.owner_id FROM group_members gm 
-                                     JOIN groups g ON gm.group_id = g.id 
-                                     WHERE gm.group_id = ? AND gm.user_id = ?");
+        // 兼容两种表结构
+        $stmt = $this->conn->prepare("SHOW COLUMNS FROM group_members LIKE 'is_admin'");
+        $stmt->execute();
+        $is_admin_exists = $stmt->fetch();
+        
+        if ($is_admin_exists) {
+            $stmt = $this->conn->prepare("SELECT gm.is_admin, g.owner_id FROM group_members gm 
+                                         JOIN groups g ON gm.group_id = g.id 
+                                         WHERE gm.group_id = ? AND gm.user_id = ?");
+        } else {
+            $stmt = $this->conn->prepare("SELECT (gm.role = 'admin') as is_admin, g.owner_id FROM group_members gm 
+                                         JOIN groups g ON gm.group_id = g.id 
+                                         WHERE gm.group_id = ? AND gm.user_id = ?");
+        }
         $stmt->execute([$group_id, $user_id]);
         return $stmt->fetch();
     }

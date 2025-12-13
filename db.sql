@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS messages (
     file_size INT NULL,
     type ENUM('text', 'file') DEFAULT 'text',
     status ENUM('sent', 'delivered', 'read') DEFAULT 'sent',
+    is_encrypted BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE
@@ -122,6 +123,7 @@ CREATE TABLE IF NOT EXISTS group_messages (
     file_name VARCHAR(255) NULL,
     file_size INT NULL,
     type ENUM('text', 'file') DEFAULT 'text',
+    is_encrypted BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE,
     FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE
@@ -166,7 +168,7 @@ CREATE TABLE IF NOT EXISTS bans (
     status ENUM('active', 'expired', 'lifted') DEFAULT 'active',
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (banned_by) REFERENCES users(id) ON DELETE CASCADE,
-    UNIQUE KEY unique_active_ban (user_id)
+    UNIQUE KEY unique_active_ban (user_id, status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 创建封禁日志表
@@ -251,6 +253,39 @@ CREATE INDEX idx_group_bans_ban_end ON group_bans(ban_end);
 CREATE INDEX idx_group_ban_logs_ban_id ON group_ban_logs(ban_id);
 CREATE INDEX idx_group_ban_logs_action ON group_ban_logs(action);
 
+-- 创建加密密钥表
+CREATE TABLE IF NOT EXISTS encryption_keys (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    public_key TEXT NOT NULL,
+    private_key TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_user_id (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 创建IP登录尝试表
+CREATE TABLE IF NOT EXISTS ip_login_attempts (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    ip_address VARCHAR(45) NOT NULL,
+    attempt_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_successful BOOLEAN DEFAULT FALSE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 创建IP封禁表
+CREATE TABLE IF NOT EXISTS ip_bans (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    ip_address VARCHAR(45) NOT NULL,
+    ban_reason VARCHAR(255) NOT NULL DEFAULT '多次登录失败',
+    ban_duration INT NOT NULL, -- 封禁时长（秒）
+    ban_start TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    ban_end TIMESTAMP NULL,
+    status ENUM('active', 'expired') DEFAULT 'active',
+    last_ban_id INT DEFAULT NULL,
+    UNIQUE KEY unique_active_ban (ip_address, status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- 创建索引以提高查询性能
 CREATE INDEX idx_users_status ON users(status);
 CREATE INDEX idx_messages_sender_receiver ON messages(sender_id, receiver_id);
@@ -283,3 +318,27 @@ CREATE INDEX idx_ban_logs_action ON ban_logs(action);
 CREATE INDEX idx_ip_registrations_ip_address ON ip_registrations(ip_address);
 CREATE INDEX idx_ip_registrations_user_id ON ip_registrations(user_id);
 CREATE INDEX idx_ip_registrations_registered_at ON ip_registrations(registered_at);
+CREATE INDEX idx_encryption_keys_user_id ON encryption_keys(user_id);
+CREATE INDEX idx_ip_login_attempts_ip_address ON ip_login_attempts(ip_address);
+CREATE INDEX idx_ip_login_attempts_attempt_time ON ip_login_attempts(attempt_time);
+CREATE INDEX idx_ip_bans_ip_address ON ip_bans(ip_address);
+CREATE INDEX idx_ip_bans_ban_end ON ip_bans(ban_end);
+CREATE INDEX idx_ip_bans_status ON ip_bans(status);
+
+-- 创建聊天设置表
+CREATE TABLE IF NOT EXISTS chat_settings (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    chat_type ENUM('friend', 'group') NOT NULL,
+    chat_id INT NOT NULL,
+    is_muted BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_chat_setting (user_id, chat_type, chat_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 创建聊天设置表索引
+CREATE INDEX idx_chat_settings_user_id ON chat_settings(user_id);
+CREATE INDEX idx_chat_settings_chat_type ON chat_settings(chat_type);
+CREATE INDEX idx_chat_settings_chat_id ON chat_settings(chat_id);

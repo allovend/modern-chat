@@ -24,8 +24,8 @@ $friend = new Friend($conn);
 $result = $friend->rejectFriendRequest($user_id, $request_id);
 
 if ($result['success']) {
-    header('Location: mobilechat.php?success=' . urlencode($result['message']));
+    header('Location: chat.php?success=' . urlencode($result['message']));
 } else {
-    header('Location: mobilechat.php?error=' . urlencode($result['message']));
+    header('Location: chat.php?error=' . urlencode($result['message']));
 }
 exit;

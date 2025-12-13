@@ -1,3 +1,7 @@
+<?php
+// 连接数据库
+require_once 'db.php';
+?>
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -269,9 +273,6 @@
         <h1>登录</h1>
         
         <?php
-        // 连接数据库
-        require_once 'db.php';
-        
         if (isset($_GET['error'])) {
             echo '<div class="error-message">' . htmlspecialchars($_GET['error']) . '</div>';
         }

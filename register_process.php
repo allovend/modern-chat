@@ -182,10 +182,11 @@ if ($email_verify) {
                     }
                     
                     // 检查验证结果
-                    if (strtolower($result_value) !== 'true' && strtolower($result_value) !== 'ok') {
-                        header("Location: register.php?error=" . urlencode("邮箱验证失败，请仔细填写"));
-                        exit;
-                    }
+                $lower_result = $result_value ? strtolower($result_value) : '';
+                if ($lower_result !== 'true' && $lower_result !== 'ok') {
+                    header("Location: register.php?error=" . urlencode("邮箱验证失败，请仔细填写"));
+                    exit;
+                }
                 } else {
                     // 无法解析响应
                     error_log('邮箱验证API响应解析失败: ' . $response);
@@ -209,6 +210,9 @@ $user = new User($conn);
 $result = $user->register($username, $email, $password, $user_ip);
 
 if ($result['success']) {
+    // 为新用户生成加密密钥
+    $user->generateEncryptionKeys($result['user_id']);
+    
     // 注册成功，将用户添加到所有全员群聊
     require_once 'Group.php';
     $group = new Group($conn);

@@ -938,7 +938,11 @@ $user_ip = getUserIP();
                     ?>
                     <div class="friend-item <?php echo $chat_type === 'friend' && $selected_id == $friend_id ? 'active' : ''; ?>" data-friend-id="<?php echo $friend_id; ?>">
                         <div class="friend-avatar">
-                            <?php if (!empty($friend_item['avatar'])): ?>
+                            <?php 
+                                // 检查是否是默认头像
+                                $is_default_avatar = !empty($friend_item['avatar']) && (strpos($friend_item['avatar'], 'default_avatar.png') !== false || $friend_item['avatar'] === 'default_avatar.png');
+                            ?>
+                            <?php if (!empty($friend_item['avatar']) && !$is_default_avatar): ?>
                                 <img src="<?php echo $friend_item['avatar']; ?>" alt="<?php echo $friend_item['username']; ?>" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
                             <?php else: ?>
                                 <?php echo substr($friend_item['username'], 0, 2); ?>
@@ -992,7 +996,11 @@ $user_ip = getUserIP();
                     </button>
                     <div class="friend-avatar" style="<?php echo $selected_group ? 'background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);' : ''; ?>">
                         <?php if ($selected_friend) { ?>
-                            <?php if (!empty($selected_friend['avatar'])) { ?>
+                            <?php 
+                                // 检查是否是默认头像
+                                $is_default_avatar = !empty($selected_friend['avatar']) && (strpos($selected_friend['avatar'], 'default_avatar.png') !== false || $selected_friend['avatar'] === 'default_avatar.png');
+                            ?>
+                            <?php if (!empty($selected_friend['avatar']) && !$is_default_avatar) { ?>
                                 <img src="<?php echo $selected_friend['avatar']; ?>" alt="<?php echo $selected_friend['username']; ?>" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
                             <?php } else { ?>
                                 <?php echo substr($selected_friend['username'], 0, 2); ?>
@@ -1008,7 +1016,7 @@ $user_ip = getUserIP();
                             <?php if ($selected_friend) { ?>
                                 <?php echo $selected_friend['status'] == 'online' ? '在线' : '离线'; ?>
                             <?php } elseif ($selected_group) { ?>
-                                成员: <?php echo $selected_group['member_count']; ?>人
+                                成员: <?php echo isset($selected_group['member_count']) ? $selected_group['member_count'] : 0; ?>人
                             <?php } ?>
                         </p>
                     </div>
@@ -2250,8 +2258,13 @@ $user_ip = getUserIP();
             // 获取当前用户头像
             const currentUserAvatar = '<?php echo !empty($current_user['avatar']) ? $current_user['avatar'] : ''; ?>';
             
+            // 辅助函数：检查是否是默认头像
+            function isDefaultAvatar(avatar) {
+                return avatar && (avatar.includes('default_avatar.png') || avatar === 'default_avatar.png');
+            }
+            
             if (isSent) {
-                if (currentUserAvatar) {
+                if (currentUserAvatar && !isDefaultAvatar(currentUserAvatar)) {
                     const img = document.createElement('img');
                     img.src = currentUserAvatar;
                     img.alt = '<?php echo $username; ?>';
@@ -2262,7 +2275,7 @@ $user_ip = getUserIP();
                 }
             } else {
                 // 接收的消息，使用发送者头像（适用于群聊和好友聊天）
-                if (message.avatar) {
+                if (message.avatar && !isDefaultAvatar(message.avatar)) {
                     // 群聊消息，使用发送者的头像
                     const img = document.createElement('img');
                     img.src = message.avatar;
@@ -2281,7 +2294,7 @@ $user_ip = getUserIP();
                         const friendAvatar = '<?php echo $selected_friend && !empty($selected_friend['avatar']) ? $selected_friend['avatar'] : ''; ?>';
                         const friendName = '<?php echo $selected_friend ? $selected_friend['username'] : ''; ?>';
                         
-                        if (friendAvatar) {
+                        if (friendAvatar && !isDefaultAvatar(friendAvatar)) {
                             const img = document.createElement('img');
                             img.src = friendAvatar;
                             img.alt = friendName;

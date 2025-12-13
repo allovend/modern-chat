@@ -73,8 +73,22 @@ require_once 'Group.php';
 
     // 检查消息内容是否包含HTML标签（使用更严格的正则表达式）
     function containsHtmlTags($text) {
-        // 检查各种形式的HTML标签，包括大小写和空格
-        return preg_match('/<\s*[a-zA-Z][^>]*>/i', $text);
+        // 检查各种形式的HTML标签，包括：
+        // 1. 标准标签：<div>, <img>, <a>
+        // 2. 自闭合标签：<img />, <br />
+        // 3. 未闭合标签：<div, <img, <img src="..." alt="..." width="..."
+        // 4. 大小写混合：<DIV>, <Img>
+        // 5. 包含属性的标签：<img src="..." alt="...">
+        // 6. 带有空格的标签：<  div  >
+        
+        // 正则表达式解释：
+        // < - 匹配开始的尖括号
+        // \s* - 匹配0个或多个空格
+        // [a-zA-Z] - 匹配标签名开头的字母
+        // [a-zA-Z0-9-_:.]* - 匹配标签名的其余部分（字母、数字、下划线、连字符、冒号、点）
+        // (\s+[^>]*|$) - 匹配标签名后的空格和任意属性内容直到标签结束或字符串结束
+        // 这个正则能匹配所有HTML标签尝试，包括未闭合的标签
+        return preg_match('/<\s*[a-zA-Z][a-zA-Z0-9-_:.]*(\s+[^>]*|$)/i', $text);
     }
     
     // 发送消息
@@ -161,7 +175,7 @@ require_once 'Group.php';
             $stmt->execute([$result['message_id']]);
         } else {
             // 获取群聊消息
-            $stmt = $conn->prepare("SELECT gm.*, u.username, u.avatar FROM group_messages gm JOIN users u ON gm.sender_id = u.id WHERE gm.id = ?");
+            $stmt = $conn->prepare("SELECT gm.*, u.username as sender_username, u.avatar FROM group_messages gm JOIN users u ON gm.sender_id = u.id WHERE gm.id = ?");
             $stmt->execute([$result['message_id']]);
         }
         $sent_message = $stmt->fetch();

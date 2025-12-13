@@ -121,7 +121,8 @@ if ($http_code === 200) {
         }
         
         // 检查验证结果
-        if (strtolower($result_value) === 'true' || strtolower($result_value) === 'ok') {
+        $lower_result = $result_value ? strtolower($result_value) : '';
+        if ($lower_result === 'true' || $lower_result === 'ok') {
             echo json_encode(['success' => true, 'message' => '邮箱存在，允许继续操作']);
             exit;
         } else {

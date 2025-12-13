@@ -1,7 +1,7 @@
 <?php
-// 启用错误报告以便调试
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
+// 禁用错误显示，只记录到日志
+ini_set('display_errors', 0);
+ini_set('display_startup_errors', 0);
 error_reporting(E_ALL);
 
 // 设置错误日志

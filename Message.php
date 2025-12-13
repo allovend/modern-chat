@@ -12,7 +12,7 @@ class Message {
     public function sendTextMessage($sender_id, $receiver_id, $content) {
         try {
             // 检查消息内容是否包含HTML标签
-            if (preg_match('/<[^>]*>/', $content)) {
+            if (preg_match('/<\s*[a-zA-Z][a-zA-Z0-9-_:.]*(\s+[^>]*|$)/i', $content)) {
                 // 包含HTML标签，替换为"此消息无法被显示"
                 $filtered_content = "此消息无法被显示";
             } else {
@@ -20,11 +20,29 @@ class Message {
                 $filtered_content = $content;
             }
             
+            // 导入User类用于加密
+            require_once 'User.php';
+            $user = new User($this->conn);
+            
+            // 确保接收者有加密密钥
+            $user->generateEncryptionKeys($receiver_id);
+            
+            // 获取接收者的公钥
+            $public_key = $user->getPublicKey($receiver_id);
+            
+            // 加密消息
+            $encrypted_content = $user->encryptMessage($filtered_content, $public_key);
+            
+            if ($encrypted_content === null) {
+                // 加密失败，使用原始内容但标记为未加密
+                $encrypted_content = $filtered_content;
+            }
+            
             $stmt = $this->conn->prepare(
-                "INSERT INTO messages (sender_id, receiver_id, content, type, status) 
-                 VALUES (?, ?, ?, 'text', 'sent')"
+                "INSERT INTO messages (sender_id, receiver_id, content, type, status, is_encrypted) 
+                 VALUES (?, ?, ?, 'text', 'sent', ?)"
             );
-            $stmt->execute([$sender_id, $receiver_id, $filtered_content]);
+            $stmt->execute([$sender_id, $receiver_id, $encrypted_content, $encrypted_content !== $filtered_content]);
             
             $message_id = $this->conn->lastInsertId();
             $this->updateSession($sender_id, $receiver_id, $message_id);
@@ -104,14 +122,31 @@ class Message {
     public function getChatHistory($user1_id, $user2_id, $limit = 50, $offset = 0) {
         try {
             $stmt = $this->conn->prepare(
-                "SELECT * FROM messages 
-                 WHERE (sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?) 
-                 ORDER BY created_at DESC 
+                "SELECT m.*, u.username as sender_username 
+                 FROM messages m 
+                 JOIN users u ON m.sender_id = u.id
+                 WHERE (m.sender_id = ? AND m.receiver_id = ?) OR (m.sender_id = ? AND m.receiver_id = ?) 
+                 ORDER BY m.created_at DESC 
                  LIMIT ? OFFSET ?"
             );
             $stmt->execute([$user1_id, $user2_id, $user2_id, $user1_id, $limit, $offset]);
             
             $messages = $stmt->fetchAll();
+            
+            // 解密消息
+            require_once 'User.php';
+            $user = new User($this->conn);
+            $private_key = $user->getPrivateKey($user1_id);
+            
+            foreach ($messages as &$message) {
+                if ($message['is_encrypted']) {
+                    $decrypted_content = $user->decryptMessage($message['content'], $private_key);
+                    if ($decrypted_content !== null) {
+                        $message['content'] = $decrypted_content;
+                    }
+                }
+            }
+            
             return array_reverse($messages); // 按时间正序返回
         } catch(PDOException $e) {
             error_log("Get Chat History Error: " . $e->getMessage());
