@@ -1596,6 +1596,21 @@ $agreed_to_terms = $user->hasAgreedToTerms($user_id);
                         messagesContainer.scrollTop = messagesContainer.scrollHeight;
                     }
                     
+                    // 加载设置
+                    function loadSettings() {
+                        const settings = JSON.parse(localStorage.getItem('chatSettings')) || {
+                            notificationSound: true,
+                            taskbarNotification: true,
+                            linkPopup: false,
+                            passCookies: true
+                        };
+                        
+                        document.getElementById('notification-sound').checked = settings.notificationSound;
+                        document.getElementById('taskbar-notification').checked = settings.taskbarNotification;
+                        document.getElementById('link-popup').checked = settings.linkPopup;
+                        document.getElementById('pass-cookies').checked = settings.passCookies;
+                    }
+                    
                     // 标记消息为已读
                 function markMessagesAsRead() {
                     const chatType = '<?php echo $chat_type; ?>';

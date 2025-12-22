@@ -230,7 +230,7 @@ class Group {
         $file_type = isset($file_info['file_type']) ? $file_info['file_type'] : null;
         
         // 群聊消息暂时不加密，因为涉及多个接收者
-        $is_encrypted = false;
+        $is_encrypted = 0;
         
         $stmt = $this->conn->prepare("INSERT INTO group_messages (group_id, sender_id, content, file_path, file_name, file_size, file_type, is_encrypted) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
         if ($stmt->execute([$group_id, $sender_id, $content, $file_path, $file_name, $file_size, $file_type, $is_encrypted])) {
