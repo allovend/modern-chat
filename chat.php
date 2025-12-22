@@ -13,6 +13,17 @@ require_once 'Friend.php';
 require_once 'Message.php';
 require_once 'Group.php';
 
+// IP地址获取函数
+function getUserIP() {
+    if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
+        return $_SERVER['HTTP_CLIENT_IP'];
+    } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+        return explode(',', $_SERVER['HTTP_X_FORWARDED_FOR'])[0];
+    } else {
+        return $_SERVER['REMOTE_ADDR'];
+    }
+}
+
 // 检查并创建群聊相关数据表
 function createGroupTables() {
     global $conn;
