@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS messages (
     file_path VARCHAR(255) NULL,
     file_name VARCHAR(255) NULL,
     file_size INT NULL,
+    file_type VARCHAR(50) NULL,
     type ENUM('text', 'file') DEFAULT 'text',
     status ENUM('sent', 'delivered', 'read') DEFAULT 'sent',
     is_encrypted BOOLEAN DEFAULT FALSE,
@@ -125,6 +126,7 @@ CREATE TABLE IF NOT EXISTS group_messages (
     file_path VARCHAR(255) NULL,
     file_name VARCHAR(255) NULL,
     file_size INT NULL,
+    file_type VARCHAR(50) NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE,
     FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE

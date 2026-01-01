@@ -1,5 +1,6 @@
 <?php
 require_once 'db.php';
+require_once 'User.php';
 
 class Group {
     private $conn;
@@ -26,7 +27,7 @@ class Group {
             $this->conn->beginTransaction();
             
             // 创建群聊
-            $stmt = $this->conn->prepare("INSERT INTO `groups` (name, creator_id, owner_id) VALUES (?, ?, ?)");
+            $stmt = $this->conn->prepare("INSERT INTO groups (name, creator_id, owner_id) VALUES (?, ?, ?)");
             $stmt->execute([$name, $creator_id, $creator_id]);
             $group_id = $this->conn->lastInsertId();
             
@@ -57,9 +58,27 @@ class Group {
      * @return array|false 群聊信息或false
      */
     public function getGroupInfo($group_id) {
-        $stmt = $this->conn->prepare("SELECT * FROM `groups` WHERE id = ?");
+        $stmt = $this->conn->prepare("SELECT * FROM groups WHERE id = ?");
         $stmt->execute([$group_id]);
-        return $stmt->fetch();
+        $group_info = $stmt->fetch();
+        
+        if ($group_info) {
+            // 计算成员数量
+            if ($group_info['all_user_group'] == 1) {
+                // 全员群聊，成员数量为所有用户的数量
+                $stmt = $this->conn->prepare("SELECT COUNT(*) as total_users FROM users");
+                $stmt->execute();
+                $total_users = $stmt->fetch()['total_users'];
+                $group_info['member_count'] = $total_users;
+            } else {
+                // 普通群聊，成员数量为group_members表中的记录数
+                $stmt = $this->conn->prepare("SELECT COUNT(*) as member_count FROM group_members WHERE group_id = ?");
+                $stmt->execute([$group_id]);
+                $group_info['member_count'] = $stmt->fetch()['member_count'];
+            }
+        }
+        
+        return $group_info;
     }
     
     /**
@@ -68,22 +87,35 @@ class Group {
      * @return array 成员列表
      */
     public function getGroupMembers($group_id) {
-        // 兼容两种表结构
-        $stmt = $this->conn->prepare("SHOW COLUMNS FROM group_members LIKE 'is_admin'");
-        $stmt->execute();
-        $is_admin_exists = $stmt->fetch();
-        
-        if ($is_admin_exists) {
-            $stmt = $this->conn->prepare("SELECT u.*, gm.is_admin FROM users u 
-                                         JOIN group_members gm ON u.id = gm.user_id 
-                                         WHERE gm.group_id = ?");
-        } else {
-            $stmt = $this->conn->prepare("SELECT u.*, (gm.role = 'admin') as is_admin FROM users u 
-                                         JOIN group_members gm ON u.id = gm.user_id 
-                                         WHERE gm.group_id = ?");
-        }
+        // 检查是否是全员群聊
+        $stmt = $this->conn->prepare("SELECT all_user_group FROM groups WHERE id = ?");
         $stmt->execute([$group_id]);
-        return $stmt->fetchAll();
+        $group_info = $stmt->fetch();
+        
+        if ($group_info && $group_info['all_user_group'] == 1) {
+            // 全员群聊，返回所有用户
+            $stmt = $this->conn->prepare("SELECT u.*, (u.id = (SELECT owner_id FROM groups WHERE id = ?)) as is_admin FROM users u");
+            $stmt->execute([$group_id]);
+            return $stmt->fetchAll();
+        } else {
+            // 普通群聊，返回group_members表中的成员
+            // 兼容两种表结构
+            $stmt = $this->conn->prepare("SHOW COLUMNS FROM group_members LIKE 'is_admin'");
+            $stmt->execute();
+            $is_admin_exists = $stmt->fetch();
+            
+            if ($is_admin_exists) {
+                $stmt = $this->conn->prepare("SELECT u.*, gm.is_admin FROM users u 
+                                             JOIN group_members gm ON u.id = gm.user_id 
+                                             WHERE gm.group_id = ?");
+            } else {
+                $stmt = $this->conn->prepare("SELECT u.*, (gm.role = 'admin') as is_admin FROM users u 
+                                             JOIN group_members gm ON u.id = gm.user_id 
+                                             WHERE gm.group_id = ?");
+            }
+            $stmt->execute([$group_id]);
+            return $stmt->fetchAll();
+        }
     }
     
     /**
@@ -169,7 +201,7 @@ class Group {
      */
     public function transferOwnership($group_id, $current_owner_id, $new_owner_id) {
         // 验证当前用户是群主
-        $stmt = $this->conn->prepare("SELECT owner_id FROM `groups` WHERE id = ? AND owner_id = ?");
+        $stmt = $this->conn->prepare("SELECT owner_id FROM groups WHERE id = ? AND owner_id = ?");
         $stmt->execute([$group_id, $current_owner_id]);
         if (!$stmt->fetch()) {
             return false;
@@ -186,7 +218,7 @@ class Group {
             $this->conn->beginTransaction();
             
             // 更新群主
-            $stmt = $this->conn->prepare("UPDATE `groups` SET owner_id = ? WHERE id = ?");
+            $stmt = $this->conn->prepare("UPDATE groups SET owner_id = ? WHERE id = ?");
             $stmt->execute([$new_owner_id, $group_id]);
             
             // 设置新群主为管理员
@@ -211,10 +243,28 @@ class Group {
      * @return array 包含success和message_id的关联数组
      */
     public function sendGroupMessage($group_id, $sender_id, $content, $file_info = []) {
-        // 验证发送者是群成员
-        $stmt = $this->conn->prepare("SELECT id FROM group_members WHERE group_id = ? AND user_id = ?");
-        $stmt->execute([$group_id, $sender_id]);
-        if (!$stmt->fetch()) {
+        // 确保必要的表和列存在
+        $this->ensureTablesExist();
+        
+        // 验证发送者是否可以发送消息
+        $is_member = false;
+        
+        // 检查是否是全员群聊
+        $stmt = $this->conn->prepare("SELECT all_user_group FROM groups WHERE id = ?");
+        $stmt->execute([$group_id]);
+        $group_info = $stmt->fetch();
+        
+        if ($group_info && $group_info['all_user_group'] == 1) {
+            // 全员群聊，所有用户都可以发送消息
+            $is_member = true;
+        } else {
+            // 普通群聊，检查用户是否是群成员
+            $stmt = $this->conn->prepare("SELECT id FROM group_members WHERE group_id = ? AND user_id = ?");
+            $stmt->execute([$group_id, $sender_id]);
+            $is_member = $stmt->fetch() !== false;
+        }
+        
+        if (!$is_member) {
             return ['success' => false, 'message' => '发送者不是群成员'];
         }
         
@@ -229,69 +279,77 @@ class Group {
         $file_size = isset($file_info['file_size']) ? $file_info['file_size'] : null;
         $file_type = isset($file_info['file_type']) ? $file_info['file_type'] : null;
         
-        // 群聊消息暂时不加密，因为涉及多个接收者
-        $is_encrypted = 0;
-        
-        $stmt = $this->conn->prepare("INSERT INTO group_messages (group_id, sender_id, content, file_path, file_name, file_size, file_type, is_encrypted) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-        if ($stmt->execute([$group_id, $sender_id, $content, $file_path, $file_name, $file_size, $file_type, $is_encrypted])) {
-            $message_id = $this->conn->lastInsertId();
+        try {
+            if ($file_path) {
+                // 发送文件消息，包含file_type字段
+                $stmt = $this->conn->prepare("INSERT INTO group_messages (group_id, sender_id, content, file_path, file_name, file_size, file_type) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                $result = $stmt->execute([$group_id, $sender_id, $content, $file_path, $file_name, $file_size, $file_type]);
+            } else {
+                // 发送文本消息，只使用数据库中实际存在的字段
+                $stmt = $this->conn->prepare("INSERT INTO group_messages (group_id, sender_id, content) VALUES (?, ?, ?)");
+                $result = $stmt->execute([$group_id, $sender_id, $content]);
+            }
             
-            // 处理@提醒
-            if (!empty($content) && $content !== "此消息无法被显示") {
-                $mentioned_user_ids = [];
+            if ($result) {
+                $message_id = $this->conn->lastInsertId();
                 
-                // 检查是否@所有人
-                if (stripos($content, '@所有人') !== false || stripos($content, '@全体成员') !== false) {
-                    // 获取群成员列表（排除发送者自己）
-                    $stmt = $this->conn->prepare("SELECT user_id FROM group_members WHERE group_id = ? AND user_id != ?");
-                    $stmt->execute([$group_id, $sender_id]);
-                    $members = $stmt->fetchAll();
+                // 处理@提醒
+                if (!empty($content) && $content !== "此消息无法被显示") {
+                    $mentioned_user_ids = [];
                     
-                    foreach ($members as $member) {
-                        $mentioned_user_ids[] = $member['user_id'];
-                    }
-                } else {
-                    // 查找@用户名格式
-                    preg_match_all('/@([^\s]+)/', $content, $matches);
-                    if (!empty($matches[1])) {
-                        // 根据用户名获取用户ID
-                        $usernames = $matches[1];
-                        $placeholders = rtrim(str_repeat('?,', count($usernames)), ',');
-                        $stmt = $this->conn->prepare("SELECT id FROM users WHERE username IN ($placeholders)");
-                        $stmt->execute($usernames);
+                    // 检查是否@所有人
+                    if (stripos($content, '@所有人') !== false || stripos($content, '@全体成员') !== false) {
+                        // 获取所有用户（排除发送者自己）
+                        $stmt = $this->conn->prepare("SELECT id FROM users WHERE id != ?");
+                        $stmt->execute([$sender_id]);
                         $users = $stmt->fetchAll();
                         
                         foreach ($users as $user) {
-                            // 检查用户是否在群聊中
-                            $stmt = $this->conn->prepare("SELECT id FROM group_members WHERE group_id = ? AND user_id = ?");
-                            $stmt->execute([$group_id, $user['id']]);
-                            if ($stmt->fetch() && $user['id'] != $sender_id) {
-                                $mentioned_user_ids[] = $user['id'];
+                            $mentioned_user_ids[] = $user['id'];
+                        }
+                    } else {
+                        // 查找@用户名格式
+                        preg_match_all('/@([^\s]+)/', $content, $matches);
+                        if (!empty($matches[1])) {
+                            // 根据用户名获取用户ID
+                            $usernames = $matches[1];
+                            $placeholders = rtrim(str_repeat('?,', count($usernames)), ',');
+                            $stmt = $this->conn->prepare("SELECT id FROM users WHERE username IN ($placeholders)");
+                            $stmt->execute($usernames);
+                            $users = $stmt->fetchAll();
+                            
+                            foreach ($users as $user) {
+                                if ($user['id'] != $sender_id) {
+                                    $mentioned_user_ids[] = $user['id'];
+                                }
                             }
+                        }
+                    }
+                    
+                    // 去重
+                    $mentioned_user_ids = array_unique($mentioned_user_ids);
+                    
+                    // 插入@提醒
+                    if (!empty($mentioned_user_ids)) {
+                        // 确保mentions表存在
+                        $this->ensureTablesExist();
+                        
+                        $stmt = $this->conn->prepare("INSERT INTO mentions (message_id, message_type, mentioned_user_id, sender_id) VALUES (?, 'group', ?, ?)");
+                        foreach ($mentioned_user_ids as $user_id) {
+                            $stmt->execute([$message_id, $user_id, $sender_id]);
                         }
                     }
                 }
                 
-                // 去重
-                $mentioned_user_ids = array_unique($mentioned_user_ids);
+                // 更新未读消息计数
+                $this->updateUnreadMessageCount($group_id, $sender_id, $message_id);
                 
-                // 插入@提醒
-                if (!empty($mentioned_user_ids)) {
-                    // 确保mentions表存在
-                    $this->ensureTablesExist();
-                    
-                    $stmt = $this->conn->prepare("INSERT INTO mentions (message_id, message_type, mentioned_user_id, sender_id) VALUES (?, 'group', ?, ?)");
-                    foreach ($mentioned_user_ids as $user_id) {
-                        $stmt->execute([$message_id, $user_id, $sender_id]);
-                    }
-                }
+                return ['success' => true, 'message_id' => $message_id];
             }
-            
-            // 更新未读消息计数
-            $this->updateUnreadMessageCount($group_id, $sender_id, $message_id);
-            
-            return ['success' => true, 'message_id' => $message_id];
+        } catch (PDOException $e) {
+            error_log("Send group message error: " . $e->getMessage());
         }
+        
         return ['success' => false, 'message' => '发送消息失败'];
     }
     
@@ -326,6 +384,12 @@ class Group {
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
             )";
             $this->conn->exec($sql);
+            
+            // 确保messages表有file_type列
+            $this->conn->exec("ALTER TABLE IF EXISTS messages ADD COLUMN IF NOT EXISTS file_type VARCHAR(50) NULL");
+            
+            // 确保group_messages表有file_type列
+            $this->conn->exec("ALTER TABLE IF EXISTS group_messages ADD COLUMN IF NOT EXISTS file_type VARCHAR(50) NULL");
         } catch (PDOException $e) {
             error_log("Ensure tables exist error: " . $e->getMessage());
         }
@@ -367,17 +431,34 @@ class Group {
      * @return array 消息列表
      */
     public function getGroupMessages($group_id, $user_id, $last_message_id = 0, $limit = 50) {
-        // 验证用户是群成员
-        $stmt = $this->conn->prepare("SELECT id FROM group_members WHERE group_id = ? AND user_id = ?");
-        $stmt->execute([$group_id, $user_id]);
-        if (!$stmt->fetch()) {
+        // 验证用户是否可以访问该群聊
+        $is_member = false;
+        
+        // 检查是否是全员群聊
+        $stmt = $this->conn->prepare("SELECT all_user_group FROM groups WHERE id = ?");
+        $stmt->execute([$group_id]);
+        $group_info = $stmt->fetch();
+        
+        if ($group_info && $group_info['all_user_group'] == 1) {
+            // 全员群聊，所有用户都可以访问
+            $is_member = true;
+        } else {
+            // 普通群聊，检查用户是否是群成员
+            $stmt = $this->conn->prepare("SELECT id FROM group_members WHERE group_id = ? AND user_id = ?");
+            $stmt->execute([$group_id, $user_id]);
+            $is_member = $stmt->fetch() !== false;
+        }
+        
+        if (!$is_member) {
             return [];
         }
         
         // 对于获取新消息，使用id直接比较，确保能获取到所有比last_message_id大的消息
         if ($last_message_id > 0) {
             // 使用id直接比较，确保能获取到所有比last_message_id大的消息
-            $stmt = $this->conn->prepare("SELECT gm.*, u.username as sender_username, u.avatar FROM group_messages gm 
+            $stmt = $this->conn->prepare("SELECT gm.id, gm.group_id, gm.sender_id, gm.content, gm.file_path, gm.file_name, gm.file_size, gm.created_at, 
+                                         u.username as sender_username, u.avatar 
+                                         FROM group_messages gm 
                                          JOIN users u ON gm.sender_id = u.id 
                                          WHERE gm.group_id = ? AND gm.id > ? 
                                          ORDER BY gm.created_at ASC 
@@ -386,27 +467,15 @@ class Group {
             $messages = $stmt->fetchAll();
         } else {
             // 如果没有last_message_id，返回最新的消息
-            $stmt = $this->conn->prepare("SELECT gm.*, u.username as sender_username, u.avatar FROM group_messages gm 
+            $stmt = $this->conn->prepare("SELECT gm.id, gm.group_id, gm.sender_id, gm.content, gm.file_path, gm.file_name, gm.file_size, gm.created_at, 
+                                         u.username as sender_username, u.avatar 
+                                         FROM group_messages gm 
                                          JOIN users u ON gm.sender_id = u.id 
                                          WHERE gm.group_id = ? 
                                          ORDER BY gm.created_at ASC 
                                          LIMIT ?");
             $stmt->execute([$group_id, $limit]);
             $messages = $stmt->fetchAll();
-        }
-        
-        // 解密消息（如果需要）
-        require_once 'User.php';
-        $user = new User($this->conn);
-        $private_key = $user->getPrivateKey($user_id);
-        
-        foreach ($messages as &$message) {
-            if ($message['is_encrypted']) {
-                $decrypted_content = $user->decryptMessage($message['content'], $private_key);
-                if ($decrypted_content !== null) {
-                    $message['content'] = $decrypted_content;
-                }
-            }
         }
         
         return $messages;
@@ -439,7 +508,7 @@ class Group {
         try {
             // 获取消息信息
             $stmt = $this->conn->prepare("SELECT gm.*, g.owner_id FROM group_messages gm 
-                                         JOIN `groups` g ON gm.group_id = g.id 
+                                         JOIN groups g ON gm.group_id = g.id 
                                          WHERE gm.id = ?");
             $stmt->execute([$message_id]);
             $message = $stmt->fetch();
@@ -515,14 +584,14 @@ class Group {
         }
         
         // 群主不能直接退出，必须先转让群主
-        $stmt = $this->conn->prepare("SELECT owner_id FROM `groups` WHERE id = ? AND owner_id = ?");
+        $stmt = $this->conn->prepare("SELECT owner_id FROM groups WHERE id = ? AND owner_id = ?");
         $stmt->execute([$group_id, $user_id]);
         if ($stmt->fetch()) {
             return false;
         }
         
         // 检查是否是全员群聊，如果是则禁止退出
-        $stmt = $this->conn->prepare("SELECT all_user_group FROM `groups` WHERE id = ?");
+        $stmt = $this->conn->prepare("SELECT all_user_group FROM groups WHERE id = ?");
         $stmt->execute([$group_id]);
         $group = $stmt->fetch();
         if ($group && $group['all_user_group'] > 0) {
@@ -541,49 +610,87 @@ class Group {
      * @return array 群聊列表
      */
     public function getUserGroups($user_id) {
+        // 获取所有群聊，包括全员群聊
+        $stmt = $this->conn->prepare("SELECT g.* FROM groups g");
+        $stmt->execute();
+        $all_groups = $stmt->fetchAll();
+        
+        // 获取用户的群聊成员身份
         // 兼容两种表结构
         $stmt = $this->conn->prepare("SHOW COLUMNS FROM group_members LIKE 'is_admin'");
         $stmt->execute();
         $is_admin_exists = $stmt->fetch();
         
         if ($is_admin_exists) {
-            $stmt = $this->conn->prepare("SELECT g.*, gm.is_admin, (SELECT COUNT(*) FROM group_members WHERE group_id = g.id) as member_count 
-                                         FROM `groups` g 
-                                         JOIN group_members gm ON g.id = gm.group_id 
-                                         WHERE gm.user_id = ?");
+            $stmt = $this->conn->prepare("SELECT gm.group_id, gm.is_admin FROM group_members gm WHERE gm.user_id = ?");
         } else {
-            $stmt = $this->conn->prepare("SELECT g.*, (gm.role = 'admin') as is_admin, (SELECT COUNT(*) FROM group_members WHERE group_id = g.id) as member_count 
-                                         FROM `groups` g 
-                                         JOIN group_members gm ON g.id = gm.group_id 
-                                         WHERE gm.user_id = ?");
+            $stmt = $this->conn->prepare("SELECT gm.group_id, (gm.role = 'admin') as is_admin FROM group_members gm WHERE gm.user_id = ?");
         }
         $stmt->execute([$user_id]);
-        $groups = $stmt->fetchAll();
+        $user_groups = $stmt->fetchAll(\PDO::FETCH_KEY_PAIR);
         
-        // 为每个群聊获取最新消息
-        foreach ($groups as &$group) {
-            // 获取该群聊的最新消息
-            $stmt = $this->conn->prepare(
-                "SELECT gm.content, gm.created_at, gm.sender_id, u.username as sender_username 
-                 FROM group_messages gm 
-                 JOIN users u ON gm.sender_id = u.id 
-                 WHERE gm.group_id = ? 
-                 ORDER BY gm.created_at DESC 
-                 LIMIT 1"
-            );
-            $stmt->execute([$group['id']]);
-            $last_message = $stmt->fetch();
+        $groups = [];
+        foreach ($all_groups as $group) {
+            // 检查用户是否可以访问该群聊
+            $is_member = false;
             
-            if ($last_message) {
-                $group['last_message'] = $last_message['content'];
-                $group['last_message_time'] = $last_message['created_at'];
-                $group['sender_username'] = $last_message['sender_username'];
-                $group['is_me'] = $last_message['sender_id'] == $user_id;
+            if ($group['all_user_group'] == 1) {
+                // 全员群聊，所有用户都可以访问
+                $is_member = true;
             } else {
-                $group['last_message'] = '';
-                $group['last_message_time'] = '';
-                $group['sender_username'] = '';
-                $group['is_me'] = false;
+                // 普通群聊，检查用户是否是群成员
+                $is_member = isset($user_groups[$group['id']]);
+            }
+            
+            if ($is_member) {
+                // 获取成员数量
+                if ($group['all_user_group'] == 1) {
+                    // 全员群聊，成员数量为所有用户的数量
+                    $stmt = $this->conn->prepare("SELECT COUNT(*) as total_users FROM users");
+                    $stmt->execute();
+                    $total_users = $stmt->fetch()['total_users'];
+                    $group['member_count'] = $total_users;
+                } else {
+                    // 普通群聊，成员数量为group_members表中的记录数
+                    $stmt = $this->conn->prepare("SELECT COUNT(*) as member_count FROM group_members WHERE group_id = ?");
+                    $stmt->execute([$group['id']]);
+                    $group['member_count'] = $stmt->fetch()['member_count'];
+                }
+                
+                // 获取用户在该群聊中的角色
+                if ($group['all_user_group'] == 1) {
+                    // 全员群聊，群主是管理员，其他用户是普通成员
+                    $group['is_admin'] = $user_id == $group['owner_id'];
+                } else {
+                    // 普通群聊，使用group_members表中的角色
+                    $group['is_admin'] = isset($user_groups[$group['id']]) ? $user_groups[$group['id']] : false;
+                }
+                
+                // 获取该群聊的最新消息
+                $stmt = $this->conn->prepare(
+                    "SELECT gm.content, gm.created_at, gm.sender_id, u.username as sender_username 
+                     FROM group_messages gm 
+                     JOIN users u ON gm.sender_id = u.id 
+                     WHERE gm.group_id = ? 
+                     ORDER BY gm.created_at DESC 
+                     LIMIT 1"
+                );
+                $stmt->execute([$group['id']]);
+                $last_message = $stmt->fetch();
+                
+                if ($last_message) {
+                    $group['last_message'] = $last_message['content'];
+                    $group['last_message_time'] = $last_message['created_at'];
+                    $group['sender_username'] = $last_message['sender_username'];
+                    $group['is_me'] = $last_message['sender_id'] == $user_id;
+                } else {
+                    $group['last_message'] = '';
+                    $group['last_message_time'] = '';
+                    $group['sender_username'] = '';
+                    $group['is_me'] = false;
+                }
+                
+                $groups[] = $group;
             }
         }
         
@@ -597,22 +704,37 @@ class Group {
      * @return array|false 角色信息或false
      */
     public function getMemberRole($group_id, $user_id) {
-        // 兼容两种表结构
-        $stmt = $this->conn->prepare("SHOW COLUMNS FROM group_members LIKE 'is_admin'");
-        $stmt->execute();
-        $is_admin_exists = $stmt->fetch();
+        // 检查是否是全员群聊
+        $stmt = $this->conn->prepare("SELECT all_user_group, owner_id FROM groups WHERE id = ?");
+        $stmt->execute([$group_id]);
+        $group_info = $stmt->fetch();
         
-        if ($is_admin_exists) {
-            $stmt = $this->conn->prepare("SELECT gm.is_admin, g.owner_id FROM group_members gm 
-                                         JOIN `groups` g ON gm.group_id = g.id 
-                                         WHERE gm.group_id = ? AND gm.user_id = ?");
+        if ($group_info && $group_info['all_user_group'] == 1) {
+            // 全员群聊，群主是管理员，其他用户是普通成员
+            $is_admin = $user_id == $group_info['owner_id'];
+            return [
+                'is_admin' => $is_admin,
+                'owner_id' => $group_info['owner_id']
+            ];
         } else {
-            $stmt = $this->conn->prepare("SELECT (gm.role = 'admin') as is_admin, g.owner_id FROM group_members gm 
-                                         JOIN `groups` g ON gm.group_id = g.id 
-                                         WHERE gm.group_id = ? AND gm.user_id = ?");
+            // 普通群聊，从group_members表获取角色
+            // 兼容两种表结构
+            $stmt = $this->conn->prepare("SHOW COLUMNS FROM group_members LIKE 'is_admin'");
+            $stmt->execute();
+            $is_admin_exists = $stmt->fetch();
+            
+            if ($is_admin_exists) {
+                $stmt = $this->conn->prepare("SELECT gm.is_admin, g.owner_id FROM group_members gm 
+                                             JOIN groups g ON gm.group_id = g.id 
+                                             WHERE gm.group_id = ? AND gm.user_id = ?");
+            } else {
+                $stmt = $this->conn->prepare("SELECT (gm.role = 'admin') as is_admin, g.owner_id FROM group_members gm 
+                                             JOIN groups g ON gm.group_id = g.id 
+                                             WHERE gm.group_id = ? AND gm.user_id = ?");
+            }
+            $stmt->execute([$group_id, $user_id]);
+            return $stmt->fetch();
         }
-        $stmt->execute([$group_id, $user_id]);
-        return $stmt->fetch();
     }
     
 
@@ -624,9 +746,20 @@ class Group {
      * @return bool 是否是群成员
      */
     public function isUserInGroup($group_id, $user_id) {
-        $stmt = $this->conn->prepare("SELECT id FROM group_members WHERE group_id = ? AND user_id = ?");
-        $stmt->execute([$group_id, $user_id]);
-        return $stmt->fetch() !== false;
+        // 检查是否是全员群聊
+        $stmt = $this->conn->prepare("SELECT all_user_group, owner_id FROM groups WHERE id = ?");
+        $stmt->execute([$group_id]);
+        $group_info = $stmt->fetch();
+        
+        if ($group_info && $group_info['all_user_group'] == 1) {
+            // 全员群聊，所有用户都视为群成员
+            return true;
+        } else {
+            // 普通群聊，检查用户是否在群成员表中
+            $stmt = $this->conn->prepare("SELECT id FROM group_members WHERE group_id = ? AND user_id = ?");
+            $stmt->execute([$group_id, $user_id]);
+            return $stmt->fetch() !== false;
+        }
     }
     
     /**
@@ -687,7 +820,7 @@ class Group {
      */
     public function getGroupInvitations($user_id) {
         $stmt = $this->conn->prepare("SELECT gi.*, g.name as group_name, u.username as inviter_name, u.avatar as inviter_avatar FROM group_invitations gi
-                                     JOIN `groups` g ON gi.group_id = g.id
+                                     JOIN groups g ON gi.group_id = g.id
                                      JOIN users u ON gi.inviter_id = u.id
                                      WHERE gi.invitee_id = ?
                                      ORDER BY gi.created_at DESC");
@@ -883,7 +1016,7 @@ class Group {
                                             u1.username as creator_username, 
                                             u2.username as owner_username,
                                             (SELECT COUNT(*) FROM group_members WHERE group_id = g.id) as member_count
-                                     FROM `groups` g
+                                     FROM groups g
                                      JOIN users u1 ON g.creator_id = u1.id
                                      JOIN users u2 ON g.owner_id = u2.id
                                      ORDER BY g.created_at DESC");
@@ -901,7 +1034,7 @@ class Group {
                                             g.name as group_name
                                      FROM group_messages gm
                                      JOIN users u ON gm.sender_id = u.id
-                                     JOIN `groups` g ON gm.group_id = g.id
+                                     JOIN groups g ON gm.group_id = g.id
                                      ORDER BY gm.created_at DESC
                                      LIMIT 1000"); // 限制1000条消息
         $stmt->execute();
@@ -917,7 +1050,7 @@ class Group {
     public function deleteGroup($group_id, $owner_id = null) {
         // 如果提供了owner_id，验证该用户是否是群主
         if ($owner_id !== null) {
-            $stmt = $this->conn->prepare("SELECT id FROM `groups` WHERE id = ? AND owner_id = ?");
+            $stmt = $this->conn->prepare("SELECT id FROM groups WHERE id = ? AND owner_id = ?");
             $stmt->execute([$group_id, $owner_id]);
             if (!$stmt->fetch()) {
                 return false;
@@ -925,7 +1058,7 @@ class Group {
         }
         
         // 检查是否是全员群聊，如果是则禁止删除
-        $stmt = $this->conn->prepare("SELECT all_user_group FROM `groups` WHERE id = ?");
+        $stmt = $this->conn->prepare("SELECT all_user_group FROM groups WHERE id = ?");
         $stmt->execute([$group_id]);
         $group = $stmt->fetch();
         if ($group && $group['all_user_group'] > 0) {
@@ -944,7 +1077,7 @@ class Group {
             $stmt->execute([$group_id]);
             
             // 删除群聊
-            $stmt = $this->conn->prepare("DELETE FROM `groups` WHERE id = ?");
+            $stmt = $this->conn->prepare("DELETE FROM groups WHERE id = ?");
             $stmt->execute([$group_id]);
             
             $this->conn->commit();
@@ -968,7 +1101,7 @@ class Group {
             
             // 创建群聊
             $group_name = "全员群聊-{$group_number}";
-            $stmt = $this->conn->prepare("INSERT INTO `groups` (name, creator_id, owner_id, all_user_group) VALUES (?, ?, ?, ?)");
+            $stmt = $this->conn->prepare("INSERT INTO groups (name, creator_id, owner_id, all_user_group) VALUES (?, ?, ?, ?)");
             $stmt->execute([$group_name, $creator_id, $creator_id, $group_number]);
             $group_id = $this->conn->lastInsertId();
             
@@ -1001,7 +1134,7 @@ class Group {
      * @return array 全员群聊列表
      */
     public function getAllUserGroups() {
-        $stmt = $this->conn->prepare("SELECT * FROM `groups` WHERE all_user_group > 0 ORDER BY all_user_group ASC");
+        $stmt = $this->conn->prepare("SELECT * FROM groups WHERE all_user_group > 0 ORDER BY all_user_group ASC");
         $stmt->execute();
         return $stmt->fetchAll();
     }
@@ -1037,7 +1170,7 @@ class Group {
      * @return int 当前全员群聊的数量
      */
     public function getCurrentAllUserGroupNumber() {
-        $stmt = $this->conn->prepare("SELECT MAX(all_user_group) as max_group FROM `groups` WHERE all_user_group > 0");
+        $stmt = $this->conn->prepare("SELECT MAX(all_user_group) as max_group FROM groups WHERE all_user_group > 0");
         $stmt->execute();
         $result = $stmt->fetch();
         return $result['max_group'] ? (int)$result['max_group'] : 0;

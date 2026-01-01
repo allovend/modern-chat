@@ -74,6 +74,10 @@ function createGroupTables() {
         UNIQUE KEY unique_user_chat (user_id, chat_type, chat_id),
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    
+    -- 添加缺失的file_type列
+    ALTER TABLE IF EXISTS messages ADD COLUMN IF NOT EXISTS file_type VARCHAR(50) NULL;
+    ALTER TABLE IF EXISTS group_messages ADD COLUMN IF NOT EXISTS file_type VARCHAR(50) NULL;
     ";
     
     try {

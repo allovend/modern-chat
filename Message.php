@@ -38,13 +38,16 @@ class Message {
     }
     
     // 发送文件消息
-    public function sendFileMessage($sender_id, $receiver_id, $file_path, $file_name, $file_size) {
+    public function sendFileMessage($sender_id, $receiver_id, $file_path, $file_name, $file_size, $file_type = null) {
         try {
+            // 确保必要的表和列存在
+            $this->ensureTablesExist();
+            
             $stmt = $this->conn->prepare(
-                "INSERT INTO messages (sender_id, receiver_id, file_path, file_name, file_size, type, status) 
-                 VALUES (?, ?, ?, ?, ?, 'file', 'sent')"
+                "INSERT INTO messages (sender_id, receiver_id, file_path, file_name, file_size, file_type, type, status) 
+                 VALUES (?, ?, ?, ?, ?, ?, 'file', 'sent')"
             );
-            $stmt->execute([$sender_id, $receiver_id, $file_path, $file_name, $file_size]);
+            $stmt->execute([$sender_id, $receiver_id, $file_path, $file_name, $file_size, $file_type]);
             
             $message_id = $this->conn->lastInsertId();
             $this->updateSession($sender_id, $receiver_id, $message_id);
@@ -95,6 +98,12 @@ class Message {
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
             )";
             $this->conn->exec($sql);
+            
+            // 确保messages表有file_type列
+            $this->conn->exec("ALTER TABLE IF EXISTS messages ADD COLUMN IF NOT EXISTS file_type VARCHAR(50) NULL");
+            
+            // 确保group_messages表有file_type列
+            $this->conn->exec("ALTER TABLE IF EXISTS group_messages ADD COLUMN IF NOT EXISTS file_type VARCHAR(50) NULL");
         } catch (PDOException $e) {
             error_log("Ensure tables exist error: " . $e->getMessage());
         }

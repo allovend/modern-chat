@@ -343,13 +343,14 @@ require_once 'Group.php';
     if ($chat_type === 'friend') {
         // 好友消息
         if ($file_result && $file_result['success']) {
-            // 发送文件消息
+            // 发送文件消息，添加file_type参数，使用mime_type作为file_type
             $result = $message->sendFileMessage(
                 $user_id,
                 $friend_id,
                 $file_result['file_path'],
                 $file_result['file_name'],
-                $file_result['file_size']
+                $file_result['file_size'],
+                $file_result['mime_type']
             );
             error_log("Send File Message Result: " . print_r($result, true));
         } else if ($message_text) {
@@ -451,12 +452,12 @@ require_once 'Group.php';
         }
         
         if ($file_result && $file_result['success']) {
-            // 发送文件消息
+            // 发送文件消息，添加file_type字段，使用mime_type作为file_type
             $file_info = [
                 'file_path' => $file_result['file_path'],
                 'file_name' => $file_result['file_name'],
-                'file_size' => $file_result['file_size']
-                // 移除file_type，因为FileUpload->upload()方法不返回file_type
+                'file_size' => $file_result['file_size'],
+                'file_type' => $file_result['mime_type'] // 添加file_type字段
             ];
             $result = $group->sendGroupMessage($selected_id, $user_id, '', $file_info);
             error_log("Send Group File Message Result: " . print_r($result, true));
