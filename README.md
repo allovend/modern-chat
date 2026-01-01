@@ -2,6 +2,19 @@
 
 一个基于 PHP + MySQL + HTML 的现代化聊天系统，具有现代化的 UI 设计和丰富的功能。
 
+<p>
+  <a href="https://github.com/LzdqesjG/modern-chat/stargazers" target="_blank">
+    <img alt="GitHub stars" src="https://img.shields.io/github/stars/LzdqesjG/modern-chat.svg" />
+  </a>
+  <a href="https://github.com/LzdqesjG/modern-chat/releases" target="_blank">
+    <img alt="All releases" src="https://img.shields.io/github/downloads/LzdqesjG/modern-chat/total.svg" />
+  </a>
+</p>
+
+点击链接加入QQ群聊【网页聊天室用户交流群】：(https://qm.qq.com/q/gn6F4IeCOY)[https://qm.qq.com/q/gn6F4IeCOY]
+
+若无法加群请使用QQ群号：`1075419361`
+
 ---
 
    ### 已部署好的体验网站
@@ -9,6 +22,23 @@
   - https://chat.hyacine.com.cn/chat
 
 ---
+
+<p>
+  <a href="https://github.com/LzdqesjG/modern-chat/releases/latest" target="_blank">
+    <img alt="Latest GitHub release" src="https://img.shields.io/github/release/LzdqesjG/modern-chat.svg" />
+  </a>
+  <a href="https://github.com/LzdqesjG/modern-chat/wiki/Help" target="_blank">
+    <img alt="Documentation WIP" src="https://img.shields.io/badge/Docs-WIP-red.svg" />
+  </a>
+  <a href="https://github.com/LzdqesjG/modern-chat/issues" target="_blank">
+    <img alt="Issues" src="https://img.shields.io/github/issues/LzdqesjG/modern-chat.svg" />
+  </a>
+  <a style="text-decoration:none" href="https://discord.gg/XgEqDHX">
+    <img src="https://img.shields.io/discord/1456213145139019893.svg" alt="Discord" />
+  </a>
+</p>
+
+
 ## 功能特性
 
 - 📱 **现代化 UI 设计** - 响应式设计，适配各种设备
