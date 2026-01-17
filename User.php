@@ -1,11 +1,15 @@
 <?php
 require_once 'db.php';
+require_once 'RedisManager.php';
 
 class User {
     private $conn;
+    private $redisManager;
     
     public function __construct($db) {
         $this->conn = $db;
+        // 初始化Redis管理器
+        $this->redisManager = new RedisManager($this->conn);
     }
     
     // 用户注册
@@ -80,8 +84,19 @@ class User {
     // 更新用户状态
     public function updateStatus($user_id, $status) {
         try {
+            // 先更新数据库中的状态
             $stmt = $this->conn->prepare("UPDATE users SET status = ?, last_active = NOW() WHERE id = ?");
             $stmt->execute([$status, $user_id]);
+            
+            // 使用RedisManager管理在线人数
+            if ($status == 'online') {
+                // 用户上线，添加到Redis在线用户列表
+                $this->redisManager->addOnlineUser($user_id);
+            } else {
+                // 用户下线，从Redis在线用户列表中移除
+                $this->redisManager->removeOnlineUser($user_id);
+            }
+            
             return true;
         } catch(PDOException $e) {
             error_log("Update Status Error: " . $e->getMessage());
@@ -101,11 +116,11 @@ class User {
         }
     }
     
-    // 通过用户名搜索用户
-    public function searchUsers($username, $current_user_id) {
+    // 通过用户名或邮箱搜索用户
+    public function searchUsers($search_term, $current_user_id) {
         try {
-            $stmt = $this->conn->prepare("SELECT id, username, email, avatar, status FROM users WHERE username LIKE ? AND id != ?");
-            $stmt->execute(["%$username%", $current_user_id]);
+            $stmt = $this->conn->prepare("SELECT id, username, email, avatar, status FROM users WHERE (username LIKE ? OR email LIKE ?) AND id != ?");
+            $stmt->execute(["%$search_term%", "%$search_term%", $current_user_id]);
             return $stmt->fetchAll();
         } catch(PDOException $e) {
             error_log("Search Users Error: " . $e->getMessage());
@@ -137,6 +152,18 @@ class User {
             error_log("Get Status Error: " . $e->getMessage());
             return 'offline';
         }
+    }
+    
+    // 获取在线用户数量
+    public function getOnlineUserCount() {
+        // 使用RedisManager获取在线用户数量
+        return $this->redisManager->getOnlineUserCount();
+    }
+    
+    // 更新用户活动时间
+    public function updateUserActivity($user_id) {
+        // 使用RedisManager更新用户活动时间
+        $this->redisManager->updateUserActivity($user_id);
     }
     
     /**
@@ -391,36 +418,15 @@ class User {
         // 创建密钥对
         $res = openssl_pkey_new($config);
         
-        if ($res === false) {
-            error_log("OpenSSL: Failed to generate new private key");
-            return false;
-        }
-        
         // 提取私钥
-        $success = openssl_pkey_export($res, $private_key);
-        
-        if (!$success) {
-            error_log("OpenSSL: Failed to export private key");
-            openssl_free_key($res);
-            return false;
-        }
+        openssl_pkey_export($res, $private_key);
         
         // 提取公钥
         $public_key = openssl_pkey_get_details($res);
-        
-        if ($public_key === false) {
-            error_log("OpenSSL: Failed to get public key details");
-            openssl_free_key($res);
-            return false;
-        }
-        
-        $public_key_pem = $public_key["key"];
-        
-        // 释放资源
-        openssl_free_key($res);
+        $public_key = $public_key["key"];
         
         return array(
-            "public_key" => $public_key_pem,
+            "public_key" => $public_key,
             "private_key" => $private_key
         );
     }
@@ -442,12 +448,6 @@ class User {
             
             // 生成密钥对
             $keys = $this->generateRSAKeys();
-            
-            // 检查密钥生成是否成功
-            if ($keys === false) {
-                error_log("Generate Encryption Keys Error: RSA key generation failed");
-                return false;
-            }
             
             // 存储密钥
             $stmt = $this->conn->prepare(
@@ -506,10 +506,7 @@ class User {
     public function encryptMessage($message, $public_key) {
         try {
             $encrypted = "";
-            if (!openssl_public_encrypt($message, $encrypted, $public_key)) {
-                error_log("Encrypt Message Error: openssl_public_encrypt failed");
-                return null;
-            }
+            openssl_public_encrypt($message, $encrypted, $public_key);
             return base64_encode($encrypted);
         } catch(Exception $e) {
             error_log("Encrypt Message Error: " . $e->getMessage());

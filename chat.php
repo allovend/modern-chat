@@ -336,12 +336,12 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         
         /* 左侧边栏顶部 - 用户信息 */
         .sidebar-header {
-            height: 60px;
+            height: 75px;
             background: #f6f6f6;
             border-bottom: 1px solid #eaeaea;
             display: flex;
             align-items: center;
-            padding: 0 15px;
+            padding: 10px 15px;
         }
         
         .user-avatar {
@@ -1287,6 +1287,95 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             background: rgba(255, 255, 255, 0.2);
         }
 
+        /* 全屏模式下的容器样式 */
+        :fullscreen .video-player-content {
+            width: 100% !important;
+            height: 100% !important;
+            display: flex;
+            flex-direction: column;
+        }
+
+        :fullscreen .video-player-body {
+            flex: 1;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        :fullscreen .custom-video-player {
+            width: 100% !important;
+            height: 100% !important;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        /* 全屏模式下的视频元素样式 */
+        :fullscreen .custom-video-element {
+            flex: 1;
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: contain;
+            background: #000;
+        }
+
+        /* 全屏模式下的控件样式 */
+        :fullscreen .video-controls {
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            position: relative;
+            z-index: 1000;
+            opacity: 1 !important;
+            transform: translateY(0) !important;
+            pointer-events: auto !important;
+            margin: 0;
+            width: auto !important;
+        }
+
+        /* 确保全屏模式下控件始终可见，不被隐藏 */
+        :fullscreen .video-controls.hidden {
+            opacity: 1 !important;
+            transform: translateY(0) !important;
+            pointer-events: auto !important;
+        }
+
+        /* 增强全屏模式下控件的可见性 */
+        :fullscreen .video-control-btn {
+            font-size: 24px;
+            width: 48px;
+            height: 48px;
+        }
+
+        /* 修复全屏模式下进度条和时间显示 */
+        :fullscreen .video-progress-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+        }
+
+        :fullscreen .video-progress-bar {
+            flex: 1;
+        }
+
+        /* 修复全屏模式下音量控制 */
+        :fullscreen .video-volume-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* 修复全屏模式下音量滑块 */
+        :fullscreen .volume-slider {
+            width: 100px;
+        }
+
         .video-volume-control {
             display: flex;
             align-items: center;
@@ -1776,6 +1865,43 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                     </label>
                 </div>
                 
+                <!-- 设置项：音乐模式 -->
+                <div class="setting-item" style="display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #f0f0f0;">
+                    <div>
+                        <div style="font-size: 14px; font-weight: 600; color: #333;">音乐模式</div>
+                        <div style="font-size: 12px; color: #999; margin-top: 2px;">选择播放的音乐类型</div>
+                    </div>
+                    <select id="setting-music-mode" style="
+                        padding: 8px 12px;
+                        border: 1px solid #ddd;
+                        border-radius: 6px;
+                        background: white;
+                        font-size: 13px;
+                        cursor: pointer;
+                    ">
+                        <option value="random">随机音乐</option>
+                        <option value="hoyo">HOYO-MiX</option>
+                    </select>
+                </div>
+                
+                <!-- 设置项：字体设置 -->
+                <div class="setting-item" style="display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #f0f0f0;">
+                    <div>
+                        <div style="font-size: 14px; font-weight: 600; color: #333;">字体设置</div>
+                        <div style="font-size: 12px; color: #999; margin-top: 2px;">设置聊天界面使用的字体</div>
+                    </div>
+                    <button onclick="openFontSettingsModal()" style="
+                        padding: 8px 16px;
+                        background: #667eea;
+                        color: white;
+                        border: none;
+                        border-radius: 6px;
+                        cursor: pointer;
+                        font-size: 13px;
+                        transition: background-color 0.2s;
+                    ">设置</button>
+                </div>
+                
                 <!-- 设置项：更多设置 -->
                 <div class="setting-item" style="display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #f0f0f0;">
                     <div>
@@ -1794,10 +1920,10 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                     ">查看</button>
                 </div>
                 
-                <!-- 设置项：查看缓存 -->
+                <!-- 设置项：管理缓存 -->
                 <div class="setting-item" style="display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #f0f0f0;">
                     <div>
-                        <div style="font-size: 14px; font-weight: 600; color: #333;">查看已缓存文件</div>
+                        <div style="font-size: 14px; font-weight: 600; color: #333;">管理已缓存文件</div>
                         <div style="font-size: 12px; color: #999; margin-top: 2px;">查看和管理已缓存的文件</div>
                     </div>
                     <button onclick="showCacheViewer()" style="
@@ -1810,6 +1936,24 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                         font-size: 13px;
                         transition: background-color 0.2s;
                     ">查看</button>
+                </div>
+                
+                <!-- 设置项：清除缓存 -->
+                <div class="setting-item" style="display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #f0f0f0;">
+                    <div>
+                        <div style="font-size: 14px; font-weight: 600; color: #333;">清除文件缓存</div>
+                        <div style="font-size: 12px; color: #999; margin-top: 2px;">清除所有本地存储的文件数据，此操作不可恢复</div>
+                    </div>
+                    <button onclick="clearFileCache()" style="
+                        padding: 8px 16px;
+                        background: #ff4d4f;
+                        color: white;
+                        border: none;
+                        border-radius: 6px;
+                        cursor: pointer;
+                        font-size: 13px;
+                        transition: background-color 0.2s;
+                    ">清除</button>
                 </div>
                 
                 <!-- 设置项：密保设置 -->
@@ -1846,6 +1990,111 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                         font-size: 13px;
                         transition: background-color 0.2s;
                     ">退出</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 字体设置弹窗 -->
+    <div id="font-settings-modal" class="modal" style="display: none;">
+        <div class="modal-content" style="width: 500px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #eaeaea;">
+                <h2 style="color: #333; font-size: 18px; font-weight: 600;">字体设置</h2>
+                <button onclick="closeFontSettingsModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #666;">×</button>
+            </div>
+            <div class="settings-content" style="padding: 0 20px 20px;">
+                <div style="margin-bottom: 20px;">
+                    <div style="font-size: 14px; color: #666; margin-bottom: 15px;">设置聊天界面使用的字体</div>
+                    
+                    <!-- 字体选择 -->
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; font-size: 14px; font-weight: 600; color: #333; margin-bottom: 8px;">选择字体</label>
+                        <select id="font-select" style="
+                            width: 100%;
+                            padding: 10px 12px;
+                            border: 1px solid #ddd;
+                            border-radius: 6px;
+                            background: white;
+                            font-size: 13px;
+                            cursor: pointer;
+                        ">
+                            <option value="default">默认字体</option>
+                            <option value="noto-sans-sc">Noto Sans SC（可商用）</option>
+                            <option value="noto-serif-sc">Noto Serif SC（可商用）</option>
+                            <option value="kaiti">楷体（可商用）</option>
+                            <option value="fangsong">仿宋（可商用）</option>
+                            <option value="custom">自定义字体</option>
+                        </select>
+                    </div>
+                    
+                    <!-- 自定义字体导入 -->
+                    <div id="custom-font-section" style="margin-bottom: 15px; display: none;">
+                        <label style="display: block; font-size: 14px; font-weight: 600; color: #333; margin-bottom: 8px;">导入自定义字体</label>
+                        <input type="file" id="custom-font-file" accept=".ttf,.otf,.woff,.woff2" style="display: none;">
+                        <button onclick="document.getElementById('custom-font-file').click()" style="
+                            padding: 8px 16px;
+                            background: #667eea;
+                            color: white;
+                            border: none;
+                            border-radius: 6px;
+                            cursor: pointer;
+                            font-size: 13px;
+                            transition: background-color 0.2s;
+                        ">选择字体文件</button>
+                        <div id="custom-font-name" style="margin-top: 10px; font-size: 13px; color: #666;"></div>
+                    </div>
+                    
+                    <!-- 字体样式设置 -->
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; font-size: 14px; font-weight: 600; color: #333; margin-bottom: 8px;">字体样式</label>
+                        <div style="display: flex; gap: 15px;">
+                            <div style="display: flex; align-items: center;">
+                                <input type="checkbox" id="font-bold" style="margin-right: 6px;">
+                                <label for="font-bold" style="font-size: 13px; color: #333; cursor: pointer;">加粗</label>
+                            </div>
+                            <div style="display: flex; align-items: center;">
+                                <input type="checkbox" id="font-italic" style="margin-right: 6px;">
+                                <label for="font-italic" style="font-size: 13px; color: #333; cursor: pointer;">斜体</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 字体预览 -->
+                    <div style="
+                        padding: 15px;
+                        background: white;
+                        border: 1px solid #e0e0e0;
+                        border-radius: 6px;
+                        margin-bottom: 15px;
+                        font-size: 16px;
+                    " id="font-preview">
+                        字体预览：这是一段测试文字，用于预览所选字体的效果。
+                    </div>
+                    
+                    <!-- 操作按钮 -->
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <button onclick="applyFont()" style="
+                            padding: 8px 16px;
+                            background: #4CAF50;
+                            color: white;
+                            border: none;
+                            border-radius: 6px;
+                            cursor: pointer;
+                            font-size: 13px;
+                            transition: background-color 0.2s;
+                        ">应用字体</button>
+                        
+                        <button onclick="resetFont()" style="
+                            padding: 8px 16px;
+                            background: #ff4d4f;
+                            color: white;
+                            border: none;
+                            border-radius: 6px;
+                            cursor: pointer;
+                            font-size: 13px;
+                            transition: background-color 0.2s;
+                        ">重置字体</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2027,40 +2276,74 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                         </div>
                     </div>
                 </div>
+                
+
             </div>
         </div>
     </div>
     
     <!-- 修改头像弹窗 -->
     <div id="change-avatar-modal" class="modal" style="display: none;">
-        <div class="modal-content" style="width: 400px;">
+        <div class="modal-content" style="width: 600px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #eaeaea;">
                 <h2 style="color: #333; font-size: 20px; font-weight: 600;">修改头像</h2>
                 <button onclick="closeChangeAvatarModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #666;">×</button>
             </div>
             <div class="change-avatar-content" style="padding: 0 20px 20px;">
                 <div style="text-align: center; margin-bottom: 20px;">
-                    <div style="display: inline-block; margin-bottom: 15px;">
-                        <div id="avatar-preview" style="
-                            width: 120px;
-                            height: 120px;
-                            border-radius: 50%;
-                            background: #f0f0f0;
-                            border: 2px dashed #ccc;
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            overflow: hidden;
-                            margin: 0 auto;
-                        ">
-                            <?php if (isset($current_user['avatar']) && $current_user['avatar'] && $current_user['avatar'] !== 'deleted_user'): ?>
-                                <img src="<?php echo $current_user['avatar']; ?>" alt="当前头像" style="width: 100%; height: 100%; object-fit: cover;">
-                            <?php else: ?>
-                                <span style="color: #666; font-size: 14px;">点击选择头像</span>
-                            <?php endif; ?>
+                    <div style="display: flex; justify-content: center; gap: 20px; margin-bottom: 15px;">
+                        <!-- 左侧：选择区域 -->
+                        <div style="flex: 1;">
+                            <div style="margin-bottom: 10px; font-size: 14px; color: #666;">选择头像区域</div>
+                            <div id="avatar-crop-container" style="
+                                width: 256px;
+                                height: 256px;
+                                border: 2px solid #ddd;
+                                border-radius: 8px;
+                                overflow: hidden;
+                                position: relative;
+                                margin: 0 auto;
+                                background: #f9f9f9;
+                            ">
+                                <img id="avatar-crop-image" style="
+                                    width: 100%;
+                                    height: auto;
+                                    cursor: move;
+                                    position: absolute;
+                                " src="" alt="选择的图片" />
+                                <!-- 选择框 -->
+                                <div id="avatar-selection" style="
+                                    position: absolute;
+                                    width: 64px;
+                                    height: 64px;
+                                    border: 2px solid #667eea;
+                                    background: rgba(102, 126, 234, 0.3);
+                                    cursor: move;
+                                    left: 96px;
+                                    top: 96px;
+                                "></div>
+                            </div>
+                        </div>
+                        <!-- 右侧：预览 -->
+                        <div style="flex: 1;">
+                            <div style="margin-bottom: 10px; font-size: 14px; color: #666;">32×32预览</div>
+                            <div style="
+                                width: 120px;
+                                height: 120px;
+                                border: 2px solid #ddd;
+                                border-radius: 8px;
+                                overflow: hidden;
+                                margin: 0 auto;
+                                background: #f9f9f9;
+                            ">
+                                <canvas id="avatar-preview" width="32" height="32" style="
+                                    width: 100%;
+                                    height: 100%;
+                                "></canvas>
+                            </div>
                         </div>
                     </div>
-                    <div style="font-size: 12px; color: #999; margin-bottom: 15px;">建议使用32×32像素的图片，支持JPG、PNG格式</div>
+                    <div style="font-size: 12px; color: #999; margin-bottom: 15px;">拖动选择框选择32×32区域，支持JPG、PNG格式</div>
                     
                     <input type="file" id="avatar-file" name="avatar" accept="image/*" style="display: none;">
                     <button type="button" onclick="document.getElementById('avatar-file').click()" style="
@@ -2303,7 +2586,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             </div>
             
             <div id="clear-cache-info" style="margin-bottom: 20px;">
-                <p>你将要清除cookie缓存的全部文件（包括图片 视频 音频 文件）总大小为：<strong id="clear-cache-size">0 B</strong></p>
+                <p>你将要清除缓存的全部文件（包括图片 视频 音频 文件）总大小为：<strong id="clear-cache-size">0 B</strong></p>
                 <p>确定要清除吗？</p>
             </div>
             
@@ -2767,7 +3050,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                     <input type="text" id="search-user-input" placeholder="输入用户名或邮箱搜索" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
                 </div>
                 <div style="margin-bottom: 15px;">
-                    <button onclick="searchUser()" style="width: 100%; padding: 10px; background: #12b7f5; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; transition: background-color 0.2s;">搜索</button>
+                    <button id="search-user-button" style="width: 100%; padding: 10px; background: #12b7f5; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; transition: background-color 0.2s;">搜索</button>
                 </div>
                 <div id="search-results" style="max-height: 300px; overflow-y: auto;">
                     <p style="text-align: center; color: #666; padding: 20px;">请输入用户名或邮箱进行搜索</p>
@@ -2802,6 +3085,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 <div class="user-info">
                     <div class="user-name"><?php echo htmlspecialchars($username); ?></div>
                     <div class="user-ip">IP: <?php echo $user_ip; ?></div>
+                    <div class="user-ip">当前在线人数：<?php echo $user->getOnlineUserCount(); ?></div>
                 </div>
             </div>
             
@@ -2811,7 +3095,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             </div>
             
             <!-- 搜索结果区域 -->
-            <div id="search-results" style="display: none; padding: 15px; background: white; border-bottom: 1px solid #eaeaea; max-height: 300px; overflow-y: auto; position: absolute; width: calc(300px - 30px); z-index: 1000;">
+            <div id="main-search-results" style="display: none; padding: 15px; background: white; border-bottom: 1px solid #eaeaea; max-height: 300px; overflow-y: auto; position: absolute; width: calc(300px - 30px); z-index: 1000;">
                 <p style="color: #666; font-size: 14px; margin-bottom: 10px;">输入用户名或群聊名称进行搜索</p>
             </div>
             
@@ -2889,7 +3173,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                             </div>
                             <div class="chat-last-message">
                                 <?php if ($group_item['all_user_group'] == 1): ?>
-                                    全员群聊
+                                    世界大厅
                                 <?php else: ?>
                                     <?php echo ($group->getGroupMembers($group_item['id']) ? count($group->getGroupMembers($group_item['id'])) : 0) . ' 成员'; ?>
                                 <?php endif; ?>
@@ -2998,7 +3282,18 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                     <!-- 初始聊天记录 -->
                     <?php foreach ($chat_history as $msg): ?>
                         <?php $is_sent = $msg['sender_id'] == $user_id; ?>
-                        <div class="message <?php echo $is_sent ? 'sent' : 'received'; ?>" data-message-id="<?php echo $msg['id']; ?>" data-chat-type="<?php echo $chat_type; ?>" data-chat-id="<?php echo $selected_id; ?>">
+                        <!-- 计算消息发送时间和当前时间的差值，用于撤回功能 -->
+                        <?php 
+                            $msg_time = strtotime($msg['created_at']);
+                            $now = time();
+                            $time_diff_minutes = ($now - $msg_time) / 60;
+                            $is_within_2_minutes = $time_diff_minutes < 2;
+                        ?>
+                        <div class="message <?php echo $is_sent ? 'sent' : 'received'; ?>" 
+                            data-message-id="<?php echo $msg['id']; ?>" 
+                            data-chat-type="<?php echo $chat_type; ?>" 
+                            data-chat-id="<?php echo $selected_id; ?>" 
+                            data-message-time="<?php echo $msg_time * 1000; ?>">
                             <?php if ($is_sent): ?>
                                 <!-- 发送者的消息，内容在左，头像在右 -->
                                 <div class="message-content">
@@ -3073,6 +3368,16 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                                         }
                                     ?>
                                     <div class="message-time"><?php echo date('Y年m月d日 H:i', strtotime($msg['created_at'])); ?></div>
+                                    <?php if ($is_within_2_minutes): ?>
+                                        <div class='message-actions'>
+                                            <button class='message-action-btn' onclick='toggleMessageActions(this)'>
+                                                <span style='font-size: 16px;'>...</span>
+                                            </button>
+                                            <div class='message-action-menu' style='display: none; position: absolute; top: 100%; right: 0; background: white; border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,0.15); padding: 8px 0; z-index: 5000; min-width: 100px;'>
+                                <button class='message-action-item' onclick='recallMessage(this, "<?php echo $msg['id']; ?>", "<?php echo $chat_type; ?>", "<?php echo $selected_id; ?>")' style='width: 100%; text-align: left; padding: 8px 16px; border: none; background: transparent; cursor: pointer; transition: all 0.2s ease; color: #333;'>撤回消息</button>
+                            </div>
+                                        </div>
+                                    <?php endif; ?>
                                 </div>
                                 <div class="message-avatar">
                                     <?php if (!empty($current_user['avatar'])): ?>
@@ -3311,7 +3616,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 }
                 return [];
             } catch (error) {
-                console.error('获取群成员失败:', error);
+                // 获取群成员失败，忽略错误
                 return [];
             }
         }
@@ -3549,8 +3854,16 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 // 重置@提及标记
                 fetch(`reset_mention.php?chat_type=group&chat_id=${chatId}`)
                     .catch(error => {
-                        console.error('重置@提及标记失败:', error);
+                        // 重置@提及标记失败，忽略错误
                     });
+            }
+        }
+        
+        // 启用所有群聊操作
+        function enableGroupOperations() {
+            const inputArea = document.querySelector('.input-area');
+            if (inputArea) {
+                inputArea.style.display = 'block';
             }
         }
         
@@ -3564,11 +3877,14 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                         disableGroupOperations();
                     } else {
                         isGroupBanned = false;
+                        enableGroupOperations();
                     }
                     return data.banned;
                 })
                 .catch(error => {
-                    console.error('检查群聊封禁状态失败:', error);
+                    // 检查群聊封禁状态失败，忽略错误
+                    // 出错时默认启用群聊操作
+                    enableGroupOperations();
                     return false;
                 });
         }
@@ -3831,7 +4147,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 })
                 .catch(error => {
                     document.body.removeChild(modal);
-                    console.error('删除好友失败:', error);
+                    // 删除好友失败，忽略错误
                     showNotification('删除好友失败，请稍后重试', 'error');
                 });
             });
@@ -3881,7 +4197,8 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         
         // 页面加载时加载设置
         document.addEventListener('DOMContentLoaded', function() {
-            loadSettings();
+            // 延迟执行loadSettings，确保indexedDBManager已经初始化
+            setTimeout(loadSettings, 100);
         });
         
         // 点击页面其他地方关闭菜单
@@ -3917,8 +4234,9 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        // 清除本地存储
-                        localStorage.clear();
+                        // 只清除设置数据，不清除文件数据
+                        localStorage.removeItem('setting-link-popup');
+                        localStorage.removeItem('setting-music-player');
                         // 重定向到登录页面
                         window.location.href = 'login.php';
                     } else {
@@ -3927,56 +4245,563 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                     }
                 })
                 .catch(error => {
-                    console.error('退出登录请求失败:', error);
+                    // 退出登录请求失败，忽略错误
                     // 即使请求失败，也尝试直接跳转
-                    localStorage.clear();
+                    localStorage.removeItem('setting-link-popup');
+                    localStorage.removeItem('setting-music-player');
                     window.location.href = 'login.php';
                 });
             }
         }
         
         // 加载设置
-        function loadSettings() {
-            // 从localStorage加载设置，如果没有则使用默认值
-            const linkPopup = localStorage.getItem('setting-link-popup') === 'false' ? false : true;
-            const musicPlayer = localStorage.getItem('setting-music-player') === 'false' ? false : true;
-            
-            // 设置开关状态
-            document.getElementById('setting-link-popup').checked = linkPopup;
-            document.getElementById('setting-music-player').checked = musicPlayer;
+        async function loadSettings() {
+            try {
+                let settings;
+                let linkPopup = true; // 默认值
+                let musicPlayer = true; // 默认值
+                let musicMode = 'random'; // 默认值
+                
+                // 检查indexedDBManager是否已经初始化
+                if (typeof indexedDBManager !== 'undefined') {
+                    try {
+                        // 从IndexedDB加载设置
+                        settings = await indexedDBManager.getSettings();
+                        linkPopup = settings['setting-link-popup'] !== false;
+                        musicPlayer = settings['setting-music-player'] !== false;
+                        musicMode = settings['setting-music-mode'] || 'random';
+                    } catch (error) {
+                        // IndexedDB加载失败，使用localStorage
+                        linkPopup = localStorage.getItem('setting-link-popup') === 'false' ? false : true;
+                        musicPlayer = localStorage.getItem('setting-music-player') === 'false' ? false : true;
+                        musicMode = localStorage.getItem('setting-music-mode') || 'random';
+                    }
+                } else {
+                    // indexedDBManager未初始化，使用localStorage
+                    linkPopup = localStorage.getItem('setting-link-popup') === 'false' ? false : true;
+                    musicPlayer = localStorage.getItem('setting-music-player') === 'false' ? false : true;
+                    musicMode = localStorage.getItem('setting-music-mode') || 'random';
+                }
+                
+                // 设置开关状态
+                document.getElementById('setting-link-popup').checked = linkPopup;
+                document.getElementById('setting-music-player').checked = musicPlayer;
+                document.getElementById('setting-music-mode').value = musicMode;
+                
+                // 如果indexedDBManager已初始化且使用了localStorage，将设置保存到IndexedDB
+                if (typeof indexedDBManager !== 'undefined' && !settings) {
+                    await saveSettings();
+                }
+            } catch (error) {
+                // 加载设置失败，忽略错误
+                // 降级到使用localStorage
+                const linkPopup = localStorage.getItem('setting-link-popup') === 'false' ? false : true;
+                const musicPlayer = localStorage.getItem('setting-music-player') === 'false' ? false : true;
+                const musicMode = localStorage.getItem('setting-music-mode') || 'random';
+                
+                // 设置开关状态
+                document.getElementById('setting-link-popup').checked = linkPopup;
+                document.getElementById('setting-music-player').checked = musicPlayer;
+                document.getElementById('setting-music-mode').value = musicMode;
+            }
         }
         
         // 保存设置
-        function saveSettings() {
+        async function saveSettings() {
             // 获取开关状态
             const linkPopup = document.getElementById('setting-link-popup').checked;
             const musicPlayer = document.getElementById('setting-music-player').checked;
+            const musicMode = document.getElementById('setting-music-mode').value;
             
-            // 保存到localStorage
-            localStorage.setItem('setting-link-popup', linkPopup);
-            localStorage.setItem('setting-music-player', musicPlayer);
+            try {
+                // 检查indexedDBManager是否已经初始化
+                if (typeof indexedDBManager !== 'undefined') {
+                    try {
+                        // 保存到IndexedDB
+                        await indexedDBManager.saveSettings({
+                            'setting-link-popup': linkPopup,
+                            'setting-music-player': musicPlayer,
+                            'setting-music-mode': musicMode
+                        });
+                        
+                        // 应用设置
+                        applySettings();
+                    } catch (error) {
+                        // IndexedDB保存失败，降级到localStorage
+                        localStorage.setItem('setting-link-popup', linkPopup);
+                        localStorage.setItem('setting-music-player', musicPlayer);
+                        localStorage.setItem('setting-music-mode', musicMode);
+                    }
+                } else {
+                    // indexedDBManager未初始化，使用localStorage
+                    localStorage.setItem('setting-link-popup', linkPopup);
+                    localStorage.setItem('setting-music-player', musicPlayer);
+                    localStorage.setItem('setting-music-mode', musicMode);
+                }
+            } catch (error) {
+                // 保存设置失败，忽略错误
+                // 降级到localStorage
+                localStorage.setItem('setting-link-popup', linkPopup);
+                localStorage.setItem('setting-music-player', musicPlayer);
+                localStorage.setItem('setting-music-mode', musicMode);
+            }
+        }
+        
+        // 字体设置相关功能
+        let customFontData = null;
+        
+        // 打开字体设置弹窗
+        function openFontSettingsModal() {
+            const modal = document.getElementById('font-settings-modal');
+            if (modal) {
+                modal.style.display = 'flex';
+                // 加载已保存的字体设置
+                loadFontSettings();
+            }
+        }
+        
+        // 关闭字体设置弹窗
+        function closeFontSettingsModal() {
+            const modal = document.getElementById('font-settings-modal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        }
+        
+        // 初始化字体设置
+        async function initFontSettings() {
+            // 监听字体选择变化
+            const fontSelect = document.getElementById('font-select');
+            if (fontSelect) {
+                fontSelect.addEventListener('change', updateFontPreview);
+                // 也监听change事件，实时应用到页面
+                fontSelect.addEventListener('change', applyFont);
+            }
             
-            // 应用设置
-            applySettings();
+            // 监听自定义字体文件选择
+            const customFontFile = document.getElementById('custom-font-file');
+            if (customFontFile) {
+                customFontFile.addEventListener('change', handleCustomFontSelect);
+            }
+            
+            // 监听加粗和斜体复选框变化，实时更新预览并应用到页面
+            const fontBoldCheckbox = document.getElementById('font-bold');
+            const fontItalicCheckbox = document.getElementById('font-italic');
+            if (fontBoldCheckbox) {
+                fontBoldCheckbox.addEventListener('change', updateFontPreview);
+                fontBoldCheckbox.addEventListener('change', applyFont);
+            }
+            if (fontItalicCheckbox) {
+                fontItalicCheckbox.addEventListener('change', updateFontPreview);
+                fontItalicCheckbox.addEventListener('change', applyFont);
+            }
+        }
+        
+        // 更新字体预览
+        function updateFontPreview() {
+            const fontSelect = document.getElementById('font-select');
+            const fontPreview = document.getElementById('font-preview');
+            const customFontSection = document.getElementById('custom-font-section');
+            const fontBoldCheckbox = document.getElementById('font-bold');
+            const fontItalicCheckbox = document.getElementById('font-italic');
+            
+            // 检查所有必要元素是否存在
+            if (!fontSelect || !fontPreview || !customFontSection || !fontBoldCheckbox || !fontItalicCheckbox) {
+                return;
+            }
+            
+            if (fontSelect.value === 'custom') {
+                customFontSection.style.display = 'block';
+            } else {
+                customFontSection.style.display = 'none';
+            }
+            
+            // 更新预览文字字体
+            applyFontToElement(fontPreview, fontSelect.value);
+            
+            // 更新预览文字的斜体和加粗样式
+            fontPreview.style.fontWeight = fontBoldCheckbox.checked ? 'bold' : 'normal';
+            fontPreview.style.fontStyle = fontItalicCheckbox.checked ? 'italic' : 'normal';
+        }
+        
+        // 处理自定义字体选择
+        function handleCustomFontSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    customFontData = {
+                        name: file.name,
+                        data: e.target.result,
+                        type: file.type
+                    };
+                    document.getElementById('custom-font-name').textContent = `已选择：${file.name}`;
+                    updateFontPreview();
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+        
+        // 应用字体到指定元素
+        function applyFontToElement(element, fontValue) {
+            let fontFamily = '';
+            
+            switch (fontValue) {
+                case 'noto-sans-sc':
+                    fontFamily = '"Noto Sans SC", sans-serif';
+                    break;
+                case 'noto-serif-sc':
+                    fontFamily = '"Noto Serif SC", serif';
+                    break;
+                case 'kaiti':
+                    fontFamily = '楷体, KaiTi, serif';
+                    break;
+                case 'fangsong':
+                    fontFamily = '仿宋, FangSong, serif';
+                    break;
+                case 'custom':
+                    if (customFontData) {
+                        // 创建自定义字体样式
+                        const fontName = 'CustomFont';
+                        let style = document.getElementById('custom-font-style');
+                        if (!style) {
+                            style = document.createElement('style');
+                            style.id = 'custom-font-style';
+                            document.head.appendChild(style);
+                        }
+                        style.textContent = `@font-face {\n  font-family: '${fontName}';\n  src: url('${customFontData.data}');\n}`;
+                        fontFamily = `'${fontName}', sans-serif`;
+                    }
+                    break;
+                default:
+                    fontFamily = '"Helvetica Neue", Arial, "Microsoft YaHei", sans-serif';
+            }
+            
+            element.style.fontFamily = fontFamily;
+        }
+        
+        // 应用字体到整个页面
+        function applyFontToPage() {
+            const fontValue = localStorage.getItem('setting-font') || 'default';
+            const fontBold = localStorage.getItem('setting-font-bold') === 'true';
+            const fontItalic = localStorage.getItem('setting-font-italic') === 'true';
+            const customFontDataStr = localStorage.getItem('setting-custom-font');
+            if (customFontDataStr) {
+                customFontData = JSON.parse(customFontDataStr);
+            }
+            
+            // 创建或更新字体样式
+            let style = document.getElementById('page-font-style');
+            if (!style) {
+                style = document.createElement('style');
+                style.id = 'page-font-style';
+                document.head.appendChild(style);
+            }
+            
+            let fontFamily = '';
+            const fontWeight = fontBold ? 'bold' : 'normal';
+            const fontStyle = fontItalic ? 'italic' : 'normal';
+            
+            switch (fontValue) {
+                case 'noto-sans-sc':
+                    fontFamily = '"Noto Sans SC", sans-serif';
+                    break;
+                case 'noto-serif-sc':
+                    fontFamily = '"Noto Serif SC", serif';
+                    break;
+                case 'kaiti':
+                    fontFamily = '楷体, KaiTi, serif';
+                    break;
+                case 'fangsong':
+                    fontFamily = '仿宋, FangSong, serif';
+                    break;
+                case 'custom':
+                    if (customFontData) {
+                        const fontName = 'CustomFont';
+                        style.textContent = `@font-face {\n  font-family: '${fontName}';\n  src: url('${customFontData.data}');\n}\n* {\n  font-family: '${fontName}', sans-serif !important;\n  font-weight: ${fontWeight} !important;\n  font-style: ${fontStyle} !important;\n}`;
+                        return;
+                    }
+                    // 如果自定义字体数据不存在，使用默认字体
+                    fontFamily = '"Helvetica Neue", Arial, "Microsoft YaHei", sans-serif';
+                    break;
+                default:
+                    // 默认字体设置
+                    fontFamily = '"Helvetica Neue", Arial, "Microsoft YaHei", sans-serif';
+            }
+            
+            // 应用到所有元素
+            style.textContent = `* {\n  font-family: ${fontFamily} !important;\n  font-weight: ${fontWeight} !important;\n  font-style: ${fontStyle} !important;\n}`;
+        }
+        
+        // 加载字体设置
+        async function loadFontSettings() {
+            try {
+                let settings;
+                let fontValue = 'default';
+                let fontBold = false;
+                let fontItalic = false;
+                let customFontDataStr = null;
+                
+                // 检查indexedDBManager是否已经初始化
+                if (typeof indexedDBManager !== 'undefined') {
+                    try {
+                        // 从IndexedDB加载设置
+                        settings = await indexedDBManager.getSettings();
+                        fontValue = settings['setting-font'] || 'default';
+                        fontBold = settings['setting-font-bold'] || false;
+                        fontItalic = settings['setting-font-italic'] || false;
+                        customFontDataStr = settings['setting-custom-font'];
+                    } catch (error) {
+                        // IndexedDB加载失败，使用localStorage
+                        fontValue = localStorage.getItem('setting-font') || 'default';
+                        fontBold = localStorage.getItem('setting-font-bold') === 'true';
+                        fontItalic = localStorage.getItem('setting-font-italic') === 'true';
+                        customFontDataStr = localStorage.getItem('setting-custom-font');
+                    }
+                } else {
+                    // indexedDBManager未初始化，使用localStorage
+                    fontValue = localStorage.getItem('setting-font') || 'default';
+                    fontBold = localStorage.getItem('setting-font-bold') === 'true';
+                    fontItalic = localStorage.getItem('setting-font-italic') === 'true';
+                    customFontDataStr = localStorage.getItem('setting-custom-font');
+                }
+                
+                // 设置字体选择器
+                const fontSelect = document.getElementById('font-select');
+                if (fontSelect) {
+                    fontSelect.value = fontValue;
+                }
+                
+                // 设置斜体和加粗复选框
+                const fontBoldCheckbox = document.getElementById('font-bold');
+                const fontItalicCheckbox = document.getElementById('font-italic');
+                if (fontBoldCheckbox) {
+                    fontBoldCheckbox.checked = fontBold;
+                }
+                if (fontItalicCheckbox) {
+                    fontItalicCheckbox.checked = fontItalic;
+                }
+                
+                // 加载自定义字体数据
+                if (customFontDataStr) {
+                    customFontData = JSON.parse(customFontDataStr);
+                    const customFontName = document.getElementById('custom-font-name');
+                    if (customFontName) {
+                        customFontName.textContent = `已选择：${customFontData.name}`;
+                    }
+                }
+                
+                // 更新预览
+                updateFontPreview();
+            } catch (error) {
+                // 加载字体设置失败，忽略错误
+            }
+        }
+        
+        // 应用字体设置
+        function applyFont() {
+            const fontSelect = document.getElementById('font-select');
+            const fontBoldCheckbox = document.getElementById('font-bold');
+            const fontItalicCheckbox = document.getElementById('font-italic');
+            
+            // 检查所有必要元素是否存在
+            if (!fontSelect || !fontBoldCheckbox || !fontItalicCheckbox) {
+                return;
+            }
+            
+            const fontValue = fontSelect.value;
+            const fontBold = fontBoldCheckbox.checked;
+            const fontItalic = fontItalicCheckbox.checked;
+            
+            // 保存字体设置
+            saveFontSettings(fontValue, fontBold, fontItalic);
+            
+            // 应用字体到页面
+            applyFontToPage();
+            
+            // 显示通知
+            showNotification('字体设置已应用', 'success');
+        }
+        
+        // 保存字体设置
+        async function saveFontSettings(fontValue, fontBold = false, fontItalic = false) {
+            try {
+                const settingsToSave = {
+                    'setting-font': fontValue,
+                    'setting-font-bold': fontBold,
+                    'setting-font-italic': fontItalic
+                };
+                
+                // 如果是自定义字体，保存字体数据
+                if (fontValue === 'custom' && customFontData) {
+                    settingsToSave['setting-custom-font'] = JSON.stringify(customFontData);
+                }
+                
+                // 检查indexedDBManager是否已经初始化
+                if (typeof indexedDBManager !== 'undefined') {
+                    try {
+                        // 保存到IndexedDB
+                        await indexedDBManager.saveSettings(settingsToSave);
+                    } catch (error) {
+                        // IndexedDB保存失败，降级到localStorage
+                        localStorage.setItem('setting-font', fontValue);
+                        localStorage.setItem('setting-font-bold', fontBold);
+                        localStorage.setItem('setting-font-italic', fontItalic);
+                        if (fontValue === 'custom' && customFontData) {
+                            localStorage.setItem('setting-custom-font', JSON.stringify(customFontData));
+                        } else {
+                            localStorage.removeItem('setting-custom-font');
+                        }
+                    }
+                } else {
+                    // indexedDBManager未初始化，使用localStorage
+                    localStorage.setItem('setting-font', fontValue);
+                    localStorage.setItem('setting-font-bold', fontBold);
+                    localStorage.setItem('setting-font-italic', fontItalic);
+                    if (fontValue === 'custom' && customFontData) {
+                        localStorage.setItem('setting-custom-font', JSON.stringify(customFontData));
+                    } else {
+                        localStorage.removeItem('setting-custom-font');
+                    }
+                }
+            } catch (error) {
+                // 保存字体设置失败，忽略错误
+            }
+        }
+        
+        // 重置字体设置
+        function resetFont() {
+            // 重置字体选择器
+            const fontSelect = document.getElementById('font-select');
+            if (fontSelect) {
+                fontSelect.value = 'default';
+            }
+            
+            // 重置斜体和加粗复选框
+            const fontBoldCheckbox = document.getElementById('font-bold');
+            const fontItalicCheckbox = document.getElementById('font-italic');
+            if (fontBoldCheckbox) {
+                fontBoldCheckbox.checked = false;
+            }
+            if (fontItalicCheckbox) {
+                fontItalicCheckbox.checked = false;
+            }
+            
+            // 重置自定义字体数据
+            customFontData = null;
+            const customFontName = document.getElementById('custom-font-name');
+            if (customFontName) {
+                customFontName.textContent = '';
+            }
+            
+            // 更新预览
+            updateFontPreview();
+            
+            // 保存重置后的设置
+            saveFontSettings('default', false, false);
+            
+            // 应用重置后的字体
+            applyFontToPage();
+            
+            // 显示通知
+            showNotification('字体设置已重置', 'success');
+        }
+        
+        // 页面加载时应用字体设置
+        document.addEventListener('DOMContentLoaded', function() {
+            // 初始化字体设置
+            initFontSettings();
+            // 应用字体到页面
+            applyFontToPage();
+        });
+        
+        // 清除文件缓存
+        function clearFileCache() {
+            if (confirm('确定要清除所有文件缓存吗？此操作不可恢复。')) {
+                try {
+                    // 获取文件索引
+                    const fileIndex = JSON.parse(localStorage.getItem('fileIndex') || '[]');
+                    
+                    // 清除所有文件数据
+                    fileIndex.forEach(fileId => {
+                        localStorage.removeItem(fileId);
+                    });
+                    
+                    // 清除文件索引
+                    localStorage.removeItem('fileIndex');
+                    
+                    // 显示清除成功通知
+                    showNotification('文件缓存已成功清除', 'success');
+                } catch (error) {
+                    // 清除文件缓存失败，忽略错误
+                    showNotification('清除文件缓存失败，请稍后重试', 'error');
+                }
+            }
         }
         
         // 应用设置
-        function applySettings() {
-            // 这里可以添加应用设置的逻辑
-            const linkPopup = localStorage.getItem('setting-link-popup') === 'true';
-            const musicPlayer = localStorage.getItem('setting-music-player') === 'true';
-            
-            console.log('应用设置:', {
-                linkPopup,
-                musicPlayer
-            });
-            
-            // 示例：根据音乐播放器设置控制音乐播放
-            // if (musicPlayer) {
-            //     // 启用音乐播放
-            // } else {
-            //     // 禁用音乐播放
-            // }
+        async function applySettings() {
+            try {
+                let settings;
+                let musicMode = 'random'; // 默认值
+                let musicPlayerSetting = false; // 默认关闭
+                
+                // 检查indexedDBManager是否已经初始化
+                if (typeof indexedDBManager !== 'undefined') {
+                    try {
+                        // 从IndexedDB获取设置
+                        settings = await indexedDBManager.getSettings();
+                        musicMode = settings['setting-music-mode'] || 'random';
+                        // 如果未设置过，默认关闭
+                        musicPlayerSetting = settings['setting-music-player'] === true;
+                    } catch (error) {
+                        // IndexedDB加载失败，使用localStorage
+                        musicMode = localStorage.getItem('setting-music-mode') || 'random';
+                        // 如果未设置过，默认关闭
+                        musicPlayerSetting = localStorage.getItem('setting-music-player') === 'true';
+                    }
+                } else {
+                    // indexedDBManager未初始化，使用localStorage
+                    musicMode = localStorage.getItem('setting-music-mode') || 'random';
+                    // 如果未设置过，默认关闭
+                    musicPlayerSetting = localStorage.getItem('setting-music-player') === 'true';
+                }
+                
+                // 处理音乐播放器开关状态
+                const player = document.getElementById('music-player');
+                const audioPlayer = document.getElementById('audio-player');
+                const musicIcon = document.getElementById('music-icon');
+                
+                if (player && audioPlayer) {
+                    if (!musicPlayerSetting) {
+                        // 音乐播放器设置为关闭，暂停音乐并隐藏播放器
+                        audioPlayer.pause();
+                        player.style.display = 'none';
+                        // 更新音乐图标为关闭状态
+                        if (musicIcon) {
+                            musicIcon.innerHTML = '🎵<span style="color: red; font-size: 12px; position: absolute; top: 5px; right: 5px;">✕</span>';
+                            musicIcon.style.position = 'relative';
+                        }
+                    } else {
+                        // 更新音乐图标为正常状态
+                        if (musicIcon) {
+                            musicIcon.innerHTML = '🎵';
+                        }
+                    }
+                }
+                
+                // 只在currentMusicMode和loadNewSong都存在时才执行音乐模式切换
+                if (typeof currentMusicMode !== 'undefined' && typeof loadNewSong !== 'undefined') {
+                    // 如果音乐模式改变，立即刷新歌曲
+                    if (currentMusicMode !== musicMode && musicPlayerSetting) {
+                        currentMusicMode = musicMode;
+                        // 立即刷新歌曲
+                        await loadNewSong();
+                    }
+                }
+            } catch (error) {
+                // 忽略错误，不向控制台报错
+            }
         }
         
         // 显示缓存查看器
@@ -3995,11 +4820,11 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         }
         
         // 加载缓存统计信息
-        function loadCacheStats() {
+        async function loadCacheStats() {
             const statsContainer = document.getElementById('cache-stats');
             
-            // 解析cookie获取缓存信息
-            const cacheInfo = parseCacheCookies();
+            // 解析缓存信息
+            const cacheInfo = await parseCacheCookies();
             
             // 生成统计HTML
             let statsHtml = `
@@ -4038,57 +4863,44 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             statsContainer.innerHTML = statsHtml;
         }
         
-        // 解析cookie获取缓存信息
+        // 解析缓存信息（同时考虑localStorage和cookie）
+        // 异步解析缓存信息（支持IndexedDB和旧版cookie）
         function parseCacheCookies() {
-            const cacheInfo = {
-                audio: { count: 0, size: 0 },
-                video: { count: 0, size: 0 },
-                image: { count: 0, size: 0 },
-                file: { count: 0, size: 0 },
-                total: { count: 0, size: 0 }
-            };
-            
-            // 获取所有cookie
-            const cookies = document.cookie.split(';');
-            
-            // 遍历cookie，查找缓存相关的cookie
-            cookies.forEach(cookie => {
-                const cookieTrimmed = cookie.trim();
-                // 检查是否是缓存相关的cookie（支持多种前缀）
-                if (cookieTrimmed.startsWith('file_') || 
-                    cookieTrimmed.startsWith('video_') || 
-                    cookieTrimmed.startsWith('audio_') || 
-                    cookieTrimmed.startsWith('Picture_')) {
-                    // 这是一个缓存文件的cookie
-                    cacheInfo.total.count++;
-                    
-                    // 解析文件类型和大小
-                    const cookieParts = cookieTrimmed.split('=');
-                    const cookieValue = decodeURIComponent(cookieParts[1]);
-                    const [fileType, fileSize] = cookieValue.split(':');
-                    const size = parseInt(fileSize) || 0;
-                    
-                    // 根据文件类型分类
-                    if (fileType === 'audio') {
-                        cacheInfo.audio.count++;
-                        cacheInfo.audio.size += size;
-                    } else if (fileType === 'video') {
-                        cacheInfo.video.count++;
-                        cacheInfo.video.size += size;
-                    } else if (fileType === 'image') {
-                        cacheInfo.image.count++;
-                        cacheInfo.image.size += size;
-                    } else {
-                        cacheInfo.file.count++;
-                        cacheInfo.file.size += size;
-                    }
-                }
+            return new Promise((resolve, reject) => {
+                const cacheInfo = {
+                    audio: { count: 0, size: 0 },
+                    video: { count: 0, size: 0 },
+                    image: { count: 0, size: 0 },
+                    file: { count: 0, size: 0 },
+                    total: { count: 0, size: 0 }
+                };
+                
+                // 只使用IndexedDBManager获取缓存统计信息，不再处理localStorage和cookie中的旧数据
+                // 这样可以避免重复计算和统计错误
+                indexedDBManager.getCacheStats()
+                    .then(stats => {
+                        // 更新缓存统计信息
+                        cacheInfo.audio.count = stats.byType.audio;
+                        cacheInfo.video.count = stats.byType.video;
+                        cacheInfo.image.count = stats.byType.image;
+                        cacheInfo.file.count = stats.byType.file;
+                        cacheInfo.total.count = stats.totalFiles;
+                        cacheInfo.total.size = stats.totalSize;
+                        
+                        // 更新每种类型的大小
+                        cacheInfo.audio.size = stats.byTypeSize?.audio || 0;
+                        cacheInfo.video.size = stats.byTypeSize?.video || 0;
+                        cacheInfo.image.size = stats.byTypeSize?.image || 0;
+                        cacheInfo.file.size = stats.byTypeSize?.file || 0;
+                        
+                        resolve(cacheInfo);
+                    })
+                    .catch(error => {
+                        // 获取缓存统计失败，忽略错误
+                        // 如果IndexedDB获取失败，返回空统计信息
+                        resolve(cacheInfo);
+                    });
             });
-            
-            // 计算总大小
-            cacheInfo.total.size = cacheInfo.audio.size + cacheInfo.video.size + cacheInfo.image.size + cacheInfo.file.size;
-            
-            return cacheInfo;
         }
         
         // 格式化文件大小
@@ -4103,12 +4915,12 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         }
         
         // 显示清空缓存确认弹窗
-        function showClearCacheConfirm() {
+        async function showClearCacheConfirm() {
             const modal = document.getElementById('clear-cache-confirm-modal');
             const cacheSizeElement = document.getElementById('clear-cache-size');
             
             // 获取缓存总大小
-            const cacheInfo = parseCacheCookies();
+            const cacheInfo = await parseCacheCookies();
             cacheSizeElement.textContent = formatFileSize(cacheInfo.total.size);
             
             modal.style.display = 'flex';
@@ -4121,14 +4933,26 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         }
         
         // 清空缓存
-        function clearCache() {
-            // 获取所有cookie
+        async function clearCache() {
+            // 使用IndexedDBManager清除所有缓存
+            try {
+                await indexedDBManager.clearAllCache();
+            } catch (e) {
+                // 清除缓存失败，忽略错误
+            }
+            
+            // 清除所有缓存相关的cookie
             const cookies = document.cookie.split(';');
             
-            // 遍历cookie，删除所有缓存相关的cookie
             cookies.forEach(cookie => {
                 const cookieTrimmed = cookie.trim();
-                if (cookieTrimmed.startsWith('file_')) {
+                // 检查是否是缓存相关的cookie（支持多种前缀）
+                if (cookieTrimmed.startsWith('file_') || 
+                    cookieTrimmed.startsWith('video_') || 
+                    cookieTrimmed.startsWith('audio_') || 
+                    cookieTrimmed.startsWith('Picture_') ||
+                    cookieTrimmed.startsWith('Video_') ||
+                    cookieTrimmed.startsWith('Audio_')) {
                     // 这是一个缓存文件的cookie，删除它
                     const cookieName = cookieTrimmed.split('=')[0];
                     document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
@@ -4156,12 +4980,8 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             fileInputBtn.addEventListener('click', function() {
                 if (fileInput) {
                     fileInput.click();
-                } else {
-                    console.error('File input element not found');
                 }
             });
-        } else {
-            console.error('File input button not found');
         }
         
         // 文件选择事件处理
@@ -4172,8 +4992,6 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                     sendFile(file);
                 }
             });
-        } else {
-            console.error('File input element not found');
         }
         
         // 发送按钮点击事件
@@ -4413,6 +5231,92 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             }
         }
         
+
+        
+        // 点击其他区域关闭消息操作菜单
+        document.addEventListener('click', function(event) {
+            if (!event.target.closest('.message-actions')) {
+                document.querySelectorAll('.message-action-menu').forEach(menu => {
+                    menu.style.display = 'none';
+                });
+            }
+        });
+        
+        // 撤回消息功能
+        // 撤回消息功能 - 全局函数
+        window.recallMessage = function(button, messageId, chatType, chatId) {
+            console.log('调用撤回消息函数:', {button, messageId, chatType, chatId});
+            // 获取消息元素
+            const messageElement = button.closest('.message');
+            if (!messageElement) {
+                console.error('未找到消息元素');
+                showNotification('未找到消息元素', 'error');
+                return;
+            }
+            const messageTime = parseInt(messageElement.dataset.messageTime);
+            const now = Date.now();
+            const timeDiff = (now - messageTime) / 1000 / 60; // 转换为分钟
+            
+            // 检查是否在2分钟内
+            if (timeDiff > 2) {
+                showNotification('消息已超过2分钟，无法撤回', 'error');
+                return;
+            }
+            
+            // 从消息元素的data-message-id属性获取真实的消息ID，而不是使用传入的临时ID
+            const realMessageId = messageElement.dataset.messageId;
+            const realChatType = messageElement.dataset.chatType;
+            const realChatId = messageElement.dataset.chatId;
+            
+            console.log('真实消息ID:', realMessageId, '真实聊天类型:', realChatType, '真实聊天ID:', realChatId);
+            
+            // 发送撤回请求到服务器
+            const formData = new URLSearchParams();
+            formData.append('action', 'recall');
+            formData.append('message_id', realMessageId);
+            formData.append('chat_type', realChatType);
+            if (realChatType === 'friend') {
+                formData.append('friend_id', realChatId);
+            } else {
+                formData.append('id', realChatId);
+            }
+            
+            console.log('发送撤回请求:', formData.toString());
+            fetch('send_message.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('撤回请求响应:', data);
+                if (data.success) {
+                    // 撤回成功，更新消息显示为撤回状态
+                    messageElement.innerHTML = `
+                        <div class='message-content'>
+                            <div class='message-text' style='color: #999; font-style: italic;'>[消息已撤回]</div>
+                        </div>
+                        <div class='message-avatar'>
+                            <?php if (!empty($current_user['avatar'])): ?>
+                                <img src='<?php echo $current_user['avatar']; ?>' alt='<?php echo $username; ?>' style='width: 100%; height: 100%; border-radius: 50%; object-fit: cover;'>
+                            <?php else: ?>
+                                <?php echo substr($username, 0, 2); ?>
+                            <?php endif; ?>
+                        </div>
+                    `;
+                    showNotification('消息已撤回', 'success');
+                } else {
+                    showNotification('消息撤回失败: ' + (data.message || '未知错误'), 'error');
+                }
+            })
+            .catch(error => {
+                console.error('撤回消息失败:', error);
+                showNotification('网络错误，消息撤回失败', 'error');
+            });
+        }
+        
         // 显示安全警告
         function showSecurityWarning(link) {
             // 创建安全警告弹窗
@@ -4534,7 +5438,663 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             return link.substring(0, halfLength) + '...' + link.substring(link.length - halfLength);
         }
         
+        // IndexedDB管理类，用于统一管理所有类型的缓存
+        class IndexedDBManager {
+            constructor() {
+                this.dbName = 'chatfile';
+                this.dbVersion = 2;
+                this.db = null;
+                this.stores = {
+                    files: 'files',
+                    settings: 'settings',
+                    cache: 'cache'
+                };
+            }
+            
+            // 打开数据库
+            openDB() {
+                return new Promise((resolve, reject) => {
+                    if (this.db) {
+                        resolve(this.db);
+                        return;
+                    }
+                    
+                    const request = indexedDB.open(this.dbName, this.dbVersion);
+                    
+                    request.onerror = (event) => {
+                        reject('IndexedDB打开失败: ' + event.target.error.message);
+                    };
+                    
+                    request.onsuccess = (event) => {
+                        this.db = event.target.result;
+                        resolve(this.db);
+                    };
+                    
+                    request.onupgradeneeded = (event) => {
+                        const db = event.target.result;
+                        
+                        // 创建文件存储对象
+                        if (!db.objectStoreNames.contains(this.stores.files)) {
+                            const filesStore = db.createObjectStore(this.stores.files, { keyPath: 'id' });
+                            filesStore.createIndex('type', 'type', { unique: false });
+                            filesStore.createIndex('uploadedAt', 'uploadedAt', { unique: false });
+                            filesStore.createIndex('size', 'size', { unique: false });
+                        }
+                        
+                        // 创建设置存储对象
+                        if (!db.objectStoreNames.contains(this.stores.settings)) {
+                            const settingsStore = db.createObjectStore(this.stores.settings, { keyPath: 'key' });
+                        }
+                        
+                        // 创建通用缓存存储对象
+                        if (!db.objectStoreNames.contains(this.stores.cache)) {
+                            const cacheStore = db.createObjectStore(this.stores.cache, { keyPath: 'key' });
+                            cacheStore.createIndex('type', 'type', { unique: false });
+                            cacheStore.createIndex('timestamp', 'timestamp', { unique: false });
+                        }
+                    };
+                });
+            }
+            
+            // 保存文件到IndexedDB
+            saveFile(fileData) {
+                return new Promise((resolve, reject) => {
+                    this.openDB().then(db => {
+                        const transaction = db.transaction([this.stores.files], 'readwrite');
+                        const objectStore = transaction.objectStore(this.stores.files);
+                        
+                        const request = objectStore.put(fileData);
+                        
+                        request.onerror = (event) => {
+                            reject('文件保存失败: ' + event.target.error.message);
+                        };
+                        
+                        transaction.oncomplete = () => {
+                            resolve(fileData.id);
+                        };
+                    }).catch(error => {
+                        reject(error);
+                    });
+                });
+            }
+            
+            // 从IndexedDB获取文件
+            getFile(fileId) {
+                return new Promise((resolve, reject) => {
+                    this.openDB().then(db => {
+                        const transaction = db.transaction([this.stores.files], 'readonly');
+                        const objectStore = transaction.objectStore(this.stores.files);
+                        
+                        const request = objectStore.get(fileId);
+                        
+                        request.onerror = (event) => {
+                            reject('文件读取失败: ' + event.target.error.message);
+                        };
+                        
+                        request.onsuccess = () => {
+                            resolve(request.result);
+                        };
+                    }).catch(error => {
+                        reject(error);
+                    });
+                });
+            }
+            
+            // 从IndexedDB删除文件
+            deleteFile(fileId) {
+                return new Promise((resolve, reject) => {
+                    this.openDB().then(db => {
+                        const transaction = db.transaction([this.stores.files], 'readwrite');
+                        const objectStore = transaction.objectStore(this.stores.files);
+                        
+                        const request = objectStore.delete(fileId);
+                        
+                        request.onerror = (event) => {
+                            reject('文件删除失败: ' + event.target.error.message);
+                        };
+                        
+                        transaction.oncomplete = () => {
+                            resolve(true);
+                        };
+                    }).catch(error => {
+                        reject(error);
+                    });
+                });
+            }
+            
+            // 获取所有文件
+            getAllFiles() {
+                return new Promise((resolve, reject) => {
+                    this.openDB().then(db => {
+                        const transaction = db.transaction([this.stores.files], 'readonly');
+                        const objectStore = transaction.objectStore(this.stores.files);
+                        const files = [];
+                        
+                        objectStore.openCursor().onsuccess = (event) => {
+                            const cursor = event.target.result;
+                            if (cursor) {
+                                files.push(cursor.value);
+                                cursor.continue();
+                            } else {
+                                resolve(files);
+                            }
+                        };
+                    }).catch(error => {
+                        reject(error);
+                    });
+                });
+            }
+            
+            // 保存设置到IndexedDB
+            saveSetting(key, value) {
+                return new Promise((resolve, reject) => {
+                    this.openDB().then(db => {
+                        const transaction = db.transaction([this.stores.settings], 'readwrite');
+                        const objectStore = transaction.objectStore(this.stores.settings);
+                        
+                        const settingData = {
+                            key: key,
+                            value: value,
+                            timestamp: new Date().toISOString()
+                        };
+                        
+                        const request = objectStore.put(settingData);
+                        
+                        request.onerror = (event) => {
+                            reject('设置保存失败: ' + event.target.error.message);
+                        };
+                        
+                        transaction.oncomplete = () => {
+                            resolve(true);
+                        };
+                    }).catch(error => {
+                        reject(error);
+                    });
+                });
+            }
+            
+            // 从IndexedDB获取设置
+            getSetting(key, defaultValue = null) {
+                return new Promise((resolve, reject) => {
+                    this.openDB().then(db => {
+                        const transaction = db.transaction([this.stores.settings], 'readonly');
+                        const objectStore = transaction.objectStore(this.stores.settings);
+                        
+                        const request = objectStore.get(key);
+                        
+                        request.onerror = (event) => {
+                            reject('设置读取失败: ' + event.target.error.message);
+                        };
+                        
+                        request.onsuccess = () => {
+                            resolve(request.result ? request.result.value : defaultValue);
+                        };
+                    }).catch(error => {
+                        reject(error);
+                    });
+                });
+            }
+            
+            // 从IndexedDB获取所有设置
+            getSettings() {
+                return new Promise((resolve, reject) => {
+                    this.openDB().then(db => {
+                        const transaction = db.transaction([this.stores.settings], 'readonly');
+                        const objectStore = transaction.objectStore(this.stores.settings);
+                        const settings = {};
+                        
+                        objectStore.openCursor().onsuccess = (event) => {
+                            const cursor = event.target.result;
+                            if (cursor) {
+                                settings[cursor.value.key] = cursor.value.value;
+                                cursor.continue();
+                            } else {
+                                resolve(settings);
+                            }
+                        };
+                    }).catch(error => {
+                        reject(error);
+                    });
+                });
+            }
+            
+            // 保存多个设置到IndexedDB
+            saveSettings(settings) {
+                return new Promise((resolve, reject) => {
+                    this.openDB().then(db => {
+                        const transaction = db.transaction([this.stores.settings], 'readwrite');
+                        const objectStore = transaction.objectStore(this.stores.settings);
+                        
+                        const savePromises = [];
+                        
+                        for (const [key, value] of Object.entries(settings)) {
+                            savePromises.push(new Promise((resolveSave, rejectSave) => {
+                                const settingData = {
+                                    key: key,
+                                    value: value,
+                                    timestamp: new Date().toISOString()
+                                };
+                                
+                                const request = objectStore.put(settingData);
+                                request.onerror = () => rejectSave(`保存设置 ${key} 失败`);
+                                request.onsuccess = () => resolveSave(true);
+                            }));
+                        }
+                        
+                        Promise.all(savePromises).then(() => {
+                            resolve(true);
+                        }).catch(error => {
+                            reject(error);
+                        });
+                    }).catch(error => {
+                        reject(error);
+                    });
+                });
+            }
+            
+            // 保存通用缓存到IndexedDB
+            saveCache(key, value, type = 'general') {
+                return new Promise((resolve, reject) => {
+                    this.openDB().then(db => {
+                        const transaction = db.transaction([this.stores.cache], 'readwrite');
+                        const objectStore = transaction.objectStore(this.stores.cache);
+                        
+                        const cacheData = {
+                            key: key,
+                            value: value,
+                            type: type,
+                            timestamp: new Date().toISOString()
+                        };
+                        
+                        const request = objectStore.put(cacheData);
+                        
+                        request.onerror = (event) => {
+                            reject('缓存保存失败: ' + event.target.error.message);
+                        };
+                        
+                        transaction.oncomplete = () => {
+                            resolve(true);
+                        };
+                    }).catch(error => {
+                        reject(error);
+                    });
+                });
+            }
+            
+            // 从IndexedDB获取通用缓存
+            getCache(key) {
+                return new Promise((resolve, reject) => {
+                    this.openDB().then(db => {
+                        const transaction = db.transaction([this.stores.cache], 'readonly');
+                        const objectStore = transaction.objectStore(this.stores.cache);
+                        
+                        const request = objectStore.get(key);
+                        
+                        request.onerror = (event) => {
+                            reject('缓存读取失败: ' + event.target.error.message);
+                        };
+                        
+                        request.onsuccess = () => {
+                            resolve(request.result ? request.result.value : null);
+                        };
+                    }).catch(error => {
+                        reject(error);
+                    });
+                });
+            }
+            
+            // 删除通用缓存
+            deleteCache(key) {
+                return new Promise((resolve, reject) => {
+                    this.openDB().then(db => {
+                        const transaction = db.transaction([this.stores.cache], 'readwrite');
+                        const objectStore = transaction.objectStore(this.stores.cache);
+                        
+                        const request = objectStore.delete(key);
+                        
+                        request.onerror = (event) => {
+                            reject('缓存删除失败: ' + event.target.error.message);
+                        };
+                        
+                        transaction.oncomplete = () => {
+                            resolve(true);
+                        };
+                    }).catch(error => {
+                        reject(error);
+                    });
+                });
+            }
+            
+            // 迁移数据从localStorage到IndexedDB
+            migrateFromLocalStorage() {
+                return new Promise((resolve, reject) => {
+                    try {
+                        // 迁移设置
+                        const settingKeys = ['setting-link-popup', 'setting-music-player'];
+                        const migrationPromises = [];
+                        
+                        settingKeys.forEach(key => {
+                            const value = localStorage.getItem(key);
+                            if (value !== null) {
+                                // 转换布尔值
+                                let parsedValue = value;
+                                if (value === 'true' || value === 'false') {
+                                    parsedValue = value === 'true';
+                                }
+                                migrationPromises.push(this.saveSetting(key, parsedValue));
+                            }
+                        });
+                        
+                        // 迁移旧版文件数据
+                        const localStorageKeys = Object.keys(localStorage);
+                        localStorageKeys.forEach(key => {
+                            if (key.startsWith('File_') || key.startsWith('Picture_') || key.startsWith('Video_') || key.startsWith('Audio_')) {
+                                const fileData = localStorage.getItem(key);
+                                if (fileData) {
+                                    try {
+                                        const parsedData = JSON.parse(fileData);
+                                        if (parsedData.id && parsedData.name && parsedData.data) {
+                                            migrationPromises.push(this.saveFile(parsedData));
+                                        }
+                                    } catch (e) {
+                                        // 忽略无效数据
+                                    }
+                                }
+                            }
+                        });
+                        
+                        // 迁移fileIndex
+                        const fileIndex = localStorage.getItem('fileIndex');
+                        if (fileIndex) {
+                            try {
+                                const parsedIndex = JSON.parse(fileIndex);
+                                migrationPromises.push(this.saveCache('fileIndex', parsedIndex, 'system'));
+                            } catch (e) {
+                                // 忽略无效数据
+                            }
+                        }
+                        
+                        Promise.all(migrationPromises).then(() => {
+                            // 迁移完成后清除localStorage中的数据
+                            settingKeys.forEach(key => localStorage.removeItem(key));
+                            localStorageKeys.forEach(key => {
+                                if (key.startsWith('File_') || key.startsWith('Picture_') || key.startsWith('Video_') || key.startsWith('Audio_')) {
+                                    localStorage.removeItem(key);
+                                }
+                            });
+                            localStorage.removeItem('fileIndex');
+                            resolve(true);
+                        }).catch(error => {
+                            reject('迁移失败: ' + error.message);
+                        });
+                    } catch (error) {
+                        reject('迁移过程中发生错误: ' + error.message);
+                    }
+                });
+            }
+            
+            // 获取缓存统计信息
+            getCacheStats() {
+                return new Promise((resolve, reject) => {
+                    this.getAllFiles().then(files => {
+                        let totalSize = 0;
+                        const stats = {
+                            totalFiles: files.length,
+                            totalSize: 0,
+                            byType: {
+                                image: 0,
+                                video: 0,
+                                audio: 0,
+                                file: 0
+                            },
+                            byTypeSize: {
+                                image: 0,
+                                video: 0,
+                                audio: 0,
+                                file: 0
+                            }
+                        };
+                        
+                        files.forEach(file => {
+                            totalSize += file.size;
+                            if (file.type.startsWith('image/')) {
+                                stats.byType.image++;
+                                stats.byTypeSize.image += file.size;
+                            } else if (file.type.startsWith('video/')) {
+                                stats.byType.video++;
+                                stats.byTypeSize.video += file.size;
+                            } else if (file.type.startsWith('audio/')) {
+                                stats.byType.audio++;
+                                stats.byTypeSize.audio += file.size;
+                            } else {
+                                stats.byType.file++;
+                                stats.byTypeSize.file += file.size;
+                            }
+                        });
+                        
+                        stats.totalSize = totalSize;
+                        resolve(stats);
+                    }).catch(error => {
+                        reject('获取缓存统计失败: ' + error.message);
+                    });
+                });
+            }
+            
+            // 清除所有缓存
+            clearAllCache() {
+                return new Promise((resolve, reject) => {
+                    this.openDB().then(db => {
+                        const storesToClear = [this.stores.files, this.stores.cache];
+                        const clearPromises = [];
+                        
+                        storesToClear.forEach(storeName => {
+                            const transaction = db.transaction([storeName], 'readwrite');
+                            const objectStore = transaction.objectStore(storeName);
+                            const request = objectStore.clear();
+                            
+                            clearPromises.push(new Promise((res, rej) => {
+                                request.onerror = (event) => {
+                                    rej('清除' + storeName + '失败: ' + event.target.error.message);
+                                };
+                                
+                                transaction.oncomplete = () => {
+                                    res(true);
+                                };
+                            }));
+                        });
+                        
+                        Promise.all(clearPromises).then(() => {
+                            resolve(true);
+                        }).catch(error => {
+                            reject('清除缓存失败: ' + error.message);
+                        });
+                    }).catch(error => {
+                        reject('清除缓存过程中发生错误: ' + error.message);
+                    });
+                });
+            }
+        }
+        
+        // 初始化IndexedDB管理器实例
+        const indexedDBManager = new IndexedDBManager();
+        
+        // 页面加载时执行数据迁移
+        window.addEventListener('load', () => {
+            indexedDBManager.migrateFromLocalStorage().catch(error => {
+                // localStorage迁移失败，忽略错误
+            });
+        });
+        
+        // 保存文件到IndexedDB (兼容旧函数调用)
+        function saveFileToIndexedDB(fileData) {
+            return indexedDBManager.saveFile(fileData);
+        }
+        
+        // 从IndexedDB获取文件 (兼容旧函数调用)
+        function getFileFromIndexedDB(fileId) {
+            return indexedDBManager.getFile(fileId);
+        }
+        
+        // 从IndexedDB删除文件 (兼容旧函数调用)
+        function deleteFileFromIndexedDB(fileId) {
+            return indexedDBManager.deleteFile(fileId);
+        }
+        
+        // 获取所有文件 (兼容旧函数调用)
+        function getAllFilesFromIndexedDB() {
+            return indexedDBManager.getAllFiles();
+        }
+        
+        // 清空IndexedDB文件存储
+        function clearFilesFromIndexedDB() {
+            return new Promise((resolve, reject) => {
+                indexedDBManager.clearAllCache().then(() => {
+                    resolve(true);
+                }).catch(error => {
+                    reject('清空文件存储失败: ' + error.message);
+                });
+            });
+        }
+        
+        // localStorage空间管理函数
+        function getLocalStorageAvailableSpace() {
+            // 尝试存储不同大小的数据，找出可用空间
+            try {
+                const testKey = '__test_storage_space__';
+                let testData = '';
+                const chunkSize = 1024 * 1024; // 1MB chunks
+                let maxChunks = 100;
+                let chunksWritten = 0;
+                
+                // 先删除可能存在的测试数据
+                localStorage.removeItem(testKey);
+                
+                // 逐步增加数据大小，直到失败
+                while (chunksWritten < maxChunks) {
+                    try {
+                        testData += 'x'.repeat(chunkSize);
+                        localStorage.setItem(testKey, testData);
+                        chunksWritten++;
+                    } catch (e) {
+                        break;
+                    }
+                }
+                
+                // 计算可用空间（MB）
+                const availableSpace = chunksWritten * chunkSize;
+                
+                // 清理测试数据
+                localStorage.removeItem(testKey);
+                
+                return availableSpace;
+            } catch (error) {
+                // 保守估计，返回1MB
+                return 1024 * 1024;
+            }
+        }
+        
+        // 清理旧文件以释放空间
+        async function cleanupOldFiles(requiredSpace) {
+            try {
+                // 获取所有文件
+                const allFiles = await indexedDBManager.getAllFiles();
+                if (allFiles.length === 0) {
+                    return false;
+                }
+                
+                // 按上传时间排序，最旧的文件排在前面
+                const sortedFiles = allFiles.sort((a, b) => new Date(a.uploadedAt) - new Date(b.uploadedAt));
+                
+                // 计算需要清理的空间
+                let cleanedSize = 0;
+                const filesToRemove = [];
+                
+                // 从最旧的文件开始清理，直到有足够空间
+                for (const file of sortedFiles) {
+                    if (cleanedSize >= requiredSpace) {
+                        break;
+                    }
+                    
+                    filesToRemove.push(file.id);
+                    cleanedSize += file.size;
+                }
+                
+                // 执行清理
+                for (const fileId of filesToRemove) {
+                    await indexedDBManager.deleteFile(fileId);
+                }
+                
+                return true;
+            } catch (error) {
+                console.error('清理旧文件失败:', error);
+                return false;
+            }
+        }
+        
         // 发送文件函数
+        // IndexedDB文件存储管理
+        function saveFileToCache(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        // 根据文件类型设置不同的前缀
+                        let prefix = 'File_';
+                        if (file.type.startsWith('image/')) {
+                            prefix = 'Picture_';
+                        } else if (file.type.startsWith('video/')) {
+                            prefix = 'Video_';
+                        } else if (file.type.startsWith('audio/')) {
+                            prefix = 'Audio_';
+                        }
+                        
+                        // 生成唯一文件ID，格式为：前缀 + 原始文件名 + 时间戳 + 随机字符串
+                        const timestamp = Date.now();
+                        const randomStr = Math.random().toString(36).substring(2, 11);
+                        const fileId = prefix + file.name + '_' + timestamp + '_' + randomStr;
+                        
+                        // 准备文件数据
+                        const fileData = {
+                            id: fileId,
+                            name: file.name,
+                            size: file.size,
+                            type: file.type,
+                            data: e.target.result,
+                            uploadedAt: new Date().toISOString()
+                        };
+                        
+                        // 将文件数据存储到IndexedDB
+                        indexedDBManager.saveFile(fileData)
+                            .then(() => {
+                                resolve(fileId);
+                            })
+                            .catch(error => {
+                                reject('文件存储失败：' + error.message);
+                            });
+                    } catch (error) {
+                        reject('文件存储失败：' + error.message);
+                    }
+                };
+                reader.onerror = () => {
+                    reject('文件读取失败');
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+        
+        function getFileFromCache(fileId) {
+            return new Promise((resolve, reject) => {
+                indexedDBManager.getFile(fileId)
+                    .then(fileData => {
+                        resolve(fileData);
+                    })
+                    .catch(error => {
+                        // 从IndexedDB获取文件失败，忽略错误
+                        resolve(null);
+                    });
+            });
+        }
+        
         function sendFile(file) {
             const chatType = '<?php echo $chat_type; ?>';
             const chatId = '<?php echo $selected_id; ?>';
@@ -4545,7 +6105,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             }
             
             // 检查文件大小是否超过限制
-            const uploadMaxConfig = <?php echo getConfig('upload_files_max', 50); ?>; // 默认50MB
+            const uploadMaxConfig = <?php echo getConfig('upload_files_max', 150); ?>; // 默认50MB
             const maxFileSize = uploadMaxConfig * 1024 * 1024; // 转换为字节
             if (file.size > maxFileSize) {
                 const maxSizeMB = uploadMaxConfig.toFixed(1);
@@ -4554,13 +6114,10 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 return;
             }
             
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('chat_type', chatType);
-            if (chatType === 'friend') {
-                formData.append('friend_id', chatId);
-            } else {
-                formData.append('id', chatId);
+            // 检查IndexedDB是否支持
+            if (!window.indexedDB) {
+                showNotification('您的浏览器不支持IndexedDB，无法上传文件', 'error');
+                return;
             }
             
             // 创建文件上传中的提示消息
@@ -4568,14 +6125,18 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             const uploadingMessage = document.createElement('div');
             uploadingMessage.className = 'message sent';
             
+            // 格式化时间为 X年X月X日X时X分
+            const date = new Date();
+            const formattedTime = `${date.getFullYear()}年${(date.getMonth() + 1).toString().padStart(2, '0')}月${date.getDate().toString().padStart(2, '0')}日${date.getHours().toString().padStart(2, '0')}时${date.getMinutes().toString().padStart(2, '0')}分`;
+            const timeHtml = `<div class='message-time'>${formattedTime}</div>`;
+            
             // 创建带进度条的上传消息
-            const uploadTime = new Date().toLocaleTimeString('zh-CN', {hour: '2-digit', minute:'2-digit'});
             uploadingMessage.innerHTML = `
                 <div class='message-content'>
                     <div class='message-text'>
                         <div style='margin-bottom: 8px;'><strong>${file.name}</strong></div>
                         <div style='margin-bottom: 8px;'>文件大小：${(file.size / (1024 * 1024)).toFixed(2)} MB</div>
-                        <div style='margin-bottom: 5px;'>上传进度：</div>
+                        <div style='margin-bottom: 5px;'>上传中：</div>
                         <div style='width: 100%; height: 8px; background: #e0e0e0; border-radius: 4px; overflow: hidden; margin-bottom: 5px;'>
                             <div id='upload-progress-bar' style='width: 0%; height: 100%; background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); transition: width 0.3s ease; border-radius: 4px;'></div>
                         </div>
@@ -4584,7 +6145,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                             <span id='upload-speed'>0 KB/s</span>
                         </div>
                     </div>
-                    <div class='message-time'>${new Date().toLocaleString('zh-CN', {year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute:'2-digit'})}</div>
+                    ${timeHtml}
                 </div>
                 <div class='message-avatar'>
                     <?php if (!empty($current_user['avatar'])): ?>
@@ -4597,104 +6158,147 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             messagesContainer.appendChild(uploadingMessage);
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
             
-            // 获取进度条和状态元素
+            // 更新进度显示
             const progressBar = uploadingMessage.querySelector('#upload-progress-bar');
             const percentageText = uploadingMessage.querySelector('#upload-percentage');
             const speedText = uploadingMessage.querySelector('#upload-speed');
             
-            // 上传速度计算变量
-            let startTime = Date.now();
-            let previousBytesLoaded = 0;
+            // 模拟进度更新
+            let progress = 0;
+            const progressInterval = setInterval(() => {
+                progress += 10;
+                if (progress > 90) progress = 90;
+                progressBar.style.width = `${progress}%`;
+                percentageText.textContent = `${progress}%`;
+            }, 100);
             
-            // 创建XMLHttpRequest对象
-            const xhr = new XMLHttpRequest();
-            
-            // 监听上传进度
-            xhr.upload.addEventListener('progress', (event) => {
-                if (event.lengthComputable) {
-                    const bytesLoaded = event.loaded;
-                    const totalBytes = event.total;
+            // 保存文件到IndexedDB
+            saveFileToCache(file)
+                .then(async (fileId) => {
+                    clearInterval(progressInterval);
+                    progressBar.style.width = '100%';
+                    percentageText.textContent = '100%';
                     
-                    // 计算百分比
-                    const percentage = Math.round((bytesLoaded / totalBytes) * 100);
+                    // 准备消息数据
+                    const messageData = {
+                        id: 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+                        sender_id: '<?php echo $user_id; ?>',
+                        content: '',
+                        file_path: fileId, // 使用localStorage文件ID作为路径
+                        file_name: file.name,
+                        file_size: file.size,
+                        file_type: file.type,
+                        type: 'file',
+                        created_at: new Date().toISOString(),
+                        status: 'sent',
+                        sender_name: '<?php echo $username; ?>',
+                        sender_avatar: '<?php echo !empty($current_user['avatar']) ? $current_user['avatar'] : ''; ?>'
+                    };
                     
-                    // 更新进度条和百分比
-                    progressBar.style.width = `${percentage}%`;
-                    percentageText.textContent = `${percentage}%`;
+                    // 创建消息元素
+                    const messageElement = createMessageElement(messageData, chatType, '<?php echo $selected_id; ?>');
+                    messagesContainer.removeChild(uploadingMessage);
+                    messagesContainer.appendChild(messageElement);
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
                     
-                    // 计算上传速度
-                    const currentTime = Date.now();
-                    const elapsedTime = (currentTime - startTime) / 1000; // 秒
+                    // 初始化新添加的音频播放器
+                    initAudioPlayers();
                     
-                    if (elapsedTime > 0) {
-                        const bytesUploaded = bytesLoaded - previousBytesLoaded;
-                        const speed = bytesUploaded / elapsedTime; // 字节/秒
-                        
-                        // 格式化速度显示
-                        let speedFormatted;
-                        if (speed < 1024) {
-                            speedFormatted = `${speed.toFixed(0)} B/s`;
-                        } else if (speed < 1024 * 1024) {
-                            speedFormatted = `${(speed / 1024).toFixed(1)} KB/s`;
+                    // 发送消息到服务器（同时发送文件内容和元数据）
+                    try {
+                        const formData = new FormData();
+                        formData.append('chat_type', chatType);
+                        formData.append('content', '');
+                        formData.append('file_path', fileId);
+                        formData.append('file_name', file.name);
+                        formData.append('file_size', file.size);
+                        formData.append('file_type', file.type);
+                        // 同时上传实际文件内容
+                        formData.append('file', file);
+                        if (chatType === 'friend') {
+                            formData.append('friend_id', chatId);
                         } else {
-                            speedFormatted = `${(speed / (1024 * 1024)).toFixed(1)} MB/s`;
+                            formData.append('id', chatId);
                         }
                         
-                        speedText.textContent = speedFormatted;
+                        // 使用XMLHttpRequest替代fetch来获取上传进度
+                        const xhr = new XMLHttpRequest();
                         
-                        // 更新上一次的字节数和时间
-                        previousBytesLoaded = bytesLoaded;
-                        startTime = currentTime;
-                    }
-                }
-            });
-            
-            // 监听上传完成
-            xhr.addEventListener('load', () => {
-                try {
-                    const data = JSON.parse(xhr.responseText);
-                    
-                    // 移除上传中的提示消息
-                    messagesContainer.removeChild(uploadingMessage);
-                    
-                    if (data.success) {
-                        // 文件上传成功，创建消息元素
-                        const messageElement = createMessageElement(data.message, chatType, '<?php echo $selected_id; ?>');
-                        messagesContainer.appendChild(messageElement);
-                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                        // 显示服务器上传的真实进度
+                        xhr.upload.onprogress = function(e) {
+                            if (e.lengthComputable) {
+                                // 计算上传进度（50%本地存储 + 50%服务器上传）
+                                const uploadProgress = 50 + (e.loaded / e.total) * 50;
+                                progressBar.style.width = `${uploadProgress}%`;
+                                percentageText.textContent = `${Math.round(uploadProgress)}%`;
+                                
+                                // 计算上传速度
+                                const now = Date.now();
+                                const elapsed = (now - startTime) / 1000;
+                                const speed = e.loaded / elapsed;
+                                speedText.textContent = `${(speed / 1024).toFixed(0)} KB/s`;
+                            }
+                        };
                         
-                        // 初始化新添加的音频播放器
-                        initAudioPlayers();
-                    } else {
-                        // 文件上传失败，显示错误消息
-                        const errorMessage = document.createElement('div');
-                        errorMessage.className = 'message sent';
-                        errorMessage.innerHTML = `
-                            <div class='message-content'>
-                                <div class='message-text' style='color: #ff4d4f;'>文件上传失败：${data.message || '未知错误'}</div>
-                                <div class='message-time'>${new Date().toLocaleString('zh-CN', {year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute:'2-digit'})}</div>
-                            </div>
-                            <div class='message-avatar'>
-                                <?php if (!empty($current_user['avatar'])): ?>
-                                    <img src='<?php echo $current_user['avatar']; ?>' alt='<?php echo $username; ?>' style='width: 100%; height: 100%; border-radius: 50%; object-fit: cover;'>
-                                <?php else: ?>
-                                    <?php echo substr($username, 0, 2); ?>
-                                <?php endif; ?>
-                            </div>
-                        `;
-                        messagesContainer.appendChild(errorMessage);
-                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                        // 记录开始时间用于计算速度
+                        const startTime = Date.now();
+                        
+                        // 发送请求
+                        xhr.open('POST', 'send_message.php', true);
+                        xhr.withCredentials = true;
+                        
+                        xhr.onload = function() {
+                            if (xhr.status === 200) {
+                                // 请求成功
+                                const data = JSON.parse(xhr.responseText);
+                                if (data.success) {
+                                    // 更新本地消息的ID，避免重复显示
+                                    const localMessage = document.querySelector(`[data-message-id="${messageData.id}"]`);
+                                    if (localMessage) {
+                                        localMessage.dataset.messageId = data.message_id;
+                                        
+                                        // 更新消息中所有媒体元素的file_path，确保它们使用正确的路径
+                                        const fileElements = localMessage.querySelectorAll('[data-file-path]');
+                                        fileElements.forEach(element => {
+                                            // 保留本地IndexedDB文件ID，不替换为服务器路径
+                                            // 这样本地用户可以从IndexedDB快速访问，其他用户会从服务器获取
+                                        });
+                                    }
+                                } else {
+                                    showNotification('消息发送失败', 'error');
+                                }
+                            } else {
+                                // 请求失败
+                                console.error('消息发送到服务器失败:', xhr.statusText);
+                            }
+                        };
+                        
+                        xhr.onerror = function() {
+                            console.error('消息发送到服务器失败: 网络错误');
+                        };
+                        
+                        xhr.send(formData);
+                    } catch (error) {
+                        console.error('消息发送到服务器失败:', error);
+                        // 本地消息已显示，仅记录错误
                     }
-                } catch (error) {
-                    // JSON解析错误
+                    
+                    // 重置文件输入
+                    const fileInput = document.getElementById('file-input');
+                    if (fileInput) {
+                        fileInput.value = '';
+                    }
+                })
+                .catch((error) => {
+                    clearInterval(progressInterval);
                     messagesContainer.removeChild(uploadingMessage);
                     
                     const errorMessage = document.createElement('div');
                     errorMessage.className = 'message sent';
                     errorMessage.innerHTML = `
                         <div class='message-content'>
-                            <div class='message-text' style='color: #ff4d4f;'>文件上传失败：服务器返回格式错误</div>
-                            <div class='message-time'>${new Date().toLocaleString('zh-CN', {year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute:'2-digit'})}</div>
+                            <div class='message-text' style='color: #ff4d4f;'>文件存储失败：${error}</div>
+                            ${timeHtml}
                         </div>
                         <div class='message-avatar'>
                             <?php if (!empty($current_user['avatar'])): ?>
@@ -4706,44 +6310,13 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                     `;
                     messagesContainer.appendChild(errorMessage);
                     messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                }
-            });
-            
-            // 监听上传错误
-            xhr.addEventListener('error', () => {
-                // 移除上传中的提示消息
-                messagesContainer.removeChild(uploadingMessage);
-                
-                // 显示网络错误消息
-                const errorMessage = document.createElement('div');
-                errorMessage.className = 'message sent';
-                errorMessage.innerHTML = `
-                    <div class='message-content'>
-                        <div class='message-text' style='color: #ff4d4f;'>文件上传失败：网络错误</div>
-                        <div class='message-time'>${new Date().toLocaleString('zh-CN', {year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute:'2-digit'})}</div>
-                    </div>
-                    <div class='message-avatar'>
-                        <?php if (!empty($current_user['avatar'])): ?>
-                            <img src='<?php echo $current_user['avatar']; ?>' alt='<?php echo $username; ?>' style='width: 100%; height: 100%; border-radius: 50%; object-fit: cover;'>
-                        <?php else: ?>
-                            <?php echo substr($username, 0, 2); ?>
-                        <?php endif; ?>
-                    </div>
-                `;
-                messagesContainer.appendChild(errorMessage);
-                messagesContainer.scrollTop = messagesContainer.scrollHeight;
-            });
-            
-            // 发送请求
-            xhr.open('POST', 'send_message.php');
-            xhr.withCredentials = true;
-            xhr.send(formData);
-            
-            // 重置文件输入
-            const fileInput = document.getElementById('file-input');
-            if (fileInput) {
-                fileInput.value = '';
-            }
+                    
+                    // 重置文件输入
+                    const fileInput = document.getElementById('file-input');
+                    if (fileInput) {
+                        fileInput.value = '';
+                    }
+                });
         }
         
         function sendMessage() {
@@ -4798,6 +6371,11 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 // 创建临时消息ID
                 const tempMessageId = 'temp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
                 
+                // 格式化时间为 X年X月X日X时X分
+                const date = new Date();
+                const formattedTime = `${date.getFullYear()}年${(date.getMonth() + 1).toString().padStart(2, '0')}月${date.getDate().toString().padStart(2, '0')}日${date.getHours().toString().padStart(2, '0')}时${date.getMinutes().toString().padStart(2, '0')}分`;
+                const timeHtml = `<div class='message-time'>${formattedTime}</div>`;
+                
                 // 创建消息元素
                 const messagesContainer = document.getElementById('messages-container');
                 const messageElement = document.createElement('div');
@@ -4805,10 +6383,20 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 messageElement.dataset.messageId = tempMessageId;
                 messageElement.dataset.chatType = chatType;
                 messageElement.dataset.chatId = chatId;
+                // 保存消息发送时间，用于撤回功能
+                const messageTime = Date.now();
+                messageElement.dataset.messageTime = messageTime;
+                
                 messageElement.innerHTML = `
                     <div class='message-content'>
                         <div class='message-text'>${messageWithLinks}</div>
-                        <div class='message-time'>${new Date().toLocaleString('zh-CN', {year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute:'2-digit'})}</div>
+                        ${timeHtml}
+                        <div class='message-actions' style='position: relative;'>
+                            <button class='message-action-btn' onclick='toggleMessageActions(this)' style='width: 28px; height: 28px; font-size: 18px; background: rgba(0,0,0,0.1); border: none; border-radius: 50%; color: #333; cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: 1; transition: all 0.2s ease;'>...</button>
+                            <div class='message-action-menu' style='display: none; position: absolute; top: 100%; right: 0; background: white; border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,0.15); padding: 8px 0; z-index: 5000; min-width: 100px;'>
+                                <button class='message-action-item' onclick='recallMessage(this, "${tempMessageId}", "${chatType}", "${chatId}")' style='width: 100%; text-align: left; padding: 8px 16px; border: none; background: transparent; cursor: pointer; transition: all 0.2s ease; color: #333;'>撤回消息</button>
+                            </div>
+                        </div>
                     </div>
                     <div class='message-avatar'>
                         <?php if (!empty($current_user['avatar'])): ?>
@@ -5002,14 +6590,36 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         });
         
         // 初始化
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', async function() {
             // 加载聊天记录
             loadChatHistory();
+            
+            // 初始化聊天视频，转换为Blob URL
+            initChatVideos();
+            
+            // 初始化所有媒体
+            await initChatMedia();
             
             // 如果是群聊，检查是否被封禁
             <?php if ($chat_type === 'group' && $selected_id): ?>
                 checkGroupBanStatus(<?php echo $selected_id; ?>);
             <?php endif; ?>
+            
+            // 为搜索按钮添加点击事件
+            const searchButton = document.getElementById('search-user-button');
+            if (searchButton) {
+                searchButton.addEventListener('click', searchUser);
+            }
+            
+            // 为搜索输入框添加回车键事件
+            const searchInput = document.getElementById('search-user-input');
+            if (searchInput) {
+                searchInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        searchUser();
+                    }
+                });
+            }
         });
         
         // 文件类型检测函数
@@ -5260,6 +6870,34 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             // 这里可以添加打开文件的逻辑，比如使用window.open或创建a标签下载
             window.open(task.filePath, '_blank');
         }
+        
+        // 将DataURL转换为Blob对象
+        function dataURLToBlob(dataURL) {
+            const parts = dataURL.split(';base64,');
+            const contentType = parts[0].split(':')[1];
+            const raw = window.atob(parts[1]);
+            const rawLength = raw.length;
+            const uInt8Array = new Uint8Array(rawLength);
+            
+            for (let i = 0; i < rawLength; ++i) {
+                uInt8Array[i] = raw.charCodeAt(i);
+            }
+            
+            return new Blob([uInt8Array], { type: contentType });
+        }
+        
+        // 下载Blob对象
+        function downloadBlob(blob, fileName) {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        }
 
         // 主下载函数
         async function downloadFile(task) {
@@ -5269,6 +6907,34 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             }
             
             try {
+                // 检查是否是localStorage文件，支持多种前缀
+                if (task.filePath && (task.filePath.startsWith('Picture_') || task.filePath.startsWith('Video_') || task.filePath.startsWith('Audio_') || task.filePath.startsWith('File_'))) {
+                    // 从localStorage获取文件数据
+                    const fileData = localStorage.getItem(task.filePath);
+                    if (fileData) {
+                        const fileInfo = JSON.parse(fileData);
+                        // 创建Blob对象
+                        const blob = dataURLToBlob(fileInfo.data);
+                        
+                        // 更新任务状态为已完成
+                        updateDownloadStatus(task.id, DownloadStatus.COMPLETED);
+                        updateDownloadProgress(task.id, blob.size, blob.size);
+                        
+                        // 触发文件下载
+                        downloadBlob(blob, task.fileName);
+                        
+                        // 更新下载面板
+                        updateDownloadPanel();
+                        return;
+                    }
+                }
+                
+                // 对于服务器文件，自动添加.upload后缀
+                let downloadUrl = task.filePath;
+                if (downloadUrl && !downloadUrl.endsWith('.upload')) {
+                    downloadUrl = downloadUrl + '.upload';
+                }
+                
                 // 创建AbortController用于取消请求
                 task.abortController = new AbortController();
                 
@@ -5295,7 +6961,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 fetchOptions.headers = headers;
                 
                 // 尝试从服务器下载
-                const response = await fetch(task.filePath, fetchOptions);
+                const response = await fetch(downloadUrl, fetchOptions);
 
                 if (response.ok || response.status === 206) { // 206是部分内容
                     // 服务器返回成功，开始下载
@@ -5354,7 +7020,6 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                     }
                 } else if (response.status === 404) {
                     // 服务器返回404，尝试从缓存获取
-                    console.log('服务器返回404，尝试从缓存获取文件');
                     
                     // 尝试使用缓存获取文件
                     const cachedResponse = await fetch(task.filePath, {
@@ -5377,7 +7042,6 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                     task.chunks = [];
                 } else {
                     // 其他错误
-                    console.error(`下载错误: ${response.status} ${response.statusText}`);
                     updateDownloadStatus(task.id, DownloadStatus.FAILED);
                     
                     // 清理资源
@@ -5385,10 +7049,8 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                     task.chunks = [];
                 }
             } catch (error) {
-                console.error('下载错误:', error);
                 // 如果是abort错误，不更新状态为失败，保持暂停状态
                 if (error.name === 'AbortError') {
-                    console.log(`下载已取消: ${task.fileName}`);
                     // 保持暂停状态
                     updateDownloadStatus(task.id, DownloadStatus.PAUSED);
                 } else {
@@ -5531,7 +7193,9 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 let html = '';
                 if (data.success && data.users.length > 0) {
                     data.users.forEach(user => {
-                        const avatar = user.avatar ? `<img src="${user.avatar}" alt="${user.username}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">` : `<div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 14px;">${user.username.substring(0, 2)}</div>`;
+                        // 检查头像是否为默认头像或不存在，避免404错误
+                        const isDefaultAvatar = user.avatar && (user.avatar === 'default_avatar.png' || user.avatar.includes('default_avatar.png'));
+                        const avatar = user.avatar && !isDefaultAvatar ? `<img src="${user.avatar}" alt="${user.username}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">` : `<div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 14px;">${user.username.substring(0, 2)}</div>`;
                         
                         html += `<div style="display: flex; align-items: center; padding: 12px; border-bottom: 1px solid #f0f0f0;">
                             <div style="margin-right: 12px;">${avatar}</div>
@@ -5560,7 +7224,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             if (searchInput) {
                 searchInput.addEventListener('input', async (e) => {
                     const searchTerm = e.target.value.trim();
-                    const searchResults = document.getElementById('search-results');
+                    const searchResults = document.getElementById('main-search-results');
                     
                     if (searchTerm.length < 1) {
                         searchResults.style.display = 'none';
@@ -5588,11 +7252,13 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                                         let statusText = user.status === 'online' ? '在线' : '离线';
                                         let statusColor = user.status === 'online' ? '#4caf50' : '#9e9e9e';
                                         
+                                        // 检查头像是否为默认头像或不存在，避免404错误
+                                        const isDefaultAvatar = user.avatar && (user.avatar === 'default_avatar.png' || user.avatar.includes('default_avatar.png'));
                                         resultsHTML += `
                                             <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f0f0f0; cursor: pointer;" onclick="switchToChat('friend', ${user.id})">
                                                 <div style="display: flex; align-items: center; gap: 10px;">
                                                     <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 16px;">
-                                                        ${user.avatar ? `<img src="${user.avatar}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">` : user.username.substring(0, 2)}
+                                                        ${user.avatar && !isDefaultAvatar ? `<img src="${user.avatar}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">` : user.username.substring(0, 2)}
                                                     </div>
                                                     <div>
                                                         <div style="display: flex; align-items: center; gap: 5px;">
@@ -6236,68 +7902,59 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         
         // 检查文件是否过期
         function isFileExpired(fileName, fileType = 'file') {
+            // 如果是localStorage文件ID，直接返回false（因为存储在localStorage中）
+            if (fileName && (fileName.startsWith('Picture_') || fileName.startsWith('Video_') || fileName.startsWith('Audio_') || fileName.startsWith('File_'))) {
+                return false;
+            }
+            
             // 根据文件类型获取缓存前缀
-            let prefix;
+            let prefix = 'File_';
             switch(fileType) {
                 case 'video':
-                    prefix = 'video_';
+                    prefix = 'Video_';
                     break;
                 case 'audio':
-                    prefix = 'audio_';
+                    prefix = 'Audio_';
                     break;
                 case 'image':
                     prefix = 'Picture_';
                     break;
                 default:
-                    prefix = 'file_';
+                    prefix = 'File_';
             }
             
-            const targetCookieName = `${prefix}${encodeURIComponent(fileName)}`;
+            const targetStorageKey = `${prefix}${encodeURIComponent(fileName)}`;
             
-            // 获取所有cookie
-            const cookies = document.cookie.split(';');
-            
-            // 遍历cookie，查找缓存相关的cookie
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                const [cookieName, cookieValue] = cookie.split('=');
-                
-                // 解码cookie名称，然后比较
-                const decodedCookieName = decodeURIComponent(cookieName);
-                if (decodedCookieName === targetCookieName) {
-                    // Cookie存在，文件未过期
-                    return false;
-                }
-            }
-            
-            // Cookie不存在，文件已过期
-            return true;
+            // 检查localStorage中是否存在该文件的缓存记录
+            return !localStorage.getItem(targetStorageKey);
         }
         
-        // 设置文件Cookie
-        function setFileCookie(fileName, fileType, fileSize = 0) {
+        // 设置文件缓存记录到localStorage
+        function setFileCache(fileName, fileType, fileSize = 0) {
+            // 如果是localStorage文件ID，不需要设置缓存记录
+            if (fileName && (fileName.startsWith('Picture_') || fileName.startsWith('Video_') || fileName.startsWith('Audio_') || fileName.startsWith('File_'))) {
+                return;
+            }
+            
             // 根据文件类型获取缓存前缀
-            let prefix;
+            let prefix = 'File_';
             switch(fileType) {
                 case 'video':
-                    prefix = 'video_';
+                    prefix = 'Video_';
                     break;
                 case 'audio':
-                    prefix = 'audio_';
+                    prefix = 'Audio_';
                     break;
                 case 'image':
                     prefix = 'Picture_';
                     break;
                 default:
-                    prefix = 'file_';
+                    prefix = 'File_';
             }
             
-            const expirySeconds = getFileExpirySeconds(fileType);
-            const expiryDate = new Date();
-            expiryDate.setTime(expiryDate.getTime() + (expirySeconds * 1000));
-            const expires = "expires=" + expiryDate.toUTCString();
+            const storageKey = `${prefix}${encodeURIComponent(fileName)}`;
             // 存储文件类型和大小，格式为"type:size"
-            document.cookie = `${prefix}${encodeURIComponent(fileName)}=${encodeURIComponent(`${fileType}:${fileSize}`)}; ${expires}; path=/`;
+            localStorage.setItem(storageKey, `${fileType}:${fileSize}`);
         }
         
         // 加载聊天记录
@@ -6305,75 +7962,8 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             const messagesContainer = document.getElementById('messages-container');
             if (!messagesContainer) return;
             
-            // 处理所有媒体文件，但跳过视频元素（视频不自动缓存，点击后才缓存）
-            document.querySelectorAll('.message-file, .message-image, .audio-element').forEach(media => {
-                let filePath, fileName, fileType;
-                
-                if (media.tagName === 'A') {
-                    // 普通文件链接
-                    filePath = media.getAttribute('href');
-                    fileName = media.getAttribute('data-file-name');
-                    fileType = media.getAttribute('data-file-type');
-                    
-                    if (filePath && fileName) {
-                        // 检查文件是否过期
-                        if (isFileExpired(fileName, fileType)) {
-                            // 尝试重新获取文件
-                            fetchFileFromServer(filePath, fileName, media);
-                        } else {
-                            setFileCookie(fileName, fileType, 0);
-                            // 使用Blob URL隐藏真实URL，防止IDM等工具检测
-                            if (media.tagName === 'VIDEO' || media.tagName === 'AUDIO') {
-                                fetch(filePath, {
-                                    credentials: 'include'
-                                })
-                                .then(response => response.blob())
-                                .then(blob => {
-                                    const blobUrl = URL.createObjectURL(blob);
-                                    media.src = blobUrl;
-                                })
-                                .catch(error => {
-                                    console.error('获取媒体文件失败:', error);
-                                });
-                            }
-                        }
-                    }
-                } else {
-                    // 图片或音频（跳过视频）
-                    filePath = media.getAttribute('src');
-                    fileName = media.getAttribute('data-file-name');
-                    fileType = media.getAttribute('data-file-type');
-                    
-                    if (filePath && fileName) {
-                        // 监听加载失败事件
-                        media.onerror = function() {
-                            handleMediaLoadError(media, filePath, fileName, fileType);
-                        };
-                        
-                        // 检查文件是否过期
-                        if (isFileExpired(fileName, fileType)) {
-                            // 尝试重新获取文件
-                            fetchMediaFromServer(media, filePath, fileName, fileType);
-                        } else {
-                            setFileCookie(fileName, fileType, 0);
-                            // 使用Blob URL隐藏真实URL，防止IDM等工具检测
-                            if (media.tagName === 'AUDIO') {
-                                fetch(filePath, {
-                                    credentials: 'include'
-                                })
-                                .then(response => response.blob())
-                                .then(blob => {
-                                    const blobUrl = URL.createObjectURL(blob);
-                                    media.src = blobUrl;
-                                })
-                                .catch(error => {
-                                    console.error('获取媒体文件失败:', error);
-                                });
-                            }
-                        }
-                    }
-                }
-            });
+            // 调用initChatMedia函数来初始化所有媒体文件，优先从IndexedDB获取
+            initChatMedia();
             
             // 初始化音频播放器
             initAudioPlayers();
@@ -6401,13 +7991,19 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 return;
             }
             
-            fetch(filePath)
+            // 为服务器文件添加.upload后缀
+            let fetchUrl = filePath;
+            if (fetchUrl && !fetchUrl.endsWith('.upload')) {
+                fetchUrl = fetchUrl + '.upload';
+            }
+            
+            fetch(fetchUrl)
                 .then(response => {
                     if (response.ok) {
                         // 文件存在，获取文件大小
                         const fileSize = parseInt(response.headers.get('content-length') || '0');
                         const fileType = getFileType(fileName);
-                        setFileCookie(fileName, fileType, fileSize);
+                        setFileCache(fileName, fileType, fileSize);
                         // 重置重试计数器
                         delete fileRetryCounter[filePath];
                     } else {
@@ -6427,6 +8023,248 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 });
         }
         
+        // 从服务器获取媒体文件并缓存
+        function fetchMediaFromServer(mediaElement, filePath, fileName, fileType) {
+            // 初始化重试计数器（仅在第一次调用时）
+            if (!fileRetryCounter[filePath]) {
+                fileRetryCounter[filePath] = 0;
+            }
+            
+            // 检查是否已达到最大重试次数
+            if (fileRetryCounter[filePath] >= MAX_RETRIES) {
+                // 达到最大重试次数，显示已清理提示
+                if (mediaElement.tagName === 'IMG') {
+                    mediaElement.src = '';
+                    mediaElement.alt = `文件不存在或已被清理: ${fileName}`;
+                    mediaElement.style.opacity = '0.6';
+                } else if (mediaElement.tagName === 'AUDIO') {
+                    mediaElement.controls = false;
+                    mediaElement.innerHTML = `<span style="color: #999; font-size: 12px;">音频文件不存在或已被清理: ${fileName}</span>`;
+                    mediaElement.style.opacity = '0.6';
+                }
+                // 移除重试计数器
+                delete fileRetryCounter[filePath];
+                return;
+            }
+            
+            // 为服务器文件添加.upload后缀
+            let fetchUrl = filePath;
+            if (fetchUrl && !fetchUrl.endsWith('.upload')) {
+                fetchUrl = fetchUrl + '.upload';
+            }
+            
+            fetch(fetchUrl)
+                .then(response => {
+                    if (response.ok) {
+                        // 文件存在，获取文件大小
+                        const fileSize = parseInt(response.headers.get('content-length') || '0');
+                        setFileCache(fileName, fileType, fileSize);
+                        // 重置重试计数器
+                        delete fileRetryCounter[filePath];
+                        // 使用Blob URL隐藏真实URL，防止IDM等工具检测
+                        return response.blob();
+                    } else {
+                        // 文件不存在，增加重试计数器并继续重试
+                        fileRetryCounter[filePath]++;
+                        setTimeout(() => {
+                            fetchMediaFromServer(mediaElement, filePath, fileName, fileType);
+                        }, 1000); // 1秒后重试
+                        return Promise.reject('File not found');
+                    }
+                })
+                .then(blob => {
+                    // 设置Blob URL
+                    const blobUrl = URL.createObjectURL(blob);
+                    mediaElement.src = blobUrl;
+                })
+                .catch(error => {
+                    // 仅在非404错误时增加重试计数器
+                    if (error !== 'File not found') {
+                        fileRetryCounter[filePath]++;
+                        setTimeout(() => {
+                            fetchMediaFromServer(mediaElement, filePath, fileName, fileType);
+                        }, 1000); // 1秒后重试
+                    }
+                });
+        }
+        
+        // 初始化所有媒体文件（图片、音频、视频），优先从IndexedDB获取
+        async function initChatMedia() {
+            // 处理所有图片元素
+            document.querySelectorAll('.message-image').forEach(async img => {
+                const fileUrl = img.src;
+                const fileName = img.getAttribute('data-file-name') || '未知图片';
+                const filePath = img.getAttribute('data-file-path') || fileUrl;
+                
+                // 优先从IndexedDB获取图片
+                try {
+                    const fileData = await indexedDBManager.getFile(filePath);
+                    if (fileData && fileData.data) {
+                        // 从IndexedDB获取成功，转换为Blob URL
+                        const blob = new Blob([fileData.data], { type: fileData.type });
+                        const blobUrl = URL.createObjectURL(blob);
+                        img.src = blobUrl;
+                        return;
+                    }
+                } catch (error) {
+                    // 忽略IndexedDB错误，继续尝试从服务器获取
+                }
+                
+                // IndexedDB中没有，尝试从服务器获取，最多重试3次
+                let success = false;
+                for (let i = 0; i < 3 && !success; i++) {
+                    try {
+                        const response = await fetch(fileUrl, {
+                            credentials: 'include',
+                            cache: 'no-cache'
+                        });
+                        
+                        if (response.ok) {
+                            // 请求成功，获取Blob并转换为Blob URL
+                            const blob = await response.blob();
+                            const blobUrl = URL.createObjectURL(blob);
+                            img.src = blobUrl;
+                            success = true;
+                            
+                            // 缓存到IndexedDB
+                            try {
+                                await indexedDBManager.saveFile({
+                                    id: filePath,
+                                    name: fileName,
+                                    type: blob.type,
+                                    size: blob.size,
+                                    data: blob,
+                                    url: fileUrl,
+                                    uploadedAt: new Date().toISOString(),
+                                    fileType: 'image'
+                                });
+                            } catch (cacheError) {
+                                // 忽略缓存错误
+                            }
+                        } else if (response.status === 404) {
+                            // 忽略404错误，不向控制台报错
+                            break; // 404直接退出重试
+                        }
+                    } catch (error) {
+                        // 忽略所有错误，不向控制台报错
+                    }
+                    
+                    // 重试间隔1秒
+                    if (!success && i < 2) {
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                    }
+                }
+                
+                // 如果所有尝试都失败，显示"消息已被清理：{文件名}"
+                if (!success) {
+                    // 创建一个错误提示元素，替换图片元素
+                    const errorDiv = document.createElement('div');
+                    errorDiv.style.cssText = `
+                        background: #f8f9fa;
+                        border: 1px solid #dee2e6;
+                        border-radius: 8px;
+                        padding: 20px;
+                        text-align: center;
+                        color: #6c757d;
+                        font-size: 14px;
+                    `;
+                    errorDiv.textContent = `消息已被清理：${fileName}`;
+                    
+                    // 替换图片元素，确保parentNode存在
+                    if (img.parentNode) {
+                        img.parentNode.replaceChild(errorDiv, img);
+                    }
+                }
+            });
+            
+            // 处理所有音频元素
+            document.querySelectorAll('.audio-element').forEach(async audio => {
+                const fileUrl = audio.src;
+                const fileName = audio.getAttribute('data-file-name') || '未知音频';
+                const filePath = audio.getAttribute('data-file-path') || fileUrl;
+                
+                // 优先从IndexedDB获取音频
+                try {
+                    const fileData = await indexedDBManager.getFile(filePath);
+                    if (fileData && fileData.data) {
+                        // 从IndexedDB获取成功，转换为Blob URL
+                        const blob = new Blob([fileData.data], { type: fileData.type });
+                        const blobUrl = URL.createObjectURL(blob);
+                        audio.src = blobUrl;
+                        return;
+                    }
+                } catch (error) {
+                    // 忽略IndexedDB错误，继续尝试从服务器获取
+                }
+                
+                // IndexedDB中没有，尝试从服务器获取，最多重试3次
+                let success = false;
+                for (let i = 0; i < 3 && !success; i++) {
+                    try {
+                        const response = await fetch(fileUrl, {
+                            credentials: 'include',
+                            cache: 'no-cache'
+                        });
+                        
+                        if (response.ok) {
+                            // 请求成功，获取Blob并转换为Blob URL
+                            const blob = await response.blob();
+                            const blobUrl = URL.createObjectURL(blob);
+                            audio.src = blobUrl;
+                            success = true;
+                            
+                            // 缓存到IndexedDB
+                            try {
+                                await indexedDBManager.saveFile({
+                                    id: filePath,
+                                    name: fileName,
+                                    type: blob.type,
+                                    size: blob.size,
+                                    data: blob,
+                                    url: fileUrl,
+                                    uploadedAt: new Date().toISOString(),
+                                    fileType: 'audio'
+                                });
+                            } catch (cacheError) {
+                                // 忽略缓存错误
+                            }
+                        } else if (response.status === 404) {
+                            // 忽略404错误，不向控制台报错
+                            break; // 404直接退出重试
+                        }
+                    } catch (error) {
+                        // 忽略所有错误，不向控制台报错
+                    }
+                    
+                    // 重试间隔1秒
+                    if (!success && i < 2) {
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                    }
+                }
+                
+                // 如果所有尝试都失败，显示"消息已被清理：{文件名}"
+                if (!success) {
+                    // 创建一个错误提示元素，替换音频元素
+                    const errorDiv = document.createElement('div');
+                    errorDiv.style.cssText = `
+                        background: #f8f9fa;
+                        border: 1px solid #dee2e6;
+                        border-radius: 8px;
+                        padding: 20px;
+                        text-align: center;
+                        color: #6c757d;
+                        font-size: 14px;
+                    `;
+                    errorDiv.textContent = `消息已被清理：${fileName}`;
+                    
+                    // 替换音频元素，确保parentNode存在
+                    if (audio.parentNode) {
+                        audio.parentNode.replaceChild(errorDiv, audio);
+                    }
+                }
+            });
+        }
+        
         // 处理媒体文件加载失败
         function handleMediaLoadError(media, filePath, fileName, fileType) {
             // 初始化重试计数器（仅在第一次调用时）
@@ -6437,21 +8275,23 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             // 检查是否已达到最大重试次数
             if (fileRetryCounter[filePath] >= MAX_RETRIES) {
                 // 达到最大重试次数，显示已清理提示
-                if (media.tagName === 'IMG') {
-                    media.style.display = 'none';
-                    const mediaContainer = media.parentElement;
-                    if (mediaContainer) {
-                        mediaContainer.innerHTML = `<div class="message-media"><div class="file-info" style="text-align: center; padding: 20px; color: #999;"><h4>文件不存在或已被清理</h4><p>${fileName}</p></div></div>`;
-                    }
-                } else if (media.tagName === 'AUDIO' || media.tagName === 'VIDEO') {
-                    const audioContainer = media.parentElement;
-                    if (audioContainer) {
-                        const mediaContainer = audioContainer.parentElement;
-                        if (mediaContainer) {
-                            mediaContainer.innerHTML = `<div class="message-media"><div class="file-info" style="text-align: center; padding: 20px; color: #999;"><h4>文件不存在或已被清理</h4><p>${fileName}</p></div></div>`;
-                        }
-                    }
+                const errorDiv = document.createElement('div');
+                errorDiv.style.cssText = `
+                    background: #f8f9fa;
+                    border: 1px solid #dee2e6;
+                    border-radius: 8px;
+                    padding: 20px;
+                    text-align: center;
+                    color: #6c757d;
+                    font-size: 14px;
+                `;
+                errorDiv.textContent = `消息已被清理：${fileName}`;
+                
+                // 替换媒体元素，确保parentNode存在
+                if (media.parentNode) {
+                    media.parentNode.replaceChild(errorDiv, media);
                 }
+                
                 // 移除重试计数器
                 delete fileRetryCounter[filePath];
                 return;
@@ -6461,46 +8301,16 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             fileRetryCounter[filePath]++;
             
             // 执行获取媒体文件操作
-            fetchMediaFromServer(media, filePath, fileName, fileType);
-        }
-        
-        // 从服务器获取媒体文件并缓存
-        function fetchMediaFromServer(media, filePath, fileName, fileType) {
-            // 先移除之前的error事件监听器，避免无限循环
-            media.onerror = null;
-            
-            fetch(filePath)
-                .then(response => {
-                    if (response.ok) {
-                        // 文件存在，获取文件大小
-                        const fileSize = parseInt(response.headers.get('content-length') || '0');
-                        setFileCookie(fileName, fileType, fileSize);
-                        // 刷新媒体元素
-                        if (media.tagName === 'IMG') {
-                            media.src = filePath + '?' + new Date().getTime();
-                        } else if (media.tagName === 'AUDIO' || media.tagName === 'VIDEO') {
-                            media.src = filePath + '?' + new Date().getTime();
-                            media.load();
-                        }
-                        // 重置重试计数器
-                        delete fileRetryCounter[filePath];
-                        // 重新添加error事件监听器
-                        media.onerror = function() {
-                            handleMediaLoadError(media, filePath, fileName, fileType);
-                        };
-                    } else {
-                        // 文件不存在，继续重试
-                        setTimeout(() => {
-                            handleMediaLoadError(media, filePath, fileName, fileType);
-                        }, 1000); // 1秒后重试
-                    }
-                })
-                .catch(error => {
-                    // 网络错误，继续重试
-                    setTimeout(() => {
-                        handleMediaLoadError(media, filePath, fileName, fileType);
-                    }, 1000); // 1秒后重试
-                });
+            // 这里不再使用fetchMediaFromServer，而是直接使用新的加载逻辑
+            setTimeout(() => {
+                // 重新加载媒体文件
+                if (media.tagName === 'IMG') {
+                    media.src = media.src + '?' + new Date().getTime();
+                } else if (media.tagName === 'AUDIO' || media.tagName === 'VIDEO') {
+                    media.src = media.src + '?' + new Date().getTime();
+                    media.load();
+                }
+            }, 1000); // 1秒后重试
         }
         
         // 视频播放器相关变量
@@ -6797,13 +8607,27 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             document.getElementById('change-avatar-modal').style.display = 'none';
         }
 
-        // 监听头像文件选择并预览
+        // 头像裁剪相关变量
+        let selectedAvatarFile = null;
+        let isDraggingSelection = false;
+        let isDraggingImage = false;
+        let dragStartX = 0;
+        let dragStartY = 0;
+        let selectionStartX = 0;
+        let selectionStartY = 0;
+        let imageStartX = 0;
+        let imageStartY = 0;
+        let cropImage = null;
+        
+        // 监听头像文件选择并设置裁剪区域
         document.addEventListener('DOMContentLoaded', function() {
             const avatarFileInput = document.getElementById('avatar-file');
             if (avatarFileInput) {
                 avatarFileInput.addEventListener('change', function(e) {
                     const file = e.target.files[0];
                     if (!file) return;
+                    
+                    selectedAvatarFile = file;
                     
                     // 检查文件类型
                     if (!file.type.match('image.*')) {
@@ -6818,55 +8642,217 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                         return;
                     }
                     
-                    // 读取文件并预览
+                    // 读取文件并设置到裁剪区域
                     const reader = new FileReader();
                     reader.onload = function(event) {
-                        const avatarPreview = document.getElementById('avatar-preview');
-                        // 清空预览区域
-                        avatarPreview.innerHTML = '';
-                        // 创建预览图片
-                        const img = document.createElement('img');
+                        const img = document.getElementById('avatar-crop-image');
                         img.src = event.target.result;
-                        img.style.width = '100%';
-                        img.style.height = '100%';
-                        img.style.objectFit = 'cover';
-                        avatarPreview.appendChild(img);
+                        
+                        // 等待图片加载完成
+                        img.onload = function() {
+                            // 创建临时canvas获取实际图片尺寸
+                            const tempCanvas = document.createElement('canvas');
+                            const tempCtx = tempCanvas.getContext('2d');
+                            tempCanvas.width = img.naturalWidth;
+                            tempCanvas.height = img.naturalHeight;
+                            tempCtx.drawImage(img, 0, 0);
+                            
+                            // 保存裁剪图片对象
+                            cropImage = img;
+                            
+                            // 调整图片位置，居中显示
+                            const container = document.getElementById('avatar-crop-container');
+                            const containerWidth = container.offsetWidth;
+                            const containerHeight = container.offsetHeight;
+                            
+                            // 计算缩放比例，确保图片至少填满容器
+                            const scale = Math.max(containerWidth / img.naturalWidth, containerHeight / img.naturalHeight);
+                            img.style.width = (img.naturalWidth * scale) + 'px';
+                            img.style.height = (img.naturalHeight * scale) + 'px';
+                            
+                            // 居中显示
+                            img.style.left = ((containerWidth - img.offsetWidth) / 2) + 'px';
+                            img.style.top = ((containerHeight - img.offsetHeight) / 2) + 'px';
+                            
+                            // 更新预览
+                            updateAvatarPreview();
+                        };
                     };
                     reader.readAsDataURL(file);
                 });
             }
+            
+            // 初始化裁剪相关事件
+            initAvatarCropEvents();
         });
-
+        
+        // 初始化裁剪相关事件
+        function initAvatarCropEvents() {
+            const container = document.getElementById('avatar-crop-container');
+            const selection = document.getElementById('avatar-selection');
+            const img = document.getElementById('avatar-crop-image');
+            
+            // 选择框拖动事件
+            selection.addEventListener('mousedown', function(e) {
+                isDraggingSelection = true;
+                dragStartX = e.clientX;
+                dragStartY = e.clientY;
+                selectionStartX = selection.offsetLeft;
+                selectionStartY = selection.offsetTop;
+                e.preventDefault();
+            });
+            
+            // 图片拖动事件
+            img.addEventListener('mousedown', function(e) {
+                isDraggingImage = true;
+                dragStartX = e.clientX;
+                dragStartY = e.clientY;
+                imageStartX = img.offsetLeft;
+                imageStartY = img.offsetTop;
+                e.preventDefault();
+            });
+            
+            // 鼠标移动事件
+            document.addEventListener('mousemove', function(e) {
+                if (isDraggingSelection) {
+                    dragSelection(e);
+                } else if (isDraggingImage) {
+                    dragImage(e);
+                }
+            });
+            
+            // 鼠标释放事件
+            document.addEventListener('mouseup', function() {
+                isDraggingSelection = false;
+                isDraggingImage = false;
+            });
+            
+            // 鼠标离开事件
+            document.addEventListener('mouseleave', function() {
+                isDraggingSelection = false;
+                isDraggingImage = false;
+            });
+        }
+        
+        // 拖动选择框
+        function dragSelection(e) {
+            const container = document.getElementById('avatar-crop-container');
+            const selection = document.getElementById('avatar-selection');
+            
+            const deltaX = e.clientX - dragStartX;
+            const deltaY = e.clientY - dragStartY;
+            
+            let newLeft = selectionStartX + deltaX;
+            let newTop = selectionStartY + deltaY;
+            
+            // 限制选择框在容器内
+            const containerWidth = container.offsetWidth;
+            const containerHeight = container.offsetHeight;
+            const selectionWidth = selection.offsetWidth;
+            const selectionHeight = selection.offsetHeight;
+            
+            newLeft = Math.max(0, Math.min(newLeft, containerWidth - selectionWidth));
+            newTop = Math.max(0, Math.min(newTop, containerHeight - selectionHeight));
+            
+            selection.style.left = newLeft + 'px';
+            selection.style.top = newTop + 'px';
+            
+            // 更新预览
+            updateAvatarPreview();
+        }
+        
+        // 拖动图片
+        function dragImage(e) {
+            const img = document.getElementById('avatar-crop-image');
+            
+            const deltaX = e.clientX - dragStartX;
+            const deltaY = e.clientY - dragStartY;
+            
+            let newLeft = imageStartX + deltaX;
+            let newTop = imageStartY + deltaY;
+            
+            img.style.left = newLeft + 'px';
+            img.style.top = newTop + 'px';
+            
+            // 更新预览
+            updateAvatarPreview();
+        }
+        
+        // 更新头像预览
+        function updateAvatarPreview() {
+            const img = document.getElementById('avatar-crop-image');
+            const selection = document.getElementById('avatar-selection');
+            const canvas = document.getElementById('avatar-preview');
+            const ctx = canvas.getContext('2d');
+            
+            if (!img.src) return;
+            
+            // 清空画布
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // 计算裁剪区域
+            const selectionLeft = selection.offsetLeft;
+            const selectionTop = selection.offsetTop;
+            const selectionWidth = selection.offsetWidth;
+            const selectionHeight = selection.offsetHeight;
+            
+            // 计算图片缩放比例
+            const imgNaturalWidth = img.naturalWidth;
+            const imgNaturalHeight = img.naturalHeight;
+            const imgDisplayWidth = img.offsetWidth;
+            const imgDisplayHeight = img.offsetHeight;
+            const scaleX = imgNaturalWidth / imgDisplayWidth;
+            const scaleY = imgNaturalHeight / imgDisplayHeight;
+            
+            // 计算实际裁剪位置和尺寸
+            const cropX = Math.abs(img.offsetLeft - selectionLeft) * scaleX;
+            const cropY = Math.abs(img.offsetTop - selectionTop) * scaleY;
+            const cropWidth = selectionWidth * scaleX;
+            const cropHeight = selectionHeight * scaleY;
+            
+            // 绘制裁剪后的图片到预览画布
+            ctx.drawImage(
+                img, 
+                cropX, cropY, cropWidth, cropHeight, 
+                0, 0, canvas.width, canvas.height
+            );
+        }
+        
         // 修改头像
         function changeAvatar() {
-            const avatarFile = document.getElementById('avatar-file').files[0];
-            if (!avatarFile) {
+            if (!selectedAvatarFile) {
                 alert('请选择头像图片');
                 return false;
             }
             
-            const formData = new FormData();
-            formData.append('avatar', avatarFile);
-            formData.append('action', 'change_avatar');
+            // 获取裁剪后的图片数据
+            const canvas = document.getElementById('avatar-preview');
             
-            fetch('change_avatar.php', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert('头像修改成功');
-                    // 刷新页面以显示新头像
-                    location.reload();
-                } else {
-                    alert('头像修改失败：' + data.message);
-                }
-            })
-            .catch(error => {
-                console.error('头像修改错误：', error);
-                alert('头像修改失败，请重试');
-            });
+            // 将canvas转换为blob
+            canvas.toBlob(function(blob) {
+                const formData = new FormData();
+                formData.append('avatar', blob, 'avatar.png');
+                formData.append('action', 'change_avatar');
+                
+                fetch('change_avatar.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('头像修改成功');
+                        // 刷新页面以显示新头像
+                        location.reload();
+                    } else {
+                        alert('头像修改失败：' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('头像修改错误：', error);
+                    alert('头像修改失败，请重试');
+                });
+            }, 'image/png');
             
             return false;
         }
@@ -6984,27 +8970,78 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         
         // 应用聊天背景
         function applyChatBackground(backgroundUrl) {
-            // 应用背景到消息容器
-            const messagesContainer = document.getElementById('messages-container');
-            if (messagesContainer) {
-                messagesContainer.style.backgroundImage = `url(${backgroundUrl})`;
-                messagesContainer.style.backgroundSize = 'cover';
-                messagesContainer.style.backgroundPosition = 'center';
-                messagesContainer.style.backgroundAttachment = 'fixed';
-            }
-            
-            // 应用背景到聊天区域
-            const chatArea = document.querySelector('.chat-area');
-            if (chatArea) {
-                chatArea.style.backgroundImage = `url(${backgroundUrl})`;
-                chatArea.style.backgroundSize = 'cover';
-                chatArea.style.backgroundPosition = 'center';
-                chatArea.style.backgroundAttachment = 'fixed';
+            try {
+                // 验证backgroundUrl是否有效
+                if (!backgroundUrl || typeof backgroundUrl !== 'string') {
+                    return;
+                }
+                
+                // 创建Image对象来测试图片是否能正常加载
+                const img = new Image();
+                img.onload = function() {
+                    // 图片加载成功，应用背景到整个页面
+                    document.body.style.backgroundImage = `url(${backgroundUrl})`;
+                    document.body.style.backgroundSize = 'cover';
+                    document.body.style.backgroundPosition = 'center';
+                    document.body.style.backgroundAttachment = 'fixed';
+                    document.body.style.backgroundRepeat = 'no-repeat';
+                    
+                    // 应用背景到主容器
+                    const chatContainer = document.querySelector('.chat-container');
+                    if (chatContainer) {
+                        chatContainer.style.backgroundImage = `url(${backgroundUrl})`;
+                        chatContainer.style.backgroundSize = 'cover';
+                        chatContainer.style.backgroundPosition = 'center';
+                        chatContainer.style.backgroundAttachment = 'fixed';
+                        chatContainer.style.backgroundRepeat = 'no-repeat';
+                    }
+                    
+                    // 应用背景到消息容器
+                    const messagesContainer = document.getElementById('messages-container');
+                    if (messagesContainer) {
+                        messagesContainer.style.backgroundImage = 'none';
+                    }
+                    
+                    // 应用背景到聊天区域
+                    const chatArea = document.querySelector('.chat-area');
+                    if (chatArea) {
+                        chatArea.style.backgroundImage = 'none';
+                    }
+                };
+                img.onerror = function() {
+                    // 图片加载失败，忽略错误，不向控制台报错
+                    // 清除背景设置
+                    document.body.style.backgroundImage = '';
+                    const chatContainer = document.querySelector('.chat-container');
+                    if (chatContainer) {
+                        chatContainer.style.backgroundImage = '';
+                    }
+                };
+                img.src = backgroundUrl;
+            } catch (error) {
+                // 忽略错误，不向控制台报错
             }
         }
         
         // 移除聊天背景
         function removeChatBackground() {
+            // 移除整个页面背景
+            document.body.style.backgroundImage = '';
+            document.body.style.backgroundSize = '';
+            document.body.style.backgroundPosition = '';
+            document.body.style.backgroundAttachment = '';
+            document.body.style.backgroundRepeat = '';
+            
+            // 移除主容器背景
+            const chatContainer = document.querySelector('.chat-container');
+            if (chatContainer) {
+                chatContainer.style.backgroundImage = '';
+                chatContainer.style.backgroundSize = '';
+                chatContainer.style.backgroundPosition = '';
+                chatContainer.style.backgroundAttachment = '';
+                chatContainer.style.backgroundRepeat = '';
+            }
+            
             // 移除消息容器背景
             const messagesContainer = document.getElementById('messages-container');
             if (messagesContainer) {
@@ -7029,11 +9066,13 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             const savedBackground = localStorage.getItem('chatBackground');
             if (savedBackground) {
                 selectedBackgroundFile = savedBackground;
-                // 更新预览
+                // 只更新预览（如果元素存在）
                 const preview = document.getElementById('background-preview');
                 const previewText = document.getElementById('background-preview-text');
-                preview.style.backgroundImage = `url(${savedBackground})`;
-                previewText.style.display = 'none';
+                if (preview && previewText) {
+                    preview.style.backgroundImage = `url(${savedBackground})`;
+                    previewText.style.display = 'none';
+                }
                 // 应用背景
                 applyChatBackground(savedBackground);
             }
@@ -7137,17 +9176,17 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             console.log('开始初始化视频播放器...');
             
             // 获取视频元素和控件
-            const videoElement = document.getElementById('custom-video-element');
-            const playBtn = document.getElementById('video-play-btn');
-            const progressBar = document.getElementById('video-progress-bar');
-            const progress = document.getElementById('video-progress');
-            const currentTimeEl = document.querySelector('.video-time.current-time');
-            const totalTimeEl = document.querySelector('.video-time.total-time');
-            const muteBtn = document.getElementById('video-mute-btn');
-            const volumeSlider = document.getElementById('volume-slider');
-            const videoControls = document.querySelector('.video-controls');
-            const videoPlayer = document.querySelector('.custom-video-player');
-            const videoHeader = document.querySelector('.video-player-header');
+            let videoElement = document.getElementById('custom-video-element');
+            let playBtn = document.getElementById('video-play-btn');
+            let progressBar = document.getElementById('video-progress-bar');
+            let progress = document.getElementById('video-progress');
+            let currentTimeEl = document.querySelector('.video-time.current-time');
+            let totalTimeEl = document.querySelector('.video-time.total-time');
+            let muteBtn = document.getElementById('video-mute-btn');
+            let volumeSlider = document.getElementById('volume-slider');
+            let videoControls = document.querySelector('.video-controls');
+            let videoPlayer = document.querySelector('.custom-video-player');
+            let videoHeader = document.querySelector('.video-player-header');
             
             // 检查必要元素是否存在
             console.log('元素检查结果:');
@@ -7307,7 +9346,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             
             // 鼠标移动显示/隐藏控件逻辑
             let hideControlsTimer;
-            const showControls = () => {
+            let showControls = () => {
                 // 清除之前的计时器
                 clearTimeout(hideControlsTimer);
                 
@@ -7331,20 +9370,79 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             // 全屏变化事件
             document.addEventListener('fullscreenchange', () => {
                 if (document.fullscreenElement) {
-                    // 进入全屏，始终显示控件
+                    // 进入全屏，隐藏标题栏，显示控制按钮
+                    videoControls.classList.remove('hidden');
+                    videoHeader.classList.add('hidden');
+                    clearTimeout(hideControlsTimer);
+                    
+                    // 重置视频播放器尺寸，确保视频充满屏幕
+                    videoPlayer.style.height = '100%';
+                    videoPlayer.style.width = '100%';
+                    videoElement.style.height = '100%';
+                    videoElement.style.width = '100%';
+                    
+                    // 确保视频元素使用contain模式，避免被裁剪
+                    videoElement.style.objectFit = 'contain';
+                    
+                    // 确保控件始终可见
+                    videoControls.style.opacity = '1';
+                    videoControls.style.transform = 'translateY(0)';
+                    videoControls.style.pointerEvents = 'auto';
+                    
+                    // 添加全屏样式，确保控件始终可见
+                    videoPlayer.classList.add('fullscreen');
+                    videoControls.classList.add('fullscreen');
+                } else {
+                    // 退出全屏，显示标题栏，恢复自动隐藏逻辑
                     videoControls.classList.remove('hidden');
                     videoHeader.classList.remove('hidden');
-                    clearTimeout(hideControlsTimer);
-                } else {
-                    // 退出全屏，恢复自动隐藏逻辑
                     if (!videoElement.paused) {
                         hideControlsTimer = setTimeout(() => {
                             videoControls.classList.add('hidden');
                             videoHeader.classList.add('hidden');
                         }, 3000);
                     }
+                    
+                    // 恢复原始尺寸和样式
+                    videoPlayer.style.height = '';
+                    videoPlayer.style.width = '';
+                    videoElement.style.height = '';
+                    videoElement.style.width = '';
+                    videoElement.style.objectFit = '';
+                    videoControls.style.opacity = '';
+                    videoControls.style.transform = '';
+                    videoControls.style.pointerEvents = '';
+                    
+                    // 移除全屏样式
+                    videoPlayer.classList.remove('fullscreen');
+                    videoControls.classList.remove('fullscreen');
                 }
             });
+            
+            // 修改控件显示逻辑，确保全屏模式下始终显示控件
+            const enhancedShowControls = () => {
+                // 清除之前的计时器
+                clearTimeout(hideControlsTimer);
+                
+                // 显示控件
+                videoControls.classList.remove('hidden');
+                
+                // 非全屏模式下才显示标题栏
+                if (!document.fullscreenElement) {
+                    videoHeader.classList.remove('hidden');
+                }
+                
+                // 只有在非全屏且播放状态下才自动隐藏控件
+                if (!videoElement.paused && !document.fullscreenElement) {
+                    hideControlsTimer = setTimeout(() => {
+                        videoControls.classList.add('hidden');
+                        videoHeader.classList.add('hidden');
+                    }, 3000);
+                }
+            };
+            
+            // 替换原始的showControls函数
+            showControls = enhancedShowControls;
             
             // 初始状态：显示控件
             showControls();
@@ -7352,7 +9450,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         
         // 打开视频播放器
         // 打开视频播放器
-        function openVideoPlayer(videoUrl, videoName, videoSize) {
+        async function openVideoPlayer(videoUrl, videoName, videoSize) {
             const videoModal = document.getElementById('video-player-modal');
             const videoElement = document.getElementById('custom-video-element');
             const videoTitle = document.getElementById('video-player-title');
@@ -7372,8 +9470,27 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             // 从URL中提取文件名，用于缓存检查
             const fileNameFromUrl = videoUrl.split('/').pop().split('?')[0];
             
-            // 检查是否已经缓存，避免二次缓存
-            if (!isFileExpired(fileNameFromUrl, 'video')) {
+            // 优先从IndexedDB获取视频
+            try {
+                const fileData = await indexedDBManager.getFile(videoUrl);
+                if (fileData && fileData.data) {
+                    // 从IndexedDB获取成功，转换为Blob URL
+                    const blob = new Blob([fileData.data], { type: fileData.type });
+                    const blobUrl = URL.createObjectURL(blob);
+                    videoElement.src = blobUrl;
+                    // 不自动播放，等待用户手动点击
+                    videoElement.pause();
+                    // 不显示缓存状态
+                    cacheStatus.style.display = 'none';
+                    return;
+                }
+            } catch (error) {
+                // 忽略IndexedDB错误，继续尝试其他方式
+                console.error('从IndexedDB获取视频失败:', error);
+            }
+            
+            // 如果IndexedDB中没有，检查是否已经缓存（兼容旧版本）
+            if (typeof isFileExpired !== 'undefined' && !isFileExpired(fileNameFromUrl, 'video')) {
                 console.log('视频已缓存，直接使用URL播放');
                 // 视频已缓存，直接使用URL播放，不重新缓存
                 videoElement.src = videoUrl;
@@ -7440,8 +9557,8 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         
         // 完成缓存
         function completeCache(fileName, fileType, fileSize) {
-            // 设置文件Cookie
-            setFileCookie(fileName, fileType, fileSize);
+            // 设置文件缓存
+            setFileCache(fileName, fileType, fileSize);
             
             // 隐藏顶部缓存状态
             const cacheStatusEl = document.getElementById('top-cache-status');
@@ -7567,7 +9684,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                             cacheStatus.style.display = 'none';
                         }, 1000);
                         
-                        // 完成缓存，设置cookie
+                        // 完成缓存，设置文件缓存
                         completeCache(fileNameFromUrl, 'video', totalBytes);
                         
                         return blobUrl;
@@ -7716,6 +9833,98 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                     const videoSize = 0; // 可以从数据属性中获取，这里暂时设为0
                     openVideoPlayer(videoUrl, videoName, videoSize);
                 });
+            });
+        }
+        
+        // 初始化视频元素，将视频URL转换为Blob URL
+        async function initChatVideos() {
+            document.querySelectorAll('.video-element').forEach(async video => {
+                // 只处理没有src或src为空的视频元素
+                if (!video.src || video.src === '') {
+                    const fileUrl = video.getAttribute('data-file-url');
+                    const fileName = video.getAttribute('data-file-name');
+                    const filePath = video.getAttribute('data-file-path');
+                    
+                    if (fileUrl) {
+                        // 优先从IndexedDB获取视频
+                        try {
+                            const fileData = await indexedDBManager.getFile(filePath);
+                            if (fileData && fileData.data) {
+                                // 从IndexedDB获取成功，转换为Blob URL
+                                const blob = new Blob([fileData.data], { type: fileData.type });
+                                const blobUrl = URL.createObjectURL(blob);
+                                video.src = blobUrl;
+                                return;
+                            }
+                        } catch (error) {
+                            // 忽略IndexedDB错误，继续尝试从服务器获取
+                        }
+                        
+                        // IndexedDB中没有，尝试从服务器获取，最多重试3次
+                        let success = false;
+                        for (let i = 0; i < 3 && !success; i++) {
+                            try {
+                                const response = await fetch(fileUrl, {
+                                    credentials: 'include',
+                                    cache: 'no-cache'
+                                });
+                                
+                                if (response.ok) {
+                                    // 请求成功，获取Blob并转换为Blob URL
+                                    const blob = await response.blob();
+                                    const blobUrl = URL.createObjectURL(blob);
+                                    video.src = blobUrl;
+                                    success = true;
+                                    
+                                    // 缓存到IndexedDB
+                                    try {
+                                        await indexedDBManager.saveFile({
+                                            id: filePath,
+                                            name: fileName,
+                                            type: blob.type,
+                                            size: blob.size,
+                                            data: blob,
+                                            url: fileUrl,
+                                            uploadedAt: new Date().toISOString(),
+                                            fileType: 'video'
+                                        });
+                                    } catch (cacheError) {
+                                        // 忽略缓存错误
+                                    }
+                                } else if (response.status === 404) {
+                                    // 忽略404错误，不向控制台报错
+                                    break; // 404直接退出重试
+                                }
+                            } catch (error) {
+                                // 忽略所有错误，不向控制台报错
+                            }
+                            
+                            // 重试间隔1秒
+                            if (!success && i < 2) {
+                                await new Promise(resolve => setTimeout(resolve, 1000));
+                            }
+                        }
+                        
+                        // 如果所有尝试都失败，显示"消息已被清理：{文件名}"
+                        if (!success) {
+                            // 创建一个错误提示元素，替换视频元素
+                            const errorDiv = document.createElement('div');
+                            errorDiv.style.cssText = `
+                                background: #f8f9fa;
+                                border: 1px solid #dee2e6;
+                                border-radius: 8px;
+                                padding: 20px;
+                                text-align: center;
+                                color: #6c757d;
+                                font-size: 14px;
+                            `;
+                            errorDiv.textContent = `消息已被清理：${fileName}`;
+                            
+                            // 替换视频元素
+                            video.parentNode.replaceChild(errorDiv, video);
+                        }
+                    }
+                }
             });
         }
         
@@ -8207,7 +10416,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                             const fileName = fileLink.getAttribute('data-file-name');
                             if (filePath && fileName) {
                                 const fileType = getFileType(fileName);
-                                setFileCookie(filePath, fileType, 0);
+                                setFileCache(filePath, fileType, 0);
                             }
                         });
                         
@@ -8216,6 +10425,9 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                         
                         // 初始化新添加的视频元素
                         initVideoElements();
+                        
+                        // 初始化新添加的聊天视频，转换为Blob URL
+                        initChatVideos();
                     }
                 })
                 .catch(error => {
@@ -8258,12 +10470,53 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 }
             }
             
+            // 从存储中获取文件URL（兼容旧的localStorage和新的IndexedDB）
+            function getFileUrlFromLocalStorage(filePath) {
+                // 检查是否是本地文件ID，支持多种前缀
+                if (filePath && (filePath.startsWith('Picture_') || filePath.startsWith('Video_') || filePath.startsWith('Audio_') || filePath.startsWith('File_'))) {
+                    // 对于本地文件ID，先返回一个占位符，后续会异步加载
+                    return filePath;
+                }
+                // 对于服务器文件，自动添加.upload后缀
+                if (filePath && !filePath.endsWith('.upload')) {
+                    return filePath + '.upload';
+                }
+                return filePath;
+            }
+            
+            // 异步从IndexedDB加载文件并更新DOM
+            function loadFileFromIndexedDB(element, filePath, fileType) {
+                // 检查是否是本地文件ID
+                if (filePath && (filePath.startsWith('Picture_') || filePath.startsWith('Video_') || filePath.startsWith('Audio_') || filePath.startsWith('File_'))) {
+                    getFileFromIndexedDB(filePath)
+                        .then(fileData => {
+                            if (fileData && fileData.data) {
+                                // 根据文件类型更新不同的元素
+                                if (element.tagName === 'IMG') {
+                                    element.src = fileData.data;
+                                } else if (element.tagName === 'AUDIO' || element.tagName === 'VIDEO') {
+                                    element.src = fileData.data;
+                                } else if (element.tagName === 'A') {
+                                    // 对于链接元素，更新download属性和onclick事件
+                                    element.setAttribute('href', fileData.data);
+                                }
+                            }
+                        })
+                        .catch(error => {
+                            console.error('从IndexedDB加载文件失败：', error);
+                        });
+                }
+            }
+            
             let contentHtml;
             if (msg.type === 'file' || msg.file_path) {
-                const file_path = msg.file_path;
+                let file_path = msg.file_path;
                 const file_name = msg.file_name;
                 const file_size = msg.file_size;
                 const file_type = msg.type;
+                
+                // 从localStorage获取文件URL
+                const fileUrl = getFileUrlFromLocalStorage(file_path);
                 
                 // 检测文件的实际类型
                 const ext = file_name.toLowerCase().split('.').pop();
@@ -8274,17 +10527,13 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 if (imageExts.includes(ext)) {
                     // 图片类型
                     contentHtml = `<div class='message-media'>
-                        <img src='${file_path}' alt='${file_name}' class='message-image' data-file-name='${file_name}' data-file-type='image' data-file-path='${file_path}'>
+                        <img src='${fileUrl}' alt='${file_name}' class='message-image' data-file-name='${file_name}' data-file-type='image' data-file-path='${file_path}'>
                     </div>`;
-                    // 只在cookie不存在时才缓存文件
-                    if (isFileExpired(file_name, 'image')) {
-                        setFileCookie(file_name, 'image', file_size);
-                    }
                 } else if (audioExts.includes(ext)) {
                     // 音频类型
                     contentHtml = `<div class='message-media' style='position: relative;'>
                         <div class='custom-audio-player'>
-                            <audio src='${file_path}' class='audio-element' data-file-name='${file_name}' data-file-type='audio' data-file-path='${file_path}'></audio>
+                            <audio src='${fileUrl}' class='audio-element' data-file-name='${file_name}' data-file-type='audio' data-file-path='${file_path}'></audio>
                             <button class='audio-play-btn' title='播放'></button>
                             <div class='audio-progress-container'>
                                 <div class='audio-progress-bar'>
@@ -8302,15 +10551,11 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                             </div>
                         </div>
                     </div>`;
-                    // 只在cookie不存在时才缓存文件
-                    if (isFileExpired(file_name, 'audio')) {
-                        setFileCookie(file_name, 'audio', file_size);
-                    }
                 } else if (videoExts.includes(ext)) {
                     // 视频类型
                     contentHtml = `<div class='message-media' style='position: relative;'>
                         <div class='video-container' style='position: relative;'>
-                            <video src='${file_path}' class='video-element' data-file-name='${file_name}' data-file-type='video' data-file-path='${file_path}' controlsList='nodownload' controls autoplay muted playsinline>
+                            <video src='' class='video-element' data-file-name='${file_name}' data-file-type='video' data-file-path='${file_path}' data-file-url='${fileUrl}' controlsList='nodownload' playsinline>
                             </video>
                             <!-- 视频操作按钮 - 默认隐藏，hover时显示 -->
                             <div class='media-actions' style='position: absolute; top: 10px; right: 10px; display: flex; gap: 5px; opacity: 0; transition: opacity 0.2s ease; z-index: 3000;'>
@@ -8333,10 +10578,6 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                             </style>
                         </div>
                     </div>`;
-                    // 视频文件不自动缓存，需要用户手动点击后才缓存
-                    // if (isFileExpired(file_name)) {
-                    //     setFileCookie(file_name, 'video', file_size);
-                    // }
                 } else {
                 // 其他文件类型
                 contentHtml = `<div class='message-file' onclick="event.preventDefault(); addDownloadTask('${file_name}', '${file_path}', ${file_size}, 'file');">
@@ -8347,10 +10588,6 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                     </div>
                     <button style='background: #667eea; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; transition: all 0.2s ease;' onclick="event.stopPropagation(); addDownloadTask('${file_name}', '${file_path}', ${file_size}, 'file');">下载</button>
                 </div>`;
-                // 只在cookie不存在时才缓存文件
-                if (isFileExpired(file_name, 'file')) {
-                    setFileCookie(file_name, 'file', file_size);
-                }
             }
             } else {
                 // 检测消息是否包含链接
@@ -8360,30 +10597,44 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 contentHtml = `<div class='message-text'>${messageWithLinks}</div>`;
             }
             
-            const timeHtml = `<div class='message-time'>${new Date(msg.created_at).toLocaleString('zh-CN', {year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute:'2-digit'})}</div>`;
+            // 将时间格式化为 X年X月X日X时X分
+            const date = new Date(msg.created_at);
+            const formattedTime = `${date.getFullYear()}年${(date.getMonth() + 1).toString().padStart(2, '0')}月${date.getDate().toString().padStart(2, '0')}日${date.getHours().toString().padStart(2, '0')}时${date.getMinutes().toString().padStart(2, '0')}分`;
+            const timeHtml = `<div class='message-time'>${formattedTime}</div>`;
             
             // 添加消息操作菜单
             let messageActionsHtml = '';
             if (isSent) {
-                // 只有发送者可以看到撤回按钮
+                // 检查消息是否在2分钟内，只有2分钟内的消息可以撤回
+                const messageTime = new Date(msg.created_at);
+                const now = new Date();
+                const diffInMinutes = (now - messageTime) / (1000 * 60);
+                
+                // 生成撤回按钮HTML，只有2分钟内的消息才显示
+                const recallButtonHtml = diffInMinutes <= 2 ? `
+                    <button class='message-action-item' onclick="event.stopPropagation(); recallMessage(this, '${msg.id}', '${chatType}', '${chatId}')" 
+                            style='display: block; width: 100%; padding: 8px 16px; text-align: left; border: none; 
+                                   background: none; cursor: pointer; font-size: 14px; color: #333; transition: background-color 0.2s ease;'>撤回</button>
+                ` : '';
+                
+                // 始终显示三个点按钮，只有2分钟内的消息才显示撤回选项
                 messageActionsHtml = `
-                    <div class='message-actions' style='position: absolute; top: 8px; right: 8px; display: flex; align-items: center; gap: 5px; z-index: 4000;'>
+                    <div class='message-actions' style='position: absolute; top: 50%; right: -10px; transform: translateY(-50%); display: flex; align-items: center; gap: 5px; z-index: 4000;'>
                         <div style='position: relative; z-index: 4000;'>
-                            <button class='message-action-btn' onclick="event.stopPropagation(); toggleMessageActions(event, this)" 
-                                    style='width: 24px; height: 24px; font-size: 12px; background: rgba(0,0,0,0.1); border: none; border-radius: 50%; 
-                                           color: #666; cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: 0.6; 
+                            <button class='message-action-btn' onclick="toggleMessageActions(this)" 
+                                    style='width: 28px; height: 28px; font-size: 18px; background: rgba(0,0,0,0.2); border: none; border-radius: 50%; 
+                                           color: #333; cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: 1; 
                                            transition: all 0.2s ease; position: relative; z-index: 4000;'>⋮</button>
-                            <div class='message-actions-menu' style='display: none; position: absolute; top: 30px; right: 0; 
+                            <div class='message-actions-menu' style='display: none; position: absolute; top: 35px; right: 0; 
                                                                  background: white; border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,0.15); 
                                                                  padding: 8px 0; z-index: 5000; min-width: 80px;'>
-                                <button class='message-action-item' onclick="event.stopPropagation(); recallMessage('${msg.id}', '${chatType}', '${chatId}')" 
-                                        style='display: block; width: 100%; padding: 8px 16px; text-align: left; border: none; 
-                                               background: none; cursor: pointer; font-size: 14px; color: #333; transition: background-color 0.2s ease;'>撤回</button>
+                                ${recallButtonHtml}
                             </div>
                         </div>
                     </div>`;
             }
 
+            // 为发送者的消息添加右键和长按事件
             if (isSent) {
                 // 发送者的消息，头像在右，内容在左
                 messageDiv.innerHTML = `
@@ -8394,6 +10645,19 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                     </div>
                     <div class='message-avatar'>${avatarHtml}</div>
                 `;
+                
+                // 添加右键事件，禁止浏览器默认右键菜单
+                messageDiv.addEventListener('contextmenu', function(event) {
+                    event.preventDefault(); // 禁止浏览器默认右键菜单
+                });
+                
+                // 添加点击事件关闭菜单
+                messageDiv.addEventListener('click', function() {
+                    const menu = this.querySelector('.message-actions-menu');
+                    if (menu) {
+                        menu.style.display = 'none';
+                    }
+                });
             } else {
                 // 接收者的消息，头像在左，内容在右
                 messageDiv.innerHTML = `
@@ -8403,6 +10667,28 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                         ${timeHtml}
                     </div>
                 `;
+            }
+            
+            // 异步加载文件数据
+            if (msg.type === 'file' || msg.file_path) {
+                const file_path = msg.file_path;
+                const file_type = msg.type;
+                
+                // 查找所有媒体元素并异步加载文件数据
+                const imgElements = messageDiv.querySelectorAll('img[data-file-path]');
+                imgElements.forEach(img => {
+                    loadFileFromIndexedDB(img, img.dataset.filePath, 'image');
+                });
+                
+                const audioElements = messageDiv.querySelectorAll('audio[data-file-path]');
+                audioElements.forEach(audio => {
+                    loadFileFromIndexedDB(audio, audio.dataset.filePath, 'audio');
+                });
+                
+                const videoElements = messageDiv.querySelectorAll('video[data-file-path]');
+                videoElements.forEach(video => {
+                    loadFileFromIndexedDB(video, video.dataset.filePath, 'video');
+                });
             }
             
             return messageDiv;
@@ -8519,10 +10805,9 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         setInterval(getNewMessages, 3000);
         
         // 切换消息操作菜单
-        function toggleMessageActions(event, button) {
-            event.stopPropagation();
+        function toggleMessageActions(button) {
             // 关闭所有其他消息操作菜单
-            document.querySelectorAll('.message-actions-menu').forEach(menu => {
+            document.querySelectorAll('.message-actions-menu, .message-action-menu').forEach(menu => {
                 if (menu !== button.nextElementSibling) {
                     menu.style.display = 'none';
                 }
@@ -8540,81 +10825,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         }
 
         // 撤回消息
-        function recallMessage(messageId, chatType, chatId) {
-            if (confirm('确定要撤回这条消息吗？')) {
-                // 找到对应的消息元素并获取原始内容
-                const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
-                let originalContent = '';
-                let isTextMessage = false;
-                
-                if (messageElement) {
-                    // 检查是否为文本消息
-                    const textElement = messageElement.querySelector('.message-text:not([style*="italic"])');
-                    if (textElement && !messageElement.querySelector('.message-media, .message-file, .custom-audio-player, .video-container')) {
-                        originalContent = textElement.textContent || textElement.innerText;
-                        isTextMessage = true;
-                    }
-                }
-                
-                fetch('recall_message.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: `message_id=${messageId}&chat_type=${chatType}&chat_id=${chatId}`
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        // 找到对应的消息元素并移除
-                        const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
-                        if (messageElement) {
-                            // 替换为撤回提示，包含重新编辑按钮
-                            const editButton = isTextMessage ? `
-                                <button onclick="event.stopPropagation(); editRecalledMessage('${messageId}', '${chatType}', '${chatId}', '${encodeURIComponent(originalContent)}')" style='margin-left: 10px; padding: 2px 8px; font-size: 12px; background: #12b7f5; color: white; border: none; border-radius: 10px; cursor: pointer;'>重新编辑</button>
-                            ` : '';
-                            
-                            messageElement.innerHTML = `
-                                <div class='message-content'>
-                                    <div class='message-text' style='color: #999; font-style: italic; display: flex; align-items: center;'>
-                                        你撤回了一条消息${editButton}
-                                    </div>
-                                    <div class='message-time'>${new Date().toLocaleString('zh-CN', {year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute:'2-digit'})}</div>
-                                </div>
-                                <div class='message-avatar'>
-                                    <?php if (!empty($current_user['avatar'])): ?>
-                                        <img src='<?php echo $current_user['avatar']; ?>' alt='<?php echo $username; ?>' style='width: 100%; height: 100%; border-radius: 50%; object-fit: cover;'>
-                                    <?php else: ?>
-                                        <?php echo substr($username, 0, 2); ?>
-                                    <?php endif; ?>
-                                </div>
-                            `;
-                        }
-                        showNotification('消息撤回成功', 'success');
-                    } else {
-                        showNotification('消息撤回失败：' + (data.message || '未知错误'), 'error');
-                    }
-                })
-                .catch(error => {
-                    console.error('撤回消息失败:', error);
-                    showNotification('消息撤回失败，网络错误', 'error');
-                });
-            }
-        }
 
-        // 重新编辑撤回的消息
-        function editRecalledMessage(messageId, chatType, chatId, originalContent) {
-            // 将撤回的消息内容填充到输入框
-            const messageInput = document.getElementById('message-input');
-            messageInput.value = decodeURIComponent(originalContent);
-            messageInput.focus();
-            
-            // 滚动到底部
-            messageInput.scrollTop = messageInput.scrollHeight;
-            
-            // 可以选择自动发送编辑后的消息，或者让用户手动发送
-            // 如果需要自动发送，可以调用 sendMessage() 函数
-        }
         
         // 标记消息为已读
         function markMessagesAsRead() {
@@ -9243,30 +11454,37 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             display: none;
         }
         
-        /* 确保小窗模式下+按钮正确显示 */
-        #music-player.minimized #minimized-toggle {
+        /* 确保小窗模式下+按钮和下载按钮正确显示 */
+        #music-player.minimized #minimized-toggle-container {
             display: block;
             position: absolute;
             top: 5px;
             right: 5px;
             width: 25px;
-            height: 25px;
+            height: auto;
             font-size: 16px;
             background: rgba(0, 0, 0, 0.2);
             color: white;
             border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
+            border-radius: 12px;
             cursor: pointer;
             z-index: 1001;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
+            padding: 3px;
+            gap: 2px;
             transition: all 0.2s ease;
         }
         
-        #music-player.minimized #minimized-toggle:hover {
+        #music-player.minimized #minimized-toggle-container:hover {
             background: rgba(0, 0, 0, 0.4);
-            transform: scale(1.1);
+        }
+        
+        #music-player.minimized #minimized-toggle-container button {
+            color: white;
+            font-weight: bold;
         }
     </style>
     
@@ -9278,7 +11496,10 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         </div>
         
         <!-- 缩小状态下的切换按钮 -->
-        <button id="minimized-toggle" onclick="togglePlayer()" style="display: none; position: absolute; top: 20px; right: 15px; width: 20px; height: 20px; font-size: 14px; background: none; border: none; cursor: pointer; color: #666; z-index: 1001;">+</button>
+        <div style="display: none; position: absolute; top: 20px; right: 15px; z-index: 1001;" id="minimized-toggle-container">
+            <button onclick="togglePlayer()" style="width: 20px; height: 20px; font-size: 14px; background: none; border: none; cursor: pointer; color: #666; padding: 0; margin: 0;">+</button>
+            <button onclick="downloadMusic()" title="下载" style="width: 20px; height: 20px; font-size: 14px; background: none; border: none; cursor: pointer; color: #666; padding: 0; margin: 0; display: block; text-align: center;">&gt;</button>
+        </div>
         
         <!-- 迷你模式切换按钮 -->
         <button id="mini-toggle-btn" onclick="toggleMiniMode()" style="position: absolute; bottom: 10px; right: 10px; width: 25px; height: 25px; background: rgba(0, 0, 0, 0.3); color: white; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 50%; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; z-index: 1003; font-weight: bold;">&lt;</button>
@@ -9350,6 +11571,13 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         let initialX = 0;
         let initialY = 0;
         
+        // HOYO-MiX 音乐模式相关变量
+        let currentMusicMode = 'random'; // 当前音乐模式：'random' 或 'hoyo'
+        let hoyoSongList = []; // HOYO-MiX 歌曲列表
+        let hoyoCurrentIndex = 0; // 当前播放的歌曲索引
+        let hoyoUsedPages = []; // 已使用的随机页码列表
+        let hoyoCurrentPage = 0; // 当前页码
+        
         // 格式化时间显示（秒 -> mm:ss）
         function formatTime(seconds) {
             if (isNaN(seconds)) return '0:00';
@@ -9360,29 +11588,44 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         }
         
         // 页面加载完成后初始化音乐播放器
-        window.addEventListener('load', () => {
-            console.log('页面加载完成，检查音乐播放器设置...');
+        window.addEventListener('load', async () => {
+            let musicPlayerSetting = false; // 默认关闭
             
-            // 加载设置
-            const musicPlayerSetting = localStorage.getItem('setting-music-player') !== 'false';
-            console.log('音乐播放器设置:', musicPlayerSetting);
+            try {
+                // 检查indexedDBManager是否已经初始化
+                if (typeof indexedDBManager !== 'undefined') {
+                    try {
+                        // 从IndexedDB加载设置
+                        const settings = await indexedDBManager.getSettings();
+                        // 如果未设置过，默认关闭
+                        musicPlayerSetting = settings['setting-music-player'] === true;
+                    } catch (error) {
+                        // 降级到localStorage
+                        // 如果未设置过，默认关闭
+                        musicPlayerSetting = localStorage.getItem('setting-music-player') === 'true';
+                    }
+                } else {
+                    // indexedDBManager未初始化，使用localStorage
+                    // 如果未设置过，默认关闭
+                    musicPlayerSetting = localStorage.getItem('setting-music-player') === 'true';
+                }
+            } catch (error) {
+                // 使用默认设置
+                // 如果未设置过，默认关闭
+                musicPlayerSetting = localStorage.getItem('setting-music-player') === 'true';
+            }
             
             // 为音乐图标添加点击事件
             const musicIcon = document.getElementById('music-icon');
             if (musicIcon) {
-                console.log('找到音乐图标，添加点击事件监听器...');
                 musicIcon.addEventListener('click', toggleMusicPlayer);
-            } else {
-                console.log('未找到音乐图标元素');
             }
             
             // 只有当设置开启时才初始化播放器
             if (musicPlayerSetting) {
-                console.log('初始化音乐播放器...');
                 initMusicPlayer();
                 initDrag();
             } else {
-                console.log('音乐播放器设置已关闭，不初始化播放器');
                 // 隐藏播放器
                 const player = document.getElementById('music-player');
                 if (player) {
@@ -9512,6 +11755,197 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             audioPlayer.volume = 0.8; // 默认音量80%
         }
         
+        // 获取当前音乐模式
+        async function getCurrentMusicMode() {
+            try {
+                // 检查indexedDBManager是否已经初始化
+                if (typeof indexedDBManager !== 'undefined') {
+                    try {
+                        const settings = await indexedDBManager.getSettings();
+                        return settings['setting-music-mode'] || 'random';
+                    } catch (error) {
+                        // IndexedDB获取失败，使用localStorage
+                        return localStorage.getItem('setting-music-mode') || 'random';
+                    }
+                } else {
+                    // indexedDBManager未初始化，使用localStorage
+                    return localStorage.getItem('setting-music-mode') || 'random';
+                }
+            } catch (error) {
+                // 忽略所有错误，返回默认值
+                return localStorage.getItem('setting-music-mode') || 'random';
+            }
+        }
+        
+        // 生成1-329之间的随机页码，确保不重复
+        function generateRandomPage() {
+            if (hoyoUsedPages.length >= 329) {
+                // 重置已使用列表
+                hoyoUsedPages = [];
+            }
+            
+            let page;
+            do {
+                page = Math.floor(Math.random() * 329) + 1;
+            } while (hoyoUsedPages.includes(page));
+            
+            hoyoUsedPages.push(page);
+            return page;
+        }
+        
+        // 获取HOYO-MiX歌曲列表
+        async function getHoyoSongList() {
+            try {
+                // 生成随机页码
+                const page = generateRandomPage();
+                hoyoCurrentPage = page;
+                
+                // 请求歌曲列表
+                const response = await fetch(`https://api.vkeys.cn/v2/music/tencent/singer/songlist?mid=001uz8tl04tdL8&page=${page}`);
+                
+                // 检查是否为404错误，如果是则不向控制台报错
+                if (!response.ok && response.status === 404) {
+                    return [];
+                }
+                
+                const data = await response.json();
+                
+                if (data.code === 200 && data.data && Array.isArray(data.data)) {
+                    // 提取歌曲ID列表
+                    const songIds = data.data.map(item => item.id).filter(id => id);
+                    
+                    if (songIds.length > 0) {
+                        // 获取每首歌的详细信息
+                        const songDetails = [];
+                        for (const id of songIds) {
+                            try {
+                                const detailResponse = await fetch(`https://api.vkeys.cn/v2/music/tencent?id=${id}`);
+                                
+                                // 检查是否为404错误，如果是则不向控制台报错
+                                if (!detailResponse.ok && detailResponse.status === 404) {
+                                    continue;
+                                }
+                                
+                                const detailData = await detailResponse.json();
+                                
+                                if (detailData.code === 200 && detailData.data) {
+                                    songDetails.push({
+                                        id: id,
+                                        name: detailData.data.song || '未知歌曲',
+                                        artistsname: detailData.data.singer || '未知歌手',
+                                        picurl: detailData.data.cover || '',
+                                        url: detailData.data.url || ''
+                                    });
+                                }
+                            } catch (error) {
+                                // 忽略所有错误，不向控制台报错
+                            }
+                        }
+                        
+                        return songDetails;
+                    }
+                }
+                
+                return [];
+            } catch (error) {
+                // 忽略所有错误，不向控制台报错
+                return [];
+            }
+        }
+        
+        // 加载HOYO-MiX歌曲
+        async function loadHoyoSong() {
+            // 如果歌曲列表为空或已播放完毕，获取新的歌曲列表
+            if (hoyoSongList.length === 0 || hoyoCurrentIndex >= hoyoSongList.length) {
+                document.getElementById('player-status').textContent = '正在获取HOYO-MiX歌曲列表...';
+                hoyoSongList = await getHoyoSongList();
+                hoyoCurrentIndex = 0;
+                
+                // 如果获取失败，显示错误信息
+                if (hoyoSongList.length === 0) {
+                    document.getElementById('player-status').textContent = '获取HOYO-MiX歌曲失败，请重试';
+                    return false;
+                }
+            }
+            
+            // 获取当前要播放的歌曲
+            const song = hoyoSongList[hoyoCurrentIndex];
+            currentSong = song;
+            hoyoCurrentIndex++;
+            
+            // 更新歌曲信息
+            document.getElementById('song-title').textContent = `${song.name} - ${song.artistsname}`;
+            document.getElementById('artist-name').textContent = song.artistsname;
+            
+            // 在进度条上边显示歌曲信息
+            const progressSongInfo = document.getElementById('progress-song-info');
+            progressSongInfo.textContent = `${song.name} - ${song.artistsname}`;
+            
+            // 设置专辑图片，确保使用HTTPS
+            const albumImage = document.getElementById('album-image');
+            if (song.picurl) {
+                let picUrl = song.picurl;
+                if (picUrl.startsWith('http://')) {
+                    picUrl = picUrl.replace('http://', 'https://');
+                }
+                albumImage.src = picUrl;
+                albumImage.style.display = 'block';
+            } else {
+                albumImage.style.display = 'none';
+            }
+            
+            // 确保使用HTTPS
+            let audioUrl = song.url;
+            if (audioUrl && audioUrl.startsWith('http://')) {
+                audioUrl = audioUrl.replace('http://', 'https://');
+            }
+            
+            // 如果没有音频URL，尝试下一首
+            if (!audioUrl) {
+                return await loadHoyoSong();
+            }
+            
+            // 设置音频源
+            const audioPlayer = document.getElementById('audio-player');
+            
+            // 移除之前的事件监听器
+            audioPlayer.removeEventListener('canplaythrough', updateDuration);
+            audioPlayer.removeEventListener('timeupdate', updateProgress);
+            audioPlayer.removeEventListener('ended', loadNewSong);
+            
+            // 设置新的音频源
+            audioPlayer.src = audioUrl;
+            
+            // 重新添加事件监听器
+            audioPlayer.addEventListener('canplaythrough', updateDuration);
+            audioPlayer.addEventListener('timeupdate', updateProgress);
+            audioPlayer.addEventListener('ended', loadNewSong);
+            
+            // 添加错误处理
+            audioPlayer.addEventListener('error', (event) => {
+                // 忽略错误，不向控制台报错
+                // 播放出错时尝试下一首
+                setTimeout(() => {
+                    loadNewSong();
+                }, 1000);
+            });
+            
+            // 自动播放，添加错误处理
+            try {
+                await audioPlayer.play();
+                isPlaying = true;
+                document.getElementById('play-btn').textContent = '⏸';
+                document.getElementById('player-status').textContent = '正在播放';
+                return true;
+            } catch (playError) {
+                // 忽略错误，不向控制台报错
+                isPlaying = false;
+                document.getElementById('play-btn').textContent = '▶';
+                document.getElementById('player-status').textContent = '已暂停（点击播放）';
+                return true;
+            }
+        }
+        
         // 初始化音乐播放器
         async function initMusicPlayer() {
             try {
@@ -9526,7 +11960,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 // 请求音乐数据
                 await loadNewSong();
             } catch (error) {
-                console.error('音乐加载失败:', error);
+                // 忽略错误，不向控制台报错
                 const player = document.getElementById('music-player');
                 player.style.display = 'block';
                 player.style.position = 'fixed';
@@ -9542,6 +11976,16 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             document.getElementById('player-status').textContent = '正在加载音乐...';
             
             try {
+                // 获取当前音乐模式
+                currentMusicMode = await getCurrentMusicMode();
+                
+                if (currentMusicMode === 'hoyo') {
+                    // HOYO-MiX模式
+                    await loadHoyoSong();
+                    return;
+                }
+                
+                // 随机音乐模式
                 // 请求音乐数据
                 const response = await fetch('https://api.qqsuu.cn/api/dm-randmusic?sort=%E7%83%AD%E6%AD%8C%E6%A6%9C&format=json');
                 const data = await response.json();
@@ -9576,7 +12020,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                     const idMatch = url.match(/id=(\d+)/);
                     if (idMatch && idMatch[1]) {
                         songId = idMatch[1];
-                        console.log(`[音乐播放器] 从URL中提取到歌曲ID: ${songId}`);
+                        
                     }
                     
                     // 优先使用ID请求音乐链接，最多重试3次
@@ -9587,25 +12031,19 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                         while (retryCount < maxRetries && !audioUrl) {
                             try {
                                 const apiUrl = `https://api.vkeys.cn/v2/music/netease?id=${songId}`;
-                                console.log(`[音乐播放器] 使用ID请求音乐链接: ${apiUrl} (${retryCount + 1}/${maxRetries})`);
                                 
                                 const newResponse = await fetch(apiUrl);
                                 const newData = await newResponse.json();
                                 
-                                console.log(`[音乐播放器] ID请求返回结果:`, newData);
-                                
                                 if (newData.code === 200 && newData.data && newData.data.url) {
                                     audioUrl = newData.data.url;
-                                    console.log(`[音乐播放器] ID请求成功获取音乐链接`);
                                     break;
                                 } else {
                                     retryCount++;
-                                    console.log(`[音乐播放器] ID请求失败，重试... (${retryCount}/${maxRetries})`);
                                     await new Promise(resolve => setTimeout(resolve, 500));
                                 }
                             } catch (retryError) {
                                 retryCount++;
-                                console.log(`[音乐播放器] ID请求出错，重试... (${retryCount}/${maxRetries}):`, retryError);
                                 await new Promise(resolve => setTimeout(resolve, 500));
                             }
                         }
@@ -9615,34 +12053,27 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                     if (!audioUrl) {
                         try {
                             const apiUrl = `https://api.vkeys.cn/v2/music/netease?word=${songName}&choose=1&quality=9`;
-                            console.log(`[音乐播放器] 使用歌曲名称请求音乐链接: ${apiUrl}`);
                             
                             const newResponse = await fetch(apiUrl);
                             const newData = await newResponse.json();
                             
-                            console.log(`[音乐播放器] 名称请求返回结果:`, newData);
-                            
                             if (newData.code === 200 && newData.data && newData.data.url) {
                                 audioUrl = newData.data.url;
-                                console.log(`[音乐播放器] 名称请求成功获取音乐链接`);
                             }
                         } catch (nameError) {
-                            console.error(`[音乐播放器] 名称请求出错:`, nameError);
+                            // 忽略错误，不向控制台报错
                         }
                     }
                     
                     // 如果所有请求都失败，使用原链接作为最后的备选
                     if (!audioUrl) {
                         audioUrl = currentSong.url;
-                        console.log(`[音乐播放器] 所有请求失败，使用原链接: ${audioUrl}`);
                     }
                     
                     // 确保使用HTTPS
                     if (audioUrl.startsWith('http://')) {
                         audioUrl = audioUrl.replace('http://', 'https://');
                     }
-                    
-                    console.log(`[音乐播放器] 最终使用的音乐URL: ${audioUrl}`);
                     
                     // 设置音频源
                     const audioPlayer = document.getElementById('audio-player');
@@ -9664,8 +12095,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                     
                     // 添加错误处理
                     audioPlayer.addEventListener('error', (event) => {
-                        console.error('音频播放错误:', event);
-                        // 播放出错时不做任何操作，也不切歌曲
+                        // 忽略错误，不向控制台报错
                         document.getElementById('player-status').textContent = '播放出错';
                     });
                     
@@ -9676,7 +12106,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                         document.getElementById('play-btn').textContent = '⏸';
                         document.getElementById('player-status').textContent = '正在播放';
                     } catch (playError) {
-                        console.error('自动播放失败:', playError);
+                        // 忽略错误，不向控制台报错
                         isPlaying = false;
                         document.getElementById('play-btn').textContent = '▶';
                         document.getElementById('player-status').textContent = '已暂停（点击播放）';
@@ -9685,7 +12115,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                     document.getElementById('player-status').textContent = '加载失败，请刷新页面重试';
                 }
             } catch (error) {
-                console.error('加载歌曲失败:', error);
+                // 忽略错误，不向控制台报错
                 document.getElementById('player-status').textContent = '加载失败，请刷新页面重试';
             }
         }
@@ -9696,7 +12126,16 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             const playBtn = document.getElementById('play-btn');
             
             // 检查用户设置
-            const isUserEnabled = localStorage.getItem('setting-music-player') !== 'false';
+            let isUserEnabled = true;
+            try {
+                // 从IndexedDB加载设置
+                const settings = await indexedDBManager.getSettings();
+                isUserEnabled = settings['setting-music-player'] !== false;
+            } catch (error) {
+                // 忽略错误，不向控制台报错
+                // 降级到localStorage
+                isUserEnabled = localStorage.getItem('setting-music-player') !== 'false';
+            }
             
             // 检查服务器配置是否在HTML中渲染了音乐播放器
             const player = document.getElementById('music-player');
@@ -9731,7 +12170,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                     document.getElementById('player-status').textContent = '已暂停';
                     isPlaying = false;
                 } catch (error) {
-                    console.error('暂停播放失败:', error);
+                    // 忽略错误，不向控制台报错
                 }
             } else {
                 try {
@@ -9747,7 +12186,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                     document.getElementById('player-status').textContent = '正在播放';
                     isPlaying = true;
                 } catch (error) {
-                    console.error('播放失败:', error);
+                    // 忽略错误，不向控制台报错
                     
                     // 播放失败时，尝试重新请求第二个API获取新的音乐URL
                     try {
@@ -9756,40 +12195,42 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                         // 使用歌曲名称构建API请求链接
                         const songName = encodeURIComponent(currentSong.name + ' ' + currentSong.artistsname);
                         const apiUrl = `https://api.vkeys.cn/v2/music/netease?word=${songName}&choose=1&quality=9`;
-                        console.log(`[音乐播放器] 重新构建的API请求链接: ${apiUrl}`);
                         
                         // 请求新的API
                         const newResponse = await fetch(apiUrl);
-                        const newData = await newResponse.json();
                         
-                        // 记录API返回的JSON结果
-                        console.log(`[音乐播放器] 重新请求API返回的JSON结果:`, newData);
-                        
-                        if (newData.code === 200 && newData.data && newData.data.url) {
-                            // 获取新的音乐URL
-                            const newAudioUrl = newData.data.url;
-                            // 确保使用HTTPS
-                            const audioUrl = newAudioUrl.startsWith('http://') ? newAudioUrl.replace('http://', 'https://') : newAudioUrl;
-                            
-                            // 更新音频源
-                            audioPlayer.src = audioUrl;
-                            // 更新下载链接
-                            const downloadLink = document.getElementById('download-link');
-                            downloadLink.href = audioUrl;
-                            downloadLink.download = `${currentSong.name} - ${currentSong.artistsname}.mp3`;
-                            
-                            // 再次尝试播放
-                            await audioPlayer.play();
-                            playBtn.textContent = '⏸';
-                            document.getElementById('player-status').textContent = '正在播放';
-                            isPlaying = true;
-                            console.log(`[音乐播放器] 重新获取音乐链接成功，正在播放`);
-                        } else {
-                            // API请求失败，更新状态
+                        // 检查是否为404错误，如果是则不处理
+                        if (!newResponse.ok && newResponse.status === 404) {
+                            // 不向控制台报错，直接显示失败
                             document.getElementById('player-status').textContent = '播放失败，重新获取链接失败';
+                        } else {
+                            const newData = await newResponse.json();
+                            
+                            if (newData.code === 200 && newData.data && newData.data.url) {
+                                // 获取新的音乐URL
+                                const newAudioUrl = newData.data.url;
+                                // 确保使用HTTPS
+                                const audioUrl = newAudioUrl.startsWith('http://') ? newAudioUrl.replace('http://', 'https://') : newAudioUrl;
+                                
+                                // 更新音频源
+                                audioPlayer.src = audioUrl;
+                                // 更新下载链接
+                                const downloadLink = document.getElementById('download-link');
+                                downloadLink.href = audioUrl;
+                                downloadLink.download = `${currentSong.name} - ${currentSong.artistsname}.mp3`;
+                                
+                                // 再次尝试播放
+                                await audioPlayer.play();
+                                playBtn.textContent = '⏸';
+                                document.getElementById('player-status').textContent = '正在播放';
+                                isPlaying = true;
+                            } else {
+                                // API请求失败，更新状态
+                                document.getElementById('player-status').textContent = '播放失败，重新获取链接失败';
+                            }
                         }
                     } catch (retryError) {
-                        console.error('重新获取音乐链接失败:', retryError);
+                        // 忽略错误，不向控制台报错
                         // 重新请求也失败，更新状态
                         document.getElementById('player-status').textContent = '播放失败';
                     }
@@ -9862,7 +12303,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         function togglePlayer() {
             const player = document.getElementById('music-player');
             const toggleBtn = document.getElementById('player-toggle');
-            const minimizedToggle = document.getElementById('minimized-toggle');
+            const minimizedToggle = document.getElementById('minimized-toggle-container');
             
             if (isMinimized) {
                 // 恢复正常状态
@@ -9935,11 +12376,17 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         }
         
         // 切换音乐播放器显示/隐藏
-        function toggleMusicPlayer() {
-            console.log('toggleMusicPlayer 被调用');
-            
+        async function toggleMusicPlayer() {
             // 检查用户设置
-            const isUserEnabled = localStorage.getItem('setting-music-player') !== 'false';
+            let isUserEnabled = true;
+            try {
+                // 从IndexedDB加载设置
+                const settings = await indexedDBManager.getSettings();
+                isUserEnabled = settings['setting-music-player'] !== false;
+            } catch (error) {
+                // 降级到localStorage
+                isUserEnabled = localStorage.getItem('setting-music-player') !== 'false';
+            }
             
             // 检查服务器配置是否在HTML中渲染了音乐播放器
             const player = document.getElementById('music-player');
@@ -9971,7 +12418,6 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             
             const audioPlayer = document.getElementById('audio-player');
             
-            console.log('播放器当前显示状态:', player.style.display);
             const isVisible = player.style.display !== 'none';
             
             if (isVisible) {
@@ -9993,7 +12439,6 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                     musicIcon.innerHTML = '🎵';
                 }
             }
-            console.log('播放器新显示状态:', player.style.display);
         }
         
         // 显示入群申请弹窗
@@ -10503,5 +12948,19 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
     </script>
 <!-- GitHub角标 -->
     <a href="https://github.com/LzdqesjG/modern-chat" class="github-corner" aria-label="View source on GitHub"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#151513; color:#fff; position: absolute; top: 0; border: 0; right: 0;" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"/><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"/><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"/></svg></a><style>.github-corner:hover .octo-arm{animation:octocat-wave 560ms ease-in-out}@keyframes octocat-wave{0%,100%{transform:rotate(0)}20%,60%{transform:rotate(-25deg)}40%,80%{transform:rotate(10deg)}}@media (max-width:500px){.github-corner:hover .octo-arm{animation:none}.github-corner .octo-arm{animation:octocat-wave 560ms ease-in-out}}</style>
+    <!-- Service Worker 注册 -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/chat/service-worker.js')
+                    .then((registration) => {
+                        console.log('Service Worker 注册成功:', registration.scope);
+                    })
+                    .catch((error) => {
+                        console.log('Service Worker 注册失败:', error);
+                    });
+            });
+        }
+    </script>
     </body>
 </html>

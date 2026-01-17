@@ -88,22 +88,45 @@ class Group {
      */
     public function getGroupMembers($group_id) {
         // 检查是否是全员群聊
-        $stmt = $this->conn->prepare("SELECT all_user_group FROM groups WHERE id = ?");
+        $stmt = $this->conn->prepare("SELECT all_user_group, owner_id FROM groups WHERE id = ?");
         $stmt->execute([$group_id]);
         $group_info = $stmt->fetch();
         
+        // 获取群聊的owner_id
+        $owner_id = $group_info['owner_id'];
+        
+        // 兼容两种表结构
+        $stmt = $this->conn->prepare("SHOW COLUMNS FROM group_members LIKE 'is_admin'");
+        $stmt->execute();
+        $is_admin_exists = $stmt->fetch();
+        
         if ($group_info && $group_info['all_user_group'] == 1) {
-            // 全员群聊，返回所有用户
-            $stmt = $this->conn->prepare("SELECT u.*, (u.id = (SELECT owner_id FROM groups WHERE id = ?)) as is_admin FROM users u");
-            $stmt->execute([$group_id]);
+            // 全员群聊，返回所有用户，并正确标记管理员
+            if ($is_admin_exists) {
+                // 表结构中有is_admin字段
+                $stmt = $this->conn->prepare("SELECT u.*, 
+                                                CASE 
+                                                    WHEN u.id = ? THEN 1
+                                                    WHEN gm.is_admin = 1 THEN 1
+                                                    ELSE 0
+                                                END as is_admin 
+                                             FROM users u 
+                                             LEFT JOIN group_members gm ON u.id = gm.user_id AND gm.group_id = ?");
+            } else {
+                // 表结构中有role字段
+                $stmt = $this->conn->prepare("SELECT u.*, 
+                                                CASE 
+                                                    WHEN u.id = ? THEN 1
+                                                    WHEN gm.role = 'admin' THEN 1
+                                                    ELSE 0
+                                                END as is_admin 
+                                             FROM users u 
+                                             LEFT JOIN group_members gm ON u.id = gm.user_id AND gm.group_id = ?");
+            }
+            $stmt->execute([$owner_id, $group_id]);
             return $stmt->fetchAll();
         } else {
             // 普通群聊，返回group_members表中的成员
-            // 兼容两种表结构
-            $stmt = $this->conn->prepare("SHOW COLUMNS FROM group_members LIKE 'is_admin'");
-            $stmt->execute();
-            $is_admin_exists = $stmt->fetch();
-            
             if ($is_admin_exists) {
                 $stmt = $this->conn->prepare("SELECT u.*, gm.is_admin FROM users u 
                                              JOIN group_members gm ON u.id = gm.user_id 
@@ -386,10 +409,18 @@ class Group {
             $this->conn->exec($sql);
             
             // 确保messages表有file_type列
-            $this->conn->exec("ALTER TABLE IF EXISTS messages ADD COLUMN IF NOT EXISTS file_type VARCHAR(50) NULL");
+            $stmt = $this->conn->prepare("SHOW COLUMNS FROM messages LIKE 'file_type'");
+            $stmt->execute();
+            if (!$stmt->fetch()) {
+                $this->conn->exec("ALTER TABLE messages ADD COLUMN file_type VARCHAR(50) NULL");
+            }
             
             // 确保group_messages表有file_type列
-            $this->conn->exec("ALTER TABLE IF EXISTS group_messages ADD COLUMN IF NOT EXISTS file_type VARCHAR(50) NULL");
+            $stmt = $this->conn->prepare("SHOW COLUMNS FROM group_messages LIKE 'file_type'");
+            $stmt->execute();
+            if (!$stmt->fetch()) {
+                $this->conn->exec("ALTER TABLE group_messages ADD COLUMN file_type VARCHAR(50) NULL");
+            }
         } catch (PDOException $e) {
             error_log("Ensure tables exist error: " . $e->getMessage());
         }
@@ -1100,7 +1131,7 @@ class Group {
             $this->conn->beginTransaction();
             
             // 创建群聊
-            $group_name = "全员群聊-{$group_number}";
+            $group_name = "世界大厅-{$group_number}";
             $stmt = $this->conn->prepare("INSERT INTO groups (name, creator_id, owner_id, all_user_group) VALUES (?, ?, ?, ?)");
             $stmt->execute([$group_name, $creator_id, $creator_id, $group_number]);
             $group_id = $this->conn->lastInsertId();

@@ -316,11 +316,11 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         
         /* 左侧边栏顶部 - 用户信息 */
         .sidebar-header {
-            height: 60px;
+            height: 75px;
             background: #f6f6f6;
             display: flex;
             align-items: center;
-            padding: 0 15px;
+            padding: 10px 15px;
         }
 
         /* 三条横杠菜单按钮 */
@@ -1887,6 +1887,37 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                     </label>
                 </div>
                 
+                <!-- 设置项：音乐播放器 -->
+                <div class="setting-item" style="display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #f0f0f0;">
+                    <div>
+                        <div style="font-size: 14px; font-weight: 600; color: #333;">音乐播放器</div>
+                        <div style="font-size: 12px; color: #999; margin-top: 2px;">在聊天中播放音乐</div>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="setting-music-player">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                
+                <!-- 设置项：音乐模式 -->
+                <div class="setting-item" style="display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #f0f0f0;">
+                    <div>
+                        <div style="font-size: 14px; font-weight: 600; color: #333;">音乐模式</div>
+                        <div style="font-size: 12px; color: #999; margin-top: 2px;">选择播放的音乐类型</div>
+                    </div>
+                    <select id="setting-music-mode" style="
+                        padding: 8px 12px;
+                        border: 1px solid #ddd;
+                        border-radius: 6px;
+                        background: white;
+                        font-size: 13px;
+                        cursor: pointer;
+                    ">
+                        <option value="random">随机音乐</option>
+                        <option value="hoyo">HOYO-MiX</option>
+                    </select>
+                </div>
+                
 
                 
                 <!-- 设置项：更多设置 -->
@@ -1907,10 +1938,10 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                     ">查看</button>
                 </div>
                 
-                <!-- 设置项：查看缓存 -->
+                <!-- 设置项：管理缓存 -->
                 <div class="setting-item" style="display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #f0f0f0;">
                     <div>
-                        <div style="font-size: 14px; font-weight: 600; color: #333;">查看已缓存文件</div>
+                        <div style="font-size: 14px; font-weight: 600; color: #333;">管理已缓存文件</div>
                         <div style="font-size: 12px; color: #999; margin-top: 2px;">查看和管理已缓存的文件</div>
                     </div>
                     <button onclick="showCacheViewer()" style="
@@ -1923,6 +1954,24 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                         font-size: 13px;
                         transition: background-color 0.2s;
                     ">查看</button>
+                </div>
+                
+                <!-- 设置项：清除缓存 -->
+                <div class="setting-item" style="display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #f0f0f0;">
+                    <div>
+                        <div style="font-size: 14px; font-weight: 600; color: #333;">清除文件缓存</div>
+                        <div style="font-size: 12px; color: #999; margin-top: 2px;">清除所有本地存储的文件数据，此操作不可恢复</div>
+                    </div>
+                    <button onclick="clearFileCache()" style="
+                        padding: 8px 16px;
+                        background: #ff4d4f;
+                        color: white;
+                        border: none;
+                        border-radius: 6px;
+                        cursor: pointer;
+                        font-size: 13px;
+                        transition: background-color 0.2s;
+                    ">清除</button>
                 </div>
                 
                 <!-- 设置项：密保设置 -->
@@ -2352,7 +2401,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             </div>
             
             <div id="clear-cache-info" style="margin-bottom: 20px;">
-                <p>你将要清除cookie缓存的全部文件（包括图片 视频 音频 文件）总大小为：<strong id="clear-cache-size">0 B</strong></p>
+                <p>你将要清除缓存的全部文件（包括图片 视频 音频 文件）总大小为：<strong id="clear-cache-size">0 B</strong></p>
                 <p>确定要清除吗？</p>
             </div>
             
@@ -2786,7 +2835,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                     <input type="text" id="search-user-input" placeholder="输入用户名或邮箱搜索" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
                 </div>
                 <div style="margin-bottom: 15px;">
-                    <button onclick="searchUser()" style="width: 100%; padding: 10px; background: #12b7f5; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; transition: background-color 0.2s;">搜索</button>
+                    <button id="search-user-button" style="width: 100%; padding: 10px; background: #12b7f5; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; transition: background-color 0.2s;">搜索</button>
                 </div>
                 <div id="search-results" style="max-height: 300px; overflow-y: auto;">
                     <p style="text-align: center; color: #666; padding: 20px;">请输入用户名或邮箱进行搜索</p>
@@ -2835,6 +2884,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 <div class="user-info">
                     <div class="user-name"><?php echo htmlspecialchars($username); ?></div>
                     <div class="user-ip">IP: <?php echo $user_ip; ?></div>
+                    <div class="user-ip">当前在线人数：<?php echo $user->getOnlineUserCount(); ?></div>
                 </div>
             </div>
             
@@ -2922,7 +2972,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                             </div>
                             <div class="chat-last-message">
                                 <?php if ($group_item['all_user_group'] == 1): ?>
-                                    全员群聊
+                                    世界大厅
                                 <?php else: ?>
                                     <?php echo ($group->getGroupMembers($group_item['id']) ? count($group->getGroupMembers($group_item['id'])) : 0) . ' 成员'; ?>
                                 <?php endif; ?>
@@ -2979,12 +3029,11 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         </div>
         
         <!-- 聊天区域 -->
-        <?php if (($chat_type === 'friend' && $selected_friend) || ($chat_type === 'group' && $selected_group)): ?>
         <div class="chat-area">
                 <!-- 聊天区域顶部 -->
                 <div class="chat-header">
-                    <button class="btn-icon" onclick="window.location.href='mobilechat.php'" title="返回主页面" style="margin-right: 10px; color: #666; background: transparent; border: none; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center;">←</button>
-                    <?php if ($chat_type === 'friend'): ?>
+                    <button class="btn-icon" onclick="showChatList()" title="返回主页面" style="margin-right: 10px; color: #666; background: transparent; border: none; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center;">←</button>
+                    <?php if ($chat_type === 'friend' && $selected_friend): ?>
                         <div class="chat-avatar" style="position: relative; margin-right: 12px;">
                             <?php if (!empty($selected_friend['avatar'])): ?>
                                 <img src="<?php echo $selected_friend['avatar']; ?>" alt="<?php echo $selected_friend['username']; ?>" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
@@ -2997,7 +3046,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                             <div class="chat-header-name"><?php echo $selected_friend['username']; ?></div>
                             <div class="chat-header-status"><?php echo $selected_friend['status'] == 'online' ? '在线' : '离线'; ?></div>
                         </div>
-                    <?php else: ?>
+                    <?php elseif ($chat_type === 'group' && $selected_group): ?>
                         <div class="chat-avatar group" style="margin-right: 12px;">
                             👥
                         </div>
@@ -3016,6 +3065,14 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                                 ?>
                             </div>
                         </div>
+                    <?php else: ?>
+                        <div class="chat-avatar" style="margin-right: 12px;">
+                            👤
+                        </div>
+                        <div class="chat-header-info">
+                            <div class="chat-header-name">选择聊天对象</div>
+                            <div class="chat-header-status">请从左侧选择好友或群聊</div>
+                        </div>
                     <?php endif; ?>
                 </div>
                 
@@ -3024,7 +3081,18 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                     <!-- 初始聊天记录 -->
                     <?php foreach ($chat_history as $msg): ?>
                         <?php $is_sent = $msg['sender_id'] == $user_id; ?>
-                        <div class="message <?php echo $is_sent ? 'sent' : 'received'; ?>" data-message-id="<?php echo $msg['id']; ?>" data-chat-type="<?php echo $chat_type; ?>" data-chat-id="<?php echo $selected_id; ?>">
+                        <!-- 计算消息发送时间和当前时间的差值，用于撤回功能 -->
+                        <?php 
+                            $msg_time = strtotime($msg['created_at']);
+                            $now = time();
+                            $time_diff_minutes = ($now - $msg_time) / 60;
+                            $is_within_2_minutes = $time_diff_minutes < 2;
+                        ?>
+                        <div class="message <?php echo $is_sent ? 'sent' : 'received'; ?>" 
+                            data-message-id="<?php echo $msg['id']; ?>" 
+                            data-chat-type="<?php echo $chat_type; ?>" 
+                            data-chat-id="<?php echo $selected_id; ?>" 
+                            data-message-time="<?php echo $msg_time * 1000; ?>">
                             <?php if ($is_sent): ?>
                                 <!-- 发送者的消息，内容在左，头像在右 -->
                                 <div class="message-content">
@@ -3097,6 +3165,14 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                                         }
                                     ?>
                                     <div class="message-time"><?php echo date('Y年m月d日 H:i', strtotime($msg['created_at'])); ?></div>
+                                    <?php if ($is_within_2_minutes): ?>
+                                        <div class='message-actions' style='position: relative;'>
+                                            <button class='message-action-btn' onclick='toggleMessageActions(this)' style='width: 28px; height: 28px; font-size: 18px; background: rgba(0,0,0,0.1); border: none; border-radius: 50%; color: #333; cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: 1; transition: all 0.2s ease;'>...</button>
+                                            <div class='message-action-menu' style='display: none; position: absolute; top: 100%; right: 0; background: white; border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,0.15); padding: 8px 0; z-index: 5000; min-width: 100px;'>
+                                                <button class='message-action-item' onclick='recallMessage(this, "<?php echo $msg['id']; ?>", "<?php echo $chat_type; ?>", "<?php echo $selected_id; ?>")' style='width: 100%; text-align: left; padding: 8px 16px; border: none; background: transparent; cursor: pointer; transition: all 0.2s ease; color: #333;'>撤回消息</button>
+                                            </div>
+                                        </div>
+                                    <?php endif; ?>
                                 </div>
                                 <div class="message-avatar">
                                     <?php if (!empty($current_user['avatar'])): ?>
@@ -3288,7 +3364,6 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                     </style>
                 </div>
         </div>
-        <?php endif; ?>
     </div>
     
     <!-- 扫码登录模态框 -->
@@ -3869,6 +3944,14 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             }
         }
         
+        // 启用所有群聊操作
+        function enableGroupOperations() {
+            const inputArea = document.querySelector('.input-area');
+            if (inputArea) {
+                inputArea.style.display = 'block';
+            }
+        }
+        
         function checkGroupBanStatus(groupId) {
             return fetch(`check_group_ban.php?group_id=${groupId}`)
                 .then(response => response.json())
@@ -3879,11 +3962,14 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                         disableGroupOperations();
                     } else {
                         isGroupBanned = false;
+                        enableGroupOperations();
                     }
                     return data.banned;
                 })
                 .catch(error => {
                     console.error('检查群聊封禁状态失败:', error);
+                    // 出错时默认启用群聊操作
+                    enableGroupOperations();
                     return false;
                 });
         }
@@ -3947,6 +4033,11 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             if (inputArea) {
                 inputArea.style.display = 'none';
             }
+        }
+        
+        // 显示聊天列表（主界面）
+        function showChatList() {
+            window.location.href = 'mobilechat.php';
         }
         
         // 聊天类型切换
@@ -4227,8 +4318,8 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        // 清除本地存储
-                        localStorage.clear();
+                        // 只清除设置数据，不清除文件数据
+                        localStorage.removeItem('setting-link-popup');
                         // 重定向到登录页面
                         window.location.href = 'login.php';
                     } else {
@@ -4239,40 +4330,103 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 .catch(error => {
                     console.error('退出登录请求失败:', error);
                     // 即使请求失败，也尝试直接跳转
-                    localStorage.clear();
+                    localStorage.removeItem('setting-link-popup');
                     window.location.href = 'login.php';
                 });
             }
         }
         
         // 加载设置
-        function loadSettings() {
-            // 从localStorage加载设置，如果没有则使用默认值
-            const linkPopup = localStorage.getItem('setting-link-popup') === 'false' ? false : true;
-            
-            // 设置开关状态
-            document.getElementById('setting-link-popup').checked = linkPopup;
+        async function loadSettings() {
+            try {
+                // 从IndexedDB加载设置
+                const settings = await indexedDBManager.getSettings();
+                const linkPopup = settings['setting-link-popup'] !== false;
+                const musicPlayer = settings['setting-music-player'] !== false;
+                const musicMode = settings['setting-music-mode'] || 'random';
+                
+                // 设置开关状态
+                document.getElementById('setting-link-popup').checked = linkPopup;
+                document.getElementById('setting-music-player').checked = musicPlayer;
+                document.getElementById('setting-music-mode').value = musicMode;
+            } catch (error) {
+                console.error('加载设置失败:', error);
+                // 从localStorage迁移设置到IndexedDB
+                const linkPopup = localStorage.getItem('setting-link-popup') === 'false' ? false : true;
+                const musicPlayer = localStorage.getItem('setting-music-player') === 'false' ? false : true;
+                const musicMode = localStorage.getItem('setting-music-mode') || 'random';
+                
+                // 设置开关状态
+                document.getElementById('setting-link-popup').checked = linkPopup;
+                document.getElementById('setting-music-player').checked = musicPlayer;
+                document.getElementById('setting-music-mode').value = musicMode;
+                
+                // 保存到IndexedDB
+                await saveSettings();
+            }
         }
         
         // 保存设置
-        function saveSettings() {
-            // 获取开关状态
-            const linkPopup = document.getElementById('setting-link-popup').checked;
-            
-            // 保存到localStorage
-            localStorage.setItem('setting-link-popup', linkPopup);
-            
-            // 应用设置
-            applySettings();
+        async function saveSettings() {
+            try {
+                // 获取开关状态
+                const linkPopup = document.getElementById('setting-link-popup').checked;
+                const musicPlayer = document.getElementById('setting-music-player').checked;
+                const musicMode = document.getElementById('setting-music-mode').value;
+                
+                // 保存到IndexedDB
+                await indexedDBManager.saveSettings({
+                    'setting-link-popup': linkPopup,
+                    'setting-music-player': musicPlayer,
+                    'setting-music-mode': musicMode
+                });
+                
+                // 应用设置
+                applySettings();
+            } catch (error) {
+                console.error('保存设置失败:', error);
+                // 降级到localStorage
+                localStorage.setItem('setting-link-popup', linkPopup);
+                localStorage.setItem('setting-music-player', musicPlayer);
+                localStorage.setItem('setting-music-mode', musicMode);
+            }
+        }
+        
+        // 清除文件缓存
+        function clearFileCache() {
+            if (confirm('确定要清除所有文件缓存吗？此操作不可恢复。')) {
+                try {
+                    // 获取文件索引
+                    const fileIndex = JSON.parse(localStorage.getItem('fileIndex') || '[]');
+                    
+                    // 清除所有文件数据
+                    fileIndex.forEach(fileId => {
+                        localStorage.removeItem(fileId);
+                    });
+                    
+                    // 清除文件索引
+                    localStorage.removeItem('fileIndex');
+                    
+                    // 显示清除成功通知
+                    showNotification('文件缓存已成功清除', 'success');
+                } catch (error) {
+                    console.error('清除文件缓存失败:', error);
+                    showNotification('清除文件缓存失败，请稍后重试', 'error');
+                }
+            }
         }
         
         // 应用设置
         function applySettings() {
             // 这里可以添加应用设置的逻辑
             const linkPopup = localStorage.getItem('setting-link-popup') === 'true';
+            const musicPlayer = localStorage.getItem('setting-music-player') === 'true';
+            const musicMode = localStorage.getItem('setting-music-mode') || 'random';
             
             console.log('应用设置:', {
-                linkPopup
+                linkPopup,
+                musicPlayer,
+                musicMode
             });
         }
         
@@ -4295,7 +4449,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         function loadCacheStats() {
             const statsContainer = document.getElementById('cache-stats');
             
-            // 解析cookie获取缓存信息
+            // 解析缓存信息
             const cacheInfo = parseCacheCookies();
             
             // 生成统计HTML
@@ -4344,8 +4498,8 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             statsContainer.innerHTML = statsHtml;
         }
         
-        // 解析cookie获取缓存信息
-        function parseCacheCookies() {
+        // 解析缓存信息（同时考虑localStorage和cookie）
+        async function parseCacheCookies() {
             const cacheInfo = {
                 audio: { count: 0, size: 0 },
                 video: { count: 0, size: 0 },
@@ -4354,41 +4508,27 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 total: { count: 0, size: 0 }
             };
             
-            // 获取所有cookie
-            const cookies = document.cookie.split(';');
-            
-            // 遍历cookie，查找缓存相关的cookie
-            cookies.forEach(cookie => {
-                const cookieTrimmed = cookie.trim();
-                if (cookieTrimmed.startsWith('file_')) {
-                    // 这是一个缓存文件的cookie
-                    cacheInfo.total.count++;
-                    
-                    // 解析文件类型和大小
-                    const cookieParts = cookieTrimmed.split('=');
-                    const cookieValue = decodeURIComponent(cookieParts[1]);
-                    const [fileType, fileSize] = cookieValue.split(':');
-                    const size = parseInt(fileSize) || 0;
-                    
-                    // 根据文件类型分类
-                    if (fileType === 'audio') {
-                        cacheInfo.audio.count++;
-                        cacheInfo.audio.size += size;
-                    } else if (fileType === 'video') {
-                        cacheInfo.video.count++;
-                        cacheInfo.video.size += size;
-                    } else if (fileType === 'image') {
-                        cacheInfo.image.count++;
-                        cacheInfo.image.size += size;
-                    } else {
-                        cacheInfo.file.count++;
-                        cacheInfo.file.size += size;
-                    }
-                }
-            });
-            
-            // 计算总大小
-            cacheInfo.total.size = cacheInfo.audio.size + cacheInfo.video.size + cacheInfo.image.size + cacheInfo.file.size;
+            try {
+                // 只使用IndexedDBManager获取缓存统计信息，不再处理localStorage和cookie中的旧数据
+                // 这样可以避免重复计算和统计错误
+                const stats = await indexedDBManager.getCacheStats();
+                
+                // 更新缓存统计信息
+                cacheInfo.audio.count = stats.byType.audio;
+                cacheInfo.video.count = stats.byType.video;
+                cacheInfo.image.count = stats.byType.image;
+                cacheInfo.file.count = stats.byType.file;
+                cacheInfo.total.count = stats.totalFiles;
+                cacheInfo.total.size = stats.totalSize;
+                
+                // 更新每种类型的大小
+                cacheInfo.audio.size = stats.byTypeSize?.audio || 0;
+                cacheInfo.video.size = stats.byTypeSize?.video || 0;
+                cacheInfo.image.size = stats.byTypeSize?.image || 0;
+                cacheInfo.file.size = stats.byTypeSize?.file || 0;
+            } catch (error) {
+                console.error('获取缓存统计失败:', error);
+            }
             
             return cacheInfo;
         }
@@ -4405,12 +4545,12 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         }
         
         // 显示清空缓存确认弹窗
-        function showClearCacheConfirm() {
+        async function showClearCacheConfirm() {
             const modal = document.getElementById('clear-cache-confirm-modal');
             const cacheSizeElement = document.getElementById('clear-cache-size');
             
             // 获取缓存总大小
-            const cacheInfo = parseCacheCookies();
+            const cacheInfo = await parseCacheCookies();
             cacheSizeElement.textContent = formatFileSize(cacheInfo.total.size);
             
             modal.style.display = 'flex';
@@ -4423,14 +4563,26 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         }
         
         // 清空缓存
-        function clearCache() {
-            // 获取所有cookie
+        async function clearCache() {
+            // 1. 使用IndexedDBManager清除所有缓存
+            try {
+                await indexedDBManager.clearAllCache();
+            } catch (e) {
+                console.error('清除缓存失败:', e);
+            }
+            
+            // 2. 清除所有缓存相关的cookie
             const cookies = document.cookie.split(';');
             
-            // 遍历cookie，删除所有缓存相关的cookie
             cookies.forEach(cookie => {
                 const cookieTrimmed = cookie.trim();
-                if (cookieTrimmed.startsWith('file_')) {
+                // 检查是否是缓存相关的cookie（支持多种前缀）
+                if (cookieTrimmed.startsWith('file_') || 
+                    cookieTrimmed.startsWith('video_') || 
+                    cookieTrimmed.startsWith('audio_') || 
+                    cookieTrimmed.startsWith('Picture_') ||
+                    cookieTrimmed.startsWith('Video_') ||
+                    cookieTrimmed.startsWith('Audio_')) {
                     // 这是一个缓存文件的cookie，删除它
                     const cookieName = cookieTrimmed.split('=')[0];
                     document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
@@ -4723,6 +4875,102 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             }
         }
         
+        // 切换消息操作菜单显示/隐藏
+        function toggleMessageActions(button) {
+            const actionMenu = button.nextElementSibling;
+            // 关闭所有其他打开的菜单
+            document.querySelectorAll('.message-action-menu').forEach(menu => {
+                if (menu !== actionMenu) {
+                    menu.style.display = 'none';
+                }
+            });
+            // 切换当前菜单
+            actionMenu.style.display = actionMenu.style.display === 'block' ? 'none' : 'block';
+        }
+        
+        // 点击其他区域关闭消息操作菜单
+        document.addEventListener('click', function(event) {
+            if (!event.target.closest('.message-actions')) {
+                document.querySelectorAll('.message-action-menu').forEach(menu => {
+                    menu.style.display = 'none';
+                });
+            }
+        });
+        
+        // 撤回消息功能 - 全局函数
+        window.recallMessage = function(button, messageId, chatType, chatId) {
+            console.log('调用撤回消息函数:', {button, messageId, chatType, chatId});
+            // 获取消息元素
+            const messageElement = button.closest('.message');
+            if (!messageElement) {
+                console.error('未找到消息元素');
+                showNotification('未找到消息元素', 'error');
+                return;
+            }
+            const messageTime = parseInt(messageElement.dataset.messageTime);
+            const now = Date.now();
+            const timeDiff = (now - messageTime) / 1000 / 60; // 转换为分钟
+            
+            // 检查是否在2分钟内
+            if (timeDiff > 2) {
+                showNotification('消息已超过2分钟，无法撤回', 'error');
+                return;
+            }
+            
+            // 从消息元素的data-message-id属性获取真实的消息ID，而不是使用传入的临时ID
+            const realMessageId = messageElement.dataset.messageId;
+            const realChatType = messageElement.dataset.chatType;
+            const realChatId = messageElement.dataset.chatId;
+            
+            console.log('真实消息ID:', realMessageId, '真实聊天类型:', realChatType, '真实聊天ID:', realChatId);
+            
+            // 发送撤回请求到服务器
+            const formData = new URLSearchParams();
+            formData.append('action', 'recall');
+            formData.append('message_id', realMessageId);
+            formData.append('chat_type', realChatType);
+            if (realChatType === 'friend') {
+                formData.append('friend_id', realChatId);
+            } else {
+                formData.append('id', realChatId);
+            }
+            
+            console.log('发送撤回请求:', formData.toString());
+            fetch('send_message.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('撤回请求响应:', data);
+                if (data.success) {
+                    // 撤回成功，更新消息显示为撤回状态
+                    messageElement.innerHTML = `
+                        <div class='message-content'>
+                            <div class='message-text' style='color: #999; font-style: italic;'>[消息已撤回]</div>
+                        </div>
+                        <div class='message-avatar'>
+                            <?php if (!empty($current_user['avatar'])): ?>
+                                <img src='<?php echo $current_user['avatar']; ?>' alt='<?php echo $username; ?>' style='width: 100%; height: 100%; border-radius: 50%; object-fit: cover;'>
+                            <?php else: ?>
+                                <?php echo substr($username, 0, 2); ?>
+                            <?php endif; ?>
+                        </div>
+                    `;
+                    showNotification('消息已撤回', 'success');
+                } else {
+                    showNotification('消息撤回失败: ' + (data.message || '未知错误'), 'error');
+                }
+            })
+            .catch(error => {
+                console.error('撤回消息失败:', error);
+                showNotification('网络错误，消息撤回失败', 'error');
+            });
+        }
+        
         // 显示安全警告
         function showSecurityWarning(link) {
             // 创建安全警告弹窗
@@ -4844,7 +5092,757 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             return link.substring(0, halfLength) + '...' + link.substring(link.length - halfLength);
         }
         
+        // IndexedDB管理类，用于统一管理所有类型的缓存
+        class IndexedDBManager {
+            constructor() {
+                this.dbName = 'chatfile';
+                this.dbVersion = 2;
+                this.db = null;
+                this.stores = {
+                    files: 'files',
+                    settings: 'settings',
+                    cache: 'cache'
+                };
+            }
+            
+            // 打开数据库
+            openDB() {
+                return new Promise((resolve, reject) => {
+                    if (this.db) {
+                        resolve(this.db);
+                        return;
+                    }
+                    
+                    const request = indexedDB.open(this.dbName, this.dbVersion);
+                    
+                    request.onerror = (event) => {
+                        reject('IndexedDB打开失败: ' + event.target.error.message);
+                    };
+                    
+                    request.onsuccess = (event) => {
+                        this.db = event.target.result;
+                        resolve(this.db);
+                    };
+                    
+                    request.onupgradeneeded = (event) => {
+                        const db = event.target.result;
+                        
+                        // 创建文件存储对象
+                        if (!db.objectStoreNames.contains(this.stores.files)) {
+                            const filesStore = db.createObjectStore(this.stores.files, { keyPath: 'id' });
+                            filesStore.createIndex('type', 'type', { unique: false });
+                            filesStore.createIndex('uploadedAt', 'uploadedAt', { unique: false });
+                            filesStore.createIndex('size', 'size', { unique: false });
+                        }
+                        
+                        // 创建设置存储对象
+                        if (!db.objectStoreNames.contains(this.stores.settings)) {
+                            const settingsStore = db.createObjectStore(this.stores.settings, { keyPath: 'key' });
+                        }
+                        
+                        // 创建通用缓存存储对象
+                        if (!db.objectStoreNames.contains(this.stores.cache)) {
+                            const cacheStore = db.createObjectStore(this.stores.cache, { keyPath: 'key' });
+                            cacheStore.createIndex('type', 'type', { unique: false });
+                            cacheStore.createIndex('timestamp', 'timestamp', { unique: false });
+                        }
+                    };
+                });
+            }
+            
+            // 保存文件到IndexedDB
+            saveFile(fileData) {
+                return new Promise((resolve, reject) => {
+                    this.openDB().then(db => {
+                        const transaction = db.transaction([this.stores.files], 'readwrite');
+                        const objectStore = transaction.objectStore(this.stores.files);
+                        
+                        const request = objectStore.put(fileData);
+                        
+                        request.onerror = (event) => {
+                            reject('文件保存失败: ' + event.target.error.message);
+                        };
+                        
+                        transaction.oncomplete = () => {
+                            resolve(fileData.id);
+                        };
+                    }).catch(error => {
+                        reject(error);
+                    });
+                });
+            }
+            
+            // 从IndexedDB获取文件
+            getFile(fileId) {
+                return new Promise((resolve, reject) => {
+                    this.openDB().then(db => {
+                        const transaction = db.transaction([this.stores.files], 'readonly');
+                        const objectStore = transaction.objectStore(this.stores.files);
+                        
+                        const request = objectStore.get(fileId);
+                        
+                        request.onerror = (event) => {
+                            reject('文件读取失败: ' + event.target.error.message);
+                        };
+                        
+                        request.onsuccess = () => {
+                            resolve(request.result);
+                        };
+                    }).catch(error => {
+                        reject(error);
+                    });
+                });
+            }
+            
+            // 从IndexedDB删除文件
+            deleteFile(fileId) {
+                return new Promise((resolve, reject) => {
+                    this.openDB().then(db => {
+                        const transaction = db.transaction([this.stores.files], 'readwrite');
+                        const objectStore = transaction.objectStore(this.stores.files);
+                        
+                        const request = objectStore.delete(fileId);
+                        
+                        request.onerror = (event) => {
+                            reject('文件删除失败: ' + event.target.error.message);
+                        };
+                        
+                        transaction.oncomplete = () => {
+                            resolve(true);
+                        };
+                    }).catch(error => {
+                        reject(error);
+                    });
+                });
+            }
+            
+            // 获取所有文件
+            getAllFiles() {
+                return new Promise((resolve, reject) => {
+                    this.openDB().then(db => {
+                        const transaction = db.transaction([this.stores.files], 'readonly');
+                        const objectStore = transaction.objectStore(this.stores.files);
+                        const files = [];
+                        
+                        objectStore.openCursor().onsuccess = (event) => {
+                            const cursor = event.target.result;
+                            if (cursor) {
+                                files.push(cursor.value);
+                                cursor.continue();
+                            } else {
+                                resolve(files);
+                            }
+                        };
+                    }).catch(error => {
+                        reject(error);
+                    });
+                });
+            }
+            
+            // 保存设置到IndexedDB
+            saveSetting(key, value) {
+                return new Promise((resolve, reject) => {
+                    this.openDB().then(db => {
+                        const transaction = db.transaction([this.stores.settings], 'readwrite');
+                        const objectStore = transaction.objectStore(this.stores.settings);
+                        
+                        const settingData = {
+                            key: key,
+                            value: value,
+                            timestamp: new Date().toISOString()
+                        };
+                        
+                        const request = objectStore.put(settingData);
+                        
+                        request.onerror = (event) => {
+                            reject('设置保存失败: ' + event.target.error.message);
+                        };
+                        
+                        transaction.oncomplete = () => {
+                            resolve(true);
+                        };
+                    }).catch(error => {
+                        reject(error);
+                    });
+                });
+            }
+            
+            // 从IndexedDB获取设置
+            getSetting(key, defaultValue = null) {
+                return new Promise((resolve, reject) => {
+                    this.openDB().then(db => {
+                        const transaction = db.transaction([this.stores.settings], 'readonly');
+                        const objectStore = transaction.objectStore(this.stores.settings);
+                        
+                        const request = objectStore.get(key);
+                        
+                        request.onerror = (event) => {
+                            reject('设置读取失败: ' + event.target.error.message);
+                        };
+                        
+                        request.onsuccess = () => {
+                            resolve(request.result ? request.result.value : defaultValue);
+                        };
+                    }).catch(error => {
+                        reject(error);
+                    });
+                });
+            }
+            
+            // 保存通用缓存到IndexedDB
+            saveCache(key, value, type = 'general') {
+                return new Promise((resolve, reject) => {
+                    this.openDB().then(db => {
+                        const transaction = db.transaction([this.stores.cache], 'readwrite');
+                        const objectStore = transaction.objectStore(this.stores.cache);
+                        
+                        const cacheData = {
+                            key: key,
+                            value: value,
+                            type: type,
+                            timestamp: new Date().toISOString()
+                        };
+                        
+                        const request = objectStore.put(cacheData);
+                        
+                        request.onerror = (event) => {
+                            reject('缓存保存失败: ' + event.target.error.message);
+                        };
+                        
+                        transaction.oncomplete = () => {
+                            resolve(true);
+                        };
+                    }).catch(error => {
+                        reject(error);
+                    });
+                });
+            }
+            
+            // 从IndexedDB获取通用缓存
+            getCache(key) {
+                return new Promise((resolve, reject) => {
+                    this.openDB().then(db => {
+                        const transaction = db.transaction([this.stores.cache], 'readonly');
+                        const objectStore = transaction.objectStore(this.stores.cache);
+                        
+                        const request = objectStore.get(key);
+                        
+                        request.onerror = (event) => {
+                            reject('缓存读取失败: ' + event.target.error.message);
+                        };
+                        
+                        request.onsuccess = () => {
+                            resolve(request.result ? request.result.value : null);
+                        };
+                    }).catch(error => {
+                        reject(error);
+                    });
+                });
+            }
+            
+            // 删除通用缓存
+            deleteCache(key) {
+                return new Promise((resolve, reject) => {
+                    this.openDB().then(db => {
+                        const transaction = db.transaction([this.stores.cache], 'readwrite');
+                        const objectStore = transaction.objectStore(this.stores.cache);
+                        
+                        const request = objectStore.delete(key);
+                        
+                        request.onerror = (event) => {
+                            reject('缓存删除失败: ' + event.target.error.message);
+                        };
+                        
+                        transaction.oncomplete = () => {
+                            resolve(true);
+                        };
+                    }).catch(error => {
+                        reject(error);
+                    });
+                });
+            }
+            
+            // 迁移数据从localStorage到IndexedDB
+            migrateFromLocalStorage() {
+                return new Promise((resolve, reject) => {
+                    try {
+                        // 迁移设置
+                        const settingKeys = ['setting-link-popup', 'setting-music-player'];
+                        const migrationPromises = [];
+                        
+                        settingKeys.forEach(key => {
+                            const value = localStorage.getItem(key);
+                            if (value !== null) {
+                                // 转换布尔值
+                                let parsedValue = value;
+                                if (value === 'true' || value === 'false') {
+                                    parsedValue = value === 'true';
+                                }
+                                migrationPromises.push(this.saveSetting(key, parsedValue));
+                            }
+                        });
+                        
+                        // 迁移旧版文件数据
+                        const localStorageKeys = Object.keys(localStorage);
+                        localStorageKeys.forEach(key => {
+                            if (key.startsWith('File_') || key.startsWith('Picture_') || key.startsWith('Video_') || key.startsWith('Audio_')) {
+                                const fileData = localStorage.getItem(key);
+                                if (fileData) {
+                                    try {
+                                        const parsedData = JSON.parse(fileData);
+                                        if (parsedData.id && parsedData.name && parsedData.data) {
+                                            migrationPromises.push(this.saveFile(parsedData));
+                                        }
+                                    } catch (e) {
+                                        // 忽略无效数据
+                                    }
+                                }
+                            }
+                        });
+                        
+                        // 迁移fileIndex
+                        const fileIndex = localStorage.getItem('fileIndex');
+                        if (fileIndex) {
+                            try {
+                                const parsedIndex = JSON.parse(fileIndex);
+                                migrationPromises.push(this.saveCache('fileIndex', parsedIndex, 'system'));
+                            } catch (e) {
+                                // 忽略无效数据
+                            }
+                        }
+                        
+                        Promise.all(migrationPromises).then(() => {
+                            // 迁移完成后清除localStorage中的数据
+                            settingKeys.forEach(key => localStorage.removeItem(key));
+                            localStorageKeys.forEach(key => {
+                                if (key.startsWith('File_') || key.startsWith('Picture_') || key.startsWith('Video_') || key.startsWith('Audio_')) {
+                                    localStorage.removeItem(key);
+                                }
+                            });
+                            localStorage.removeItem('fileIndex');
+                            resolve(true);
+                        }).catch(error => {
+                            reject('迁移失败: ' + error.message);
+                        });
+                    } catch (error) {
+                        reject('迁移过程中发生错误: ' + error.message);
+                    }
+                });
+            }
+            
+            // 获取缓存统计信息
+            getCacheStats() {
+                return new Promise((resolve, reject) => {
+                    this.getAllFiles().then(files => {
+                        let totalSize = 0;
+                        const stats = {
+                            totalFiles: files.length,
+                            totalSize: 0,
+                            byType: {
+                                image: 0,
+                                video: 0,
+                                audio: 0,
+                                file: 0
+                            },
+                            byTypeSize: {
+                                image: 0,
+                                video: 0,
+                                audio: 0,
+                                file: 0
+                            }
+                        };
+                        
+                        files.forEach(file => {
+                            totalSize += file.size;
+                            if (file.type.startsWith('image/')) {
+                                stats.byType.image++;
+                                stats.byTypeSize.image += file.size;
+                            } else if (file.type.startsWith('video/')) {
+                                stats.byType.video++;
+                                stats.byTypeSize.video += file.size;
+                            } else if (file.type.startsWith('audio/')) {
+                                stats.byType.audio++;
+                                stats.byTypeSize.audio += file.size;
+                            } else {
+                                stats.byType.file++;
+                                stats.byTypeSize.file += file.size;
+                            }
+                        });
+                        
+                        stats.totalSize = totalSize;
+                        resolve(stats);
+                    }).catch(error => {
+                        reject('获取缓存统计失败: ' + error.message);
+                    });
+                });
+            }
+            
+            // 清除所有缓存
+            clearAllCache() {
+                return new Promise((resolve, reject) => {
+                    this.openDB().then(db => {
+                        const storesToClear = [this.stores.files, this.stores.cache];
+                        const clearPromises = [];
+                        
+                        storesToClear.forEach(storeName => {
+                            const transaction = db.transaction([storeName], 'readwrite');
+                            const objectStore = transaction.objectStore(storeName);
+                            const request = objectStore.clear();
+                            
+                            clearPromises.push(new Promise((res, rej) => {
+                                request.onerror = (event) => {
+                                    rej('清除' + storeName + '失败: ' + event.target.error.message);
+                                };
+                                
+                                transaction.oncomplete = () => {
+                                    res(true);
+                                };
+                            }));
+                        });
+                        
+                        Promise.all(clearPromises).then(() => {
+                            resolve(true);
+                        }).catch(error => {
+                            reject('清除缓存失败: ' + error.message);
+                        });
+                    }).catch(error => {
+                        reject('清除缓存过程中发生错误: ' + error.message);
+                    });
+                });
+            }
+        }
+        
+        // 初始化IndexedDB管理器实例
+        const indexedDBManager = new IndexedDBManager();
+        
+        // 页面加载时执行数据迁移
+        window.addEventListener('load', () => {
+            indexedDBManager.migrateFromLocalStorage().catch(error => {
+                console.log('localStorage迁移失败:', error);
+            });
+        });
+        
+        // localStorage空间管理函数
+        function getLocalStorageAvailableSpace() {
+            // 尝试存储不同大小的数据，找出可用空间
+            try {
+                const testKey = '__test_storage_space__';
+                let testData = '';
+                const chunkSize = 1024 * 1024; // 1MB chunks
+                let maxChunks = 100;
+                let chunksWritten = 0;
+                
+                // 先删除可能存在的测试数据
+                localStorage.removeItem(testKey);
+                
+                // 逐步增加数据大小，直到失败
+                while (chunksWritten < maxChunks) {
+                    try {
+                        testData += 'x'.repeat(chunkSize);
+                        localStorage.setItem(testKey, testData);
+                        chunksWritten++;
+                    } catch (e) {
+                        break;
+                    }
+                }
+                
+                // 计算可用空间（MB）
+                const availableSpace = chunksWritten * chunkSize;
+                
+                // 清理测试数据
+                localStorage.removeItem(testKey);
+                
+                return availableSpace;
+            } catch (error) {
+                // 保守估计，返回1MB
+                return 1024 * 1024;
+            }
+        }
+        
+        // 清理旧文件以释放空间
+        function cleanupOldFiles(requiredSpace) {
+            try {
+                // 获取文件索引
+                const fileIndex = JSON.parse(localStorage.getItem('fileIndex') || '[]');
+                if (fileIndex.length === 0) {
+                    return false;
+                }
+                
+                // 获取所有文件的详细信息并按上传时间排序
+                const files = [];
+                for (const fileId of fileIndex) {
+                    const fileData = localStorage.getItem(fileId);
+                    if (fileData) {
+                        try {
+                            const parsedData = JSON.parse(fileData);
+                            files.push({
+                                id: fileId,
+                                size: parsedData.size,
+                                uploadedAt: new Date(parsedData.uploadedAt)
+                            });
+                        } catch (e) {
+                            // 忽略无效文件
+                        }
+                    }
+                }
+                
+                // 按上传时间排序，最旧的文件排在前面
+                files.sort((a, b) => a.uploadedAt - b.uploadedAt);
+                
+                // 计算当前已用空间
+                let currentSize = 0;
+                for (const file of files) {
+                    currentSize += file.size;
+                }
+                
+                // 计算需要清理的空间
+                let cleanedSize = 0;
+                const filesToRemove = [];
+                
+                // 从最旧的文件开始清理，直到有足够空间
+                for (const file of files) {
+                    if (cleanedSize >= requiredSpace) {
+                        break;
+                    }
+                    
+                    filesToRemove.push(file.id);
+                    cleanedSize += file.size;
+                }
+                
+                // 执行清理
+                for (const fileId of filesToRemove) {
+                    localStorage.removeItem(fileId);
+                    // 从索引中移除
+                    const index = fileIndex.indexOf(fileId);
+                    if (index > -1) {
+                        fileIndex.splice(index, 1);
+                    }
+                }
+                
+                // 更新索引
+                localStorage.setItem('fileIndex', JSON.stringify(fileIndex));
+                
+                return true;
+            } catch (error) {
+                return false;
+            }
+        }
+        
         // 发送文件函数
+        // localStorage文件存储管理
+        function saveFileToCache(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        // 根据文件类型设置不同的前缀
+                        let prefix = 'File_';
+                        if (file.type.startsWith('image/')) {
+                            prefix = 'Picture_';
+                        } else if (file.type.startsWith('video/')) {
+                            prefix = 'Video_';
+                        } else if (file.type.startsWith('audio/')) {
+                            prefix = 'Audio_';
+                        }
+                        
+                        // 生成唯一文件ID，格式为：前缀 + 原始文件名 + 时间戳 + 随机字符串
+                        const timestamp = Date.now();
+                        const randomStr = Math.random().toString(36).substring(2, 11);
+                        const fileId = prefix + file.name + '_' + timestamp + '_' + randomStr;
+                        
+                        // 准备文件数据
+                        const fileData = {
+                            id: fileId,
+                            name: file.name,
+                            size: file.size,
+                            type: file.type,
+                            data: e.target.result,
+                            uploadedAt: new Date().toISOString()
+                        };
+                        
+                        // 将文件数据存储到IndexedDB
+                        indexedDBManager.saveFile(fileData)
+                            .then(() => {
+                                resolve(fileId);
+                            })
+                            .catch(error => {
+                                reject('文件存储失败：' + error.message);
+                            });
+                    } catch (error) {
+                        reject('文件存储失败：' + error.message);
+                    }
+                };
+                reader.onerror = () => {
+                    reject('文件读取失败');
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+        
+        function getFileFromCache(fileId) {
+            return new Promise((resolve, reject) => {
+                indexedDBManager.getFile(fileId)
+                    .then(fileData => {
+                        resolve(fileData);
+                    })
+                    .catch(error => {
+                        console.error('从IndexedDB获取文件失败：', error);
+                        resolve(null);
+                    });
+            });
+        }
+        
+        // 优化视频：降低分辨率、码率、帧率
+        async function optimizeVideo(videoFile) {
+            return new Promise((resolve, reject) => {
+                const video = document.createElement('video');
+                video.src = URL.createObjectURL(videoFile);
+                video.preload = 'metadata';
+                
+                video.onloadedmetadata = async () => {
+                    // 设置优化参数
+                    const maxWidth = 854; // 降低分辨率到854px宽
+                    const maxHeight = 480; // 降低分辨率到480px高
+                    const frameRate = 15; // 降低帧率到15fps
+                    const bitrate = 500000; // 降低码率到500kbps
+                    
+                    // 计算缩放比例
+                    let width = video.videoWidth;
+                    let height = video.videoHeight;
+                    if (width > maxWidth || height > maxHeight) {
+                        const aspectRatio = width / height;
+                        if (aspectRatio > 1) {
+                            width = maxWidth;
+                            height = Math.round(maxWidth / aspectRatio);
+                        } else {
+                            height = maxHeight;
+                            width = Math.round(maxHeight * aspectRatio);
+                        }
+                    }
+                    
+                    // 创建canvas用于视频帧绘制
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    
+                    // 创建MediaRecorder
+                    const stream = canvas.captureStream(frameRate);
+                    const recorder = new MediaRecorder(stream, {
+                        mimeType: 'video/webm;codecs=vp9',
+                        videoBitsPerSecond: bitrate
+                    });
+                    
+                    const chunks = [];
+                    recorder.ondataavailable = (e) => {
+                        if (e.data.size > 0) {
+                            chunks.push(e.data);
+                        }
+                    };
+                    
+                    recorder.onstop = () => {
+                        const optimizedBlob = new Blob(chunks, { type: 'video/webm' });
+                        const optimizedFile = new File([optimizedBlob], videoFile.name.replace(/\.[^/.]+$/, '.webm'), {
+                            type: 'video/webm',
+                            lastModified: Date.now()
+                        });
+                        URL.revokeObjectURL(video.src);
+                        resolve(optimizedFile);
+                    };
+                    
+                    recorder.onerror = (e) => {
+                        URL.revokeObjectURL(video.src);
+                        reject(new Error('视频优化失败: ' + e.error));
+                    };
+                    
+                    // 开始录制
+                    recorder.start();
+                    
+                    // 播放视频并绘制每一帧
+                    video.play().catch(error => {
+                        URL.revokeObjectURL(video.src);
+                        reject(new Error('视频播放失败: ' + error.message));
+                    });
+                    
+                    const drawFrame = () => {
+                        if (!recorder.state || recorder.state === 'inactive') {
+                            return;
+                        }
+                        
+                        ctx.drawImage(video, 0, 0, width, height);
+                        requestAnimationFrame(drawFrame);
+                    };
+                    
+                    video.addEventListener('ended', () => {
+                        recorder.stop();
+                    });
+                    
+                    drawFrame();
+                };
+                
+                video.onerror = (e) => {
+                    URL.revokeObjectURL(video.src);
+                    reject(new Error('视频加载失败: ' + e.error));
+                };
+            });
+        }
+        
+        // 优化图片：降低分辨率、减少颜色信息、选择更优格式
+        async function optimizeImage(imageFile) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.src = URL.createObjectURL(imageFile);
+                
+                img.onload = () => {
+                    // 设置优化参数
+                    const maxWidth = 1280;
+                    const maxHeight = 720;
+                    const quality = 0.7;
+                    
+                    // 计算缩放比例
+                    let width = img.width;
+                    let height = img.height;
+                    if (width > maxWidth || height > maxHeight) {
+                        const aspectRatio = width / height;
+                        if (aspectRatio > 1) {
+                            width = maxWidth;
+                            height = Math.round(maxWidth / aspectRatio);
+                        } else {
+                            height = maxHeight;
+                            width = Math.round(maxHeight * aspectRatio);
+                        }
+                    }
+                    
+                    // 创建canvas用于图片绘制
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    
+                    // 绘制图片
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    // 选择最优格式
+                    const format = imageFile.type === 'image/png' && width < 500 ? 'png' : 'jpeg';
+                    
+                    // 转换为Blob
+                    canvas.toBlob((blob) => {
+                        const optimizedFile = new File([blob], imageFile.name.replace(/\.[^/.]+$/, `.${format}`), {
+                            type: `image/${format}`,
+                            lastModified: Date.now()
+                        });
+                        URL.revokeObjectURL(img.src);
+                        resolve(optimizedFile);
+                    }, `image/${format}`, quality);
+                };
+                
+                img.onerror = (e) => {
+                    URL.revokeObjectURL(img.src);
+                    reject(new Error('图片加载失败: ' + e.error));
+                };
+            });
+        }
+        
         function sendFile(file) {
             const chatType = '<?php echo $chat_type; ?>';
             const chatId = '<?php echo $selected_id; ?>';
@@ -4864,13 +5862,10 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 return;
             }
             
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('chat_type', chatType);
-            if (chatType === 'friend') {
-                formData.append('friend_id', chatId);
-            } else {
-                formData.append('id', chatId);
+            // 检查IndexedDB是否支持
+            if (!window.indexedDB) {
+                showNotification('您的浏览器不支持IndexedDB，无法上传文件', 'error');
+                return;
             }
             
             // 创建文件上传中的提示消息
@@ -4878,14 +5873,18 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             const uploadingMessage = document.createElement('div');
             uploadingMessage.className = 'message sent';
             
+            // 格式化时间为 X年X月X日X时X分
+            const date = new Date();
+            const formattedTime = `${date.getFullYear()}年${(date.getMonth() + 1).toString().padStart(2, '0')}月${date.getDate().toString().padStart(2, '0')}日${date.getHours().toString().padStart(2, '0')}时${date.getMinutes().toString().padStart(2, '0')}分`;
+            const timeHtml = `<div class='message-time'>${formattedTime}</div>`;
+            
             // 创建带进度条的上传消息
-            const uploadTime = new Date().toLocaleTimeString('zh-CN', {hour: '2-digit', minute:'2-digit'});
             uploadingMessage.innerHTML = `
                 <div class='message-content'>
                     <div class='message-text'>
                         <div style='margin-bottom: 8px;'><strong>${file.name}</strong></div>
                         <div style='margin-bottom: 8px;'>文件大小：${(file.size / (1024 * 1024)).toFixed(2)} MB</div>
-                        <div style='margin-bottom: 5px;'>上传进度：</div>
+                        <div style='margin-bottom: 5px;'>上传中：</div>
                         <div style='width: 100%; height: 8px; background: #e0e0e0; border-radius: 4px; overflow: hidden; margin-bottom: 5px;'>
                             <div id='upload-progress-bar' style='width: 0%; height: 100%; background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); transition: width 0.3s ease; border-radius: 4px;'></div>
                         </div>
@@ -4894,7 +5893,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                             <span id='upload-speed'>0 KB/s</span>
                         </div>
                     </div>
-                    <div class='message-time'>${new Date().toLocaleString('zh-CN', {year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute:'2-digit'})}</div>
+                    ${timeHtml}
                 </div>
                 <div class='message-avatar'>
                     <?php if (!empty($current_user['avatar'])): ?>
@@ -4907,98 +5906,177 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             messagesContainer.appendChild(uploadingMessage);
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
             
-            // 获取进度条和状态元素
+            // 更新进度显示
             const progressBar = uploadingMessage.querySelector('#upload-progress-bar');
             const percentageText = uploadingMessage.querySelector('#upload-percentage');
             const speedText = uploadingMessage.querySelector('#upload-speed');
             
-            // 上传速度计算变量
-            let startTime = Date.now();
-            let previousBytesLoaded = 0;
-            
-            // 创建XMLHttpRequest对象
-            const xhr = new XMLHttpRequest();
-            
-            // 监听上传进度
-            xhr.upload.addEventListener('progress', (event) => {
-                if (event.lengthComputable) {
-                    const bytesLoaded = event.loaded;
-                    const totalBytes = event.total;
-                    
-                    // 计算百分比
-                    const percentage = Math.round((bytesLoaded / totalBytes) * 100);
-                    
-                    // 更新进度条和百分比
-                    progressBar.style.width = `${percentage}%`;
-                    percentageText.textContent = `${percentage}%`;
-                    
-                    // 计算上传速度
-                    const currentTime = Date.now();
-                    const elapsedTime = (currentTime - startTime) / 1000; // 秒
-                    
-                    if (elapsedTime > 0) {
-                        const bytesUploaded = bytesLoaded - previousBytesLoaded;
-                        const speed = bytesUploaded / elapsedTime; // 字节/秒
-                        
-                        // 格式化速度显示
-                        let speedFormatted;
-                        if (speed < 1024) {
-                            speedFormatted = `${speed.toFixed(0)} B/s`;
-                        } else if (speed < 1024 * 1024) {
-                            speedFormatted = `${(speed / 1024).toFixed(1)} KB/s`;
-                        } else {
-                            speedFormatted = `${(speed / (1024 * 1024)).toFixed(1)} MB/s`;
-                        }
-                        
-                        speedText.textContent = speedFormatted;
-                        
-                        // 更新上一次的字节数和时间
-                        previousBytesLoaded = bytesLoaded;
-                        startTime = currentTime;
-                    }
-                }
-            });
-            
-            // 监听上传完成
-            xhr.addEventListener('load', () => {
+            // 优化文件
+            (async () => {
+                let optimizedFile = file;
+                
                 try {
-                    const data = JSON.parse(xhr.responseText);
-                    
-                    // 移除上传中的提示消息（先检查是否存在）
-                    if (uploadingMessage.parentElement === messagesContainer) {
-                        messagesContainer.removeChild(uploadingMessage);
+                    // 检查文件类型并优化
+                    if (file.type.startsWith('video/')) {
+                        // 优化视频
+                        optimizedFile = await optimizeVideo(file);
+                    } else if (file.type.startsWith('image/')) {
+                        // 优化图片
+                        optimizedFile = await optimizeImage(file);
                     }
                     
-                    if (data.success) {
-                        // 文件上传成功，创建消息元素
-                        const messageElement = createMessageElement(data.message, chatType, chatId);
-                        messagesContainer.appendChild(messageElement);
-                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                        
-                        // 初始化新添加的音频播放器
-                        initAudioPlayers();
-                    } else {
-                        // 文件上传失败，显示错误消息
-                        const errorMessage = document.createElement('div');
-                        errorMessage.className = 'message sent';
-                        errorMessage.innerHTML = `
-                            <div class='message-content'>
-                                <div class='message-text' style='color: #ff4d4f;'>文件上传失败：${data.message || '未知错误'}</div>
-                                <div class='message-time'>${new Date().toLocaleString('zh-CN', {year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute:'2-digit'})}</div>
-                            </div>
-                            <div class='message-avatar'>
-                                <?php if (!empty($current_user['avatar'])): ?>
-                                    <img src='<?php echo $current_user['avatar']; ?>' alt='<?php echo $username; ?>' style='width: 100%; height: 100%; border-radius: 50%; object-fit: cover;'>
-                                <?php else: ?>
-                                    <?php echo substr($username, 0, 2); ?>
-                                <?php endif; ?>
-                            </div>
-                        `;
-                        messagesContainer.appendChild(errorMessage);
-                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                    }
-                } catch (error) {
-                    // JSON解析错误
+                    // 模拟进度更新
+                    let progress = 0;
+                    const progressInterval = setInterval(() => {
+                        progress += 10;
+                        if (progress > 90) progress = 90;
+                        progressBar.style.width = `${progress}%`;
+                        percentageText.textContent = `${progress}%`;
+                    }, 100);
+                    
+                    // 保存文件到IndexedDB
+                    saveFileToCache(optimizedFile)
+                        .then(async (fileId) => {
+                            clearInterval(progressInterval);
+                            progressBar.style.width = '100%';
+                            percentageText.textContent = '100%';
+                            
+                            // 准备消息数据
+                            const messageData = {
+                                id: 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+                                sender_id: '<?php echo $user_id; ?>',
+                                content: '',
+                                file_path: fileId, // 使用localStorage文件ID作为路径
+                                file_name: optimizedFile.name,
+                                file_size: optimizedFile.size,
+                                file_type: optimizedFile.type,
+                                type: 'file',
+                                created_at: new Date().toISOString(),
+                                status: 'sent',
+                                sender_name: '<?php echo $username; ?>',
+                                sender_avatar: '<?php echo !empty($current_user['avatar']) ? $current_user['avatar'] : ''; ?>'
+                            };
+                            
+                            // 创建消息元素
+                            const messageElement = createMessageElement(messageData, chatType, chatId);
+                            // 移除上传中的提示消息（先检查是否存在）
+                            if (uploadingMessage.parentElement === messagesContainer) {
+                                messagesContainer.removeChild(uploadingMessage);
+                            }
+                            messagesContainer.appendChild(messageElement);
+                            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                            
+                            // 初始化新添加的音频播放器
+                            initAudioPlayers();
+                            
+                            // 初始化新添加的聊天视频，转换为Blob URL
+                            initChatVideos();
+                            
+                            // 发送消息到服务器（同时发送文件内容和元数据）
+                            try {
+                                const formData = new FormData();
+                                formData.append('chat_type', chatType);
+                                formData.append('content', '');
+                                formData.append('file_path', fileId);
+                                formData.append('file_name', optimizedFile.name);
+                                formData.append('file_size', optimizedFile.size);
+                                formData.append('file_type', optimizedFile.type);
+                                // 同时上传实际文件内容
+                                formData.append('file', optimizedFile);
+                                if (chatType === 'friend') {
+                                    formData.append('friend_id', chatId);
+                                } else {
+                                    formData.append('id', chatId);
+                                }
+                                
+                                // 使用XMLHttpRequest替代fetch来获取上传进度
+                                const xhr = new XMLHttpRequest();
+                                
+                                // 显示服务器上传的真实进度
+                                xhr.upload.onprogress = function(e) {
+                                    if (e.lengthComputable) {
+                                        // 计算上传进度（50%本地存储 + 50%服务器上传）
+                                        const uploadProgress = 50 + (e.loaded / e.total) * 50;
+                                        progressBar.style.width = `${uploadProgress}%`;
+                                        percentageText.textContent = `${Math.round(uploadProgress)}%`;
+                                        
+                                        // 计算上传速度
+                                        const now = Date.now();
+                                        const elapsed = (now - startTime) / 1000;
+                                        const speed = e.loaded / elapsed;
+                                        speedText.textContent = `${(speed / 1024).toFixed(0)} KB/s`;
+                                    }
+                                };
+                                
+                                // 记录开始时间用于计算速度
+                                const startTime = Date.now();
+                                
+                                // 发送请求
+                                xhr.open('POST', 'send_message.php', true);
+                                xhr.withCredentials = true;
+                                
+                                xhr.onload = function() {
+                                    if (xhr.status === 200) {
+                                        // 请求成功
+                                        const data = JSON.parse(xhr.responseText);
+                                        if (!data.success) {
+                                            showNotification('消息发送失败', 'error');
+                                        }
+                                    } else {
+                                        // 请求失败
+                                        console.error('消息发送到服务器失败:', xhr.statusText);
+                                    }
+                                };
+                                
+                                xhr.onerror = function() {
+                                    console.error('消息发送到服务器失败: 网络错误');
+                                };
+                                
+                                xhr.send(formData);
+                            } catch (error) {
+                                console.error('消息发送到服务器失败:', error);
+                                // 本地消息已显示，仅记录错误
+                            }
+                            
+                            // 重置文件输入
+                            const fileInput = document.getElementById('file-input');
+                            if (fileInput) {
+                                fileInput.value = '';
+                            }
+                        })
+                        .catch((error) => {
+                            clearInterval(progressInterval);
+                            // 移除上传中的提示消息（先检查是否存在）
+                            if (uploadingMessage.parentElement === messagesContainer) {
+                                messagesContainer.removeChild(uploadingMessage);
+                            }
+                            
+                            const errorMessage = document.createElement('div');
+                            errorMessage.className = 'message sent';
+                            errorMessage.innerHTML = `
+                                <div class='message-content'>
+                                    <div class='message-text' style='color: #ff4d4f;'>文件存储失败：${error}</div>
+                                    ${timeHtml}
+                                </div>
+                                <div class='message-avatar'>
+                                    <?php if (!empty($current_user['avatar'])): ?>
+                                        <img src='<?php echo $current_user['avatar']; ?>' alt='<?php echo $username; ?>' style='width: 100%; height: 100%; border-radius: 50%; object-fit: cover;'>
+                                    <?php else: ?>
+                                        <?php echo substr($username, 0, 2); ?>
+                                    <?php endif; ?>
+                                </div>
+                            `;
+                            messagesContainer.appendChild(errorMessage);
+                            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                            
+                            // 重置文件输入
+                            const fileInput = document.getElementById('file-input');
+                            if (fileInput) {
+                                fileInput.value = '';
+                            }
+                        });
+                } catch (optimizeError) {
+                    console.error('文件优化失败:', optimizeError);
                     // 移除上传中的提示消息（先检查是否存在）
                     if (uploadingMessage.parentElement === messagesContainer) {
                         messagesContainer.removeChild(uploadingMessage);
@@ -5008,8 +6086,8 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                     errorMessage.className = 'message sent';
                     errorMessage.innerHTML = `
                         <div class='message-content'>
-                            <div class='message-text' style='color: #ff4d4f;'>文件上传失败：服务器返回格式错误</div>
-                            <div class='message-time'>${new Date().toLocaleString('zh-CN', {year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute:'2-digit'})}</div>
+                            <div class='message-text' style='color: #ff4d4f;'>文件优化失败：${optimizeError.message}</div>
+                            ${timeHtml}
                         </div>
                         <div class='message-avatar'>
                             <?php if (!empty($current_user['avatar'])): ?>
@@ -5021,46 +6099,14 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                     `;
                     messagesContainer.appendChild(errorMessage);
                     messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                    
+                    // 重置文件输入
+                    const fileInput = document.getElementById('file-input');
+                    if (fileInput) {
+                        fileInput.value = '';
+                    }
                 }
-            });
-            
-            // 监听上传错误
-            xhr.addEventListener('error', () => {
-                // 移除上传中的提示消息（先检查是否存在）
-                if (uploadingMessage.parentElement === messagesContainer) {
-                    messagesContainer.removeChild(uploadingMessage);
-                }
-                
-                // 显示网络错误消息
-                const errorMessage = document.createElement('div');
-                errorMessage.className = 'message sent';
-                errorMessage.innerHTML = `
-                    <div class='message-content'>
-                        <div class='message-text' style='color: #ff4d4f;'>文件上传失败：网络错误</div>
-                        <div class='message-time'>${new Date().toLocaleString('zh-CN', {year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute:'2-digit'})}</div>
-                    </div>
-                    <div class='message-avatar'>
-                        <?php if (!empty($current_user['avatar'])): ?>
-                            <img src='<?php echo $current_user['avatar']; ?>' alt='<?php echo $username; ?>' style='width: 100%; height: 100%; border-radius: 50%; object-fit: cover;'>
-                        <?php else: ?>
-                            <?php echo substr($username, 0, 2); ?>
-                        <?php endif; ?>
-                    </div>
-                `;
-                messagesContainer.appendChild(errorMessage);
-                messagesContainer.scrollTop = messagesContainer.scrollHeight;
-            });
-            
-            // 发送请求
-            xhr.open('POST', 'send_message.php');
-            xhr.withCredentials = true;
-            xhr.send(formData);
-            
-            // 重置文件输入
-            const fileInput = document.getElementById('file-input');
-            if (fileInput) {
-                fileInput.value = '';
-            }
+            })();
         }
         
         function sendMessage() {
@@ -5115,6 +6161,10 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 // 创建临时消息ID
                 const tempMessageId = 'temp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
                 
+                // 格式化时间为 X年X月X日X时X分
+                const date = new Date();
+                const formattedTime = `${date.getFullYear()}年${(date.getMonth() + 1).toString().padStart(2, '0')}月${date.getDate().toString().padStart(2, '0')}日${date.getHours().toString().padStart(2, '0')}时${date.getMinutes().toString().padStart(2, '0')}分`;
+                
                 // 创建消息元素
                 const messagesContainer = document.getElementById('messages-container');
                 const messageElement = document.createElement('div');
@@ -5122,10 +6172,19 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 messageElement.dataset.messageId = tempMessageId;
                 messageElement.dataset.chatType = chatType;
                 messageElement.dataset.chatId = chatId;
+                // 保存消息发送时间，用于撤回功能
+                const messageTime = Date.now();
+                messageElement.dataset.messageTime = messageTime;
                 messageElement.innerHTML = `
                     <div class='message-content'>
                         <div class='message-text'>${messageWithLinks}</div>
-                        <div class='message-time'>${new Date().toLocaleTimeString('zh-CN', {hour: '2-digit', minute:'2-digit'})}</div>
+                        <div class='message-time'>${formattedTime}</div>
+                        <div class='message-actions' style='position: relative;'>
+                            <button class='message-action-btn' onclick='toggleMessageActions(this)' style='width: 28px; height: 28px; font-size: 18px; background: rgba(0,0,0,0.1); border: none; border-radius: 50%; color: #333; cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: 1; transition: all 0.2s ease;'>...</button>
+                            <div class='message-action-menu' style='display: none; position: absolute; top: 100%; right: 0; background: white; border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,0.15); padding: 8px 0; z-index: 5000; min-width: 100px;'>
+                                <button class='message-action-item' onclick='recallMessage(this, "${tempMessageId}", "${chatType}", "${chatId}")' style='width: 100%; text-align: left; padding: 8px 16px; border: none; background: transparent; cursor: pointer; transition: all 0.2s ease; color: #333;'>撤回消息</button>
+                            </div>
+                        </div>
                     </div>
                     <div class='message-avatar'>
                         <?php if (!empty($current_user['avatar'])): ?>
@@ -5296,14 +6355,36 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         }
 
         // 初始化
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', async function() {
             // 加载聊天记录
             loadChatHistory();
+            
+            // 初始化聊天视频，转换为Blob URL
+            initChatVideos();
+            
+            // 初始化所有媒体
+            await initChatMedia();
             
             // 如果是群聊，检查是否被封禁
             <?php if ($chat_type === 'group' && $selected_id): ?>
                 checkGroupBanStatus(<?php echo $selected_id; ?>);
             <?php endif; ?>
+            
+            // 为搜索按钮添加点击事件
+            const searchButton = document.getElementById('search-user-button');
+            if (searchButton) {
+                searchButton.addEventListener('click', searchUser);
+            }
+            
+            // 为搜索输入框添加回车键事件
+            const searchInput = document.getElementById('search-user-input');
+            if (searchInput) {
+                searchInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        searchUser();
+                    }
+                });
+            }
         });
         
         // 文件类型检测函数
@@ -5463,6 +6544,34 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             // 这里可以添加打开文件的逻辑，比如使用window.open或创建a标签下载
             window.open(task.filePath, '_blank');
         }
+        
+        // 将DataURL转换为Blob对象
+        function dataURLToBlob(dataURL) {
+            const parts = dataURL.split(';base64,');
+            const contentType = parts[0].split(':')[1];
+            const raw = window.atob(parts[1]);
+            const rawLength = raw.length;
+            const uInt8Array = new Uint8Array(rawLength);
+            
+            for (let i = 0; i < rawLength; ++i) {
+                uInt8Array[i] = raw.charCodeAt(i);
+            }
+            
+            return new Blob([uInt8Array], { type: contentType });
+        }
+        
+        // 下载Blob对象
+        function downloadBlob(blob, fileName) {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        }
 
         // 主下载函数
         async function downloadFile(task) {
@@ -5472,6 +6581,34 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             }
             
             try {
+                // 检查是否是localStorage文件，支持多种前缀
+                if (task.filePath && (task.filePath.startsWith('Picture_') || task.filePath.startsWith('Video_') || task.filePath.startsWith('Audio_') || task.filePath.startsWith('File_'))) {
+                    // 从localStorage获取文件数据
+                    const fileData = localStorage.getItem(task.filePath);
+                    if (fileData) {
+                        const fileInfo = JSON.parse(fileData);
+                        // 创建Blob对象
+                        const blob = dataURLToBlob(fileInfo.data);
+                        
+                        // 更新任务状态为已完成
+                        updateDownloadStatus(task.id, DownloadStatus.COMPLETED);
+                        updateDownloadProgress(task.id, blob.size, blob.size);
+                        
+                        // 触发文件下载
+                        downloadBlob(blob, task.fileName);
+                        
+                        // 更新下载面板
+                        updateDownloadPanel();
+                        return;
+                    }
+                }
+                
+                // 对于服务器文件，自动添加.upload后缀
+                let downloadUrl = task.filePath;
+                if (downloadUrl && !downloadUrl.endsWith('.upload')) {
+                    downloadUrl = downloadUrl + '.upload';
+                }
+                
                 // 创建AbortController用于取消请求
                 task.abortController = new AbortController();
                 
@@ -5498,7 +6635,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 fetchOptions.headers = headers;
                 
                 // 尝试从服务器下载
-                const response = await fetch(task.filePath, fetchOptions);
+                const response = await fetch(downloadUrl, fetchOptions);
 
                 if (response.ok || response.status === 206) { // 206是部分内容
                     // 服务器返回成功，开始下载
@@ -5732,7 +6869,9 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 let html = '';
                 if (data.success && data.users.length > 0) {
                     data.users.forEach(user => {
-                        const avatar = user.avatar ? `<img src="${user.avatar}" alt="${user.username}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">` : `<div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 14px;">${user.username.substring(0, 2)}</div>`;
+                        // 检查头像是否为默认头像或不存在，避免404错误
+                        const isDefaultAvatar = user.avatar && (user.avatar === 'default_avatar.png' || user.avatar.includes('default_avatar.png'));
+                        const avatar = user.avatar && !isDefaultAvatar ? `<img src="${user.avatar}" alt="${user.username}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">` : `<div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 14px;">${user.username.substring(0, 2)}</div>`;
                         
                         html += `<div style="display: flex; align-items: center; padding: 12px; border-bottom: 1px solid #f0f0f0;">
                             <div style="margin-right: 12px;">${avatar}</div>
@@ -5789,11 +6928,13 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                                         let statusText = user.status === 'online' ? '在线' : '离线';
                                         let statusColor = user.status === 'online' ? '#4caf50' : '#9e9e9e';
                                         
+                                        // 检查头像是否为默认头像或不存在，避免404错误
+                                        const isDefaultAvatar = user.avatar && (user.avatar === 'default_avatar.png' || user.avatar.includes('default_avatar.png'));
                                         resultsHTML += `
                                             <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f0f0f0; cursor: pointer;" onclick="switchToChat('friend', ${user.id})">
                                                 <div style="display: flex; align-items: center; gap: 10px;">
                                                     <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 16px;">
-                                                        ${user.avatar ? `<img src="${user.avatar}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">` : user.username.substring(0, 2)}
+                                                        ${user.avatar && !isDefaultAvatar ? `<img src="${user.avatar}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">` : user.username.substring(0, 2)}
                                                     </div>
                                                     <div>
                                                         <div style="display: flex; align-items: center; gap: 5px;">
@@ -6454,65 +7595,60 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         
         // 检查文件是否过期
         function isFileExpired(filePath, fileType = '') {
+            // 如果是localStorage文件ID，直接返回false（因为存储在localStorage中）
+            if (filePath && (filePath.startsWith('Picture_') || filePath.startsWith('Video_') || filePath.startsWith('Audio_') || filePath.startsWith('File_'))) {
+                return false;
+            }
+            
             // 从filePath中提取文件名，作为缓存的键
             const fileName = filePath.split('/').pop().split('?')[0];
             // 根据文件类型设置不同的前缀
-            let prefix = 'file_';
+            let prefix = 'File_';
             if (fileType === 'video') {
-                prefix = 'video_';
+                prefix = 'Video_';
             } else if (fileType === 'image') {
                 prefix = 'Picture_';
             } else if (fileType === 'audio') {
-                prefix = 'audio_';
+                prefix = 'Audio_';
             }
             
-            const targetCookieName = `${prefix}${encodeURIComponent(fileName)}`;
+            const targetStorageKey = `${prefix}${encodeURIComponent(fileName)}`;
             
-            // 获取所有cookie
-            const cookies = document.cookie.split(';');
-            
-            // 遍历cookie，查找缓存相关的cookie
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                const [cookieName, cookieValue] = cookie.split('=');
-                
-                // 解码cookie名称，然后比较
-                const decodedCookieName = decodeURIComponent(cookieName);
-                if (decodedCookieName === targetCookieName) {
-                    // Cookie存在，文件未过期
-                    return false;
-                }
-            }
-            
-            // Cookie不存在，文件已过期
-            return true;
+            // 检查localStorage中是否存在该文件的缓存记录
+            return !localStorage.getItem(targetStorageKey);
         }
         
-        // 设置文件Cookie
-        function setFileCookie(filePath, fileType, fileSize = 0) {
+        // 设置文件缓存记录到localStorage
+        function setFileCache(filePath, fileType, fileSize = 0) {
+            // 如果是localStorage文件ID，不需要设置缓存记录
+            if (filePath && (filePath.startsWith('Picture_') || filePath.startsWith('Video_') || filePath.startsWith('Audio_') || filePath.startsWith('File_'))) {
+                return;
+            }
+            
             // 从filePath中提取文件名，作为缓存的键
             const fileName = filePath.split('/').pop().split('?')[0];
             // 根据文件类型设置不同的前缀
-            let prefix = 'file_';
+            let prefix = 'File_';
             if (fileType === 'video') {
-                prefix = 'video_';
+                prefix = 'Video_';
             } else if (fileType === 'image') {
                 prefix = 'Picture_';
             } else if (fileType === 'audio') {
-                prefix = 'audio_';
+                prefix = 'Audio_';
             }
-            const expirySeconds = getFileExpirySeconds(fileType);
-            const expiryDate = new Date();
-            expiryDate.setTime(expiryDate.getTime() + (expirySeconds * 1000));
-            const expires = "expires=" + expiryDate.toUTCString();
+            
+            const storageKey = `${prefix}${encodeURIComponent(fileName)}`;
             // 存储文件类型和大小，格式为"type:size"
-            document.cookie = `${prefix}${encodeURIComponent(fileName)}=${encodeURIComponent(`${fileType}:${fileSize}`)}; ${expires}; path=/`;
+            localStorage.setItem(storageKey, `${fileType}:${fileSize}`);
         }
         
         // 加载聊天记录
         function loadChatHistory() {
             const messagesContainer = document.getElementById('messages-container');
             if (!messagesContainer) return;
+            
+            // 调用initChatMedia函数来初始化所有媒体文件，优先从IndexedDB获取
+            initChatMedia();
             
             // 初始化音频播放器
             initAudioPlayers();
@@ -6540,15 +7676,21 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 return;
             }
             
-            fetch(filePath)
+            // 为服务器文件添加.upload后缀
+            let fetchUrl = filePath;
+            if (fetchUrl && !fetchUrl.endsWith('.upload')) {
+                fetchUrl = fetchUrl + '.upload';
+            }
+            
+            fetch(fetchUrl)
                 .then(response => {
                     if (response.ok) {
                         // 文件存在，获取文件大小
                         const fileSize = parseInt(response.headers.get('content-length') || '0');
                         const fileType = getFileType(fileName);
-                        // 只在cookie不存在时才缓存文件
+                        // 只在localStorage缓存不存在时才缓存文件
                         if (isFileExpired(filePath, fileType)) {
-                            setFileCookie(filePath, fileType, fileSize);
+                            setFileCache(filePath, fileType, fileSize);
                         }
                         // 重置重试计数器
                         delete fileRetryCounter[filePath];
@@ -6569,6 +7711,179 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 });
         }
         
+        // 初始化所有媒体文件（图片、音频、视频），优先从IndexedDB获取
+        async function initChatMedia() {
+            // 处理所有图片元素
+            document.querySelectorAll('.message-image').forEach(async img => {
+                const fileUrl = img.src;
+                const fileName = img.getAttribute('data-file-name') || '未知图片';
+                const filePath = img.getAttribute('data-file-path') || fileUrl;
+                
+                // 优先从IndexedDB获取图片
+                try {
+                    const fileData = await indexedDBManager.getFile(filePath);
+                    if (fileData && fileData.data) {
+                        // 从IndexedDB获取成功，转换为Blob URL
+                        const blob = new Blob([fileData.data], { type: fileData.type });
+                        const blobUrl = URL.createObjectURL(blob);
+                        img.src = blobUrl;
+                        return;
+                    }
+                } catch (error) {
+                    // 忽略IndexedDB错误，继续尝试从服务器获取
+                }
+                
+                // IndexedDB中没有，尝试从服务器获取，最多重试3次
+                let success = false;
+                for (let i = 0; i < 3 && !success; i++) {
+                    try {
+                        const response = await fetch(fileUrl, {
+                            credentials: 'include',
+                            cache: 'no-cache'
+                        });
+                        
+                        if (response.ok) {
+                            // 请求成功，获取Blob并转换为Blob URL
+                            const blob = await response.blob();
+                            const blobUrl = URL.createObjectURL(blob);
+                            img.src = blobUrl;
+                            success = true;
+                            
+                            // 缓存到IndexedDB
+                            try {
+                                await indexedDBManager.saveFile({
+                                    id: filePath,
+                                    name: fileName,
+                                    type: blob.type,
+                                    size: blob.size,
+                                    data: blob,
+                                    url: fileUrl,
+                                    uploadedAt: new Date().toISOString(),
+                                    fileType: 'image'
+                                });
+                            } catch (cacheError) {
+                                // 忽略缓存错误
+                            }
+                        } else if (response.status === 404) {
+                            // 忽略404错误，不向控制台报错
+                            break; // 404直接退出重试
+                        }
+                    } catch (error) {
+                        // 忽略所有错误，不向控制台报错
+                    }
+                    
+                    // 重试间隔1秒
+                    if (!success && i < 2) {
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                    }
+                }
+                
+                // 如果所有尝试都失败，显示"消息已被清理：{文件名}"
+                if (!success) {
+                    // 创建一个错误提示元素，替换图片元素
+                    const errorDiv = document.createElement('div');
+                    errorDiv.style.cssText = `
+                        background: #f8f9fa;
+                        border: 1px solid #dee2e6;
+                        border-radius: 8px;
+                        padding: 20px;
+                        text-align: center;
+                        color: #6c757d;
+                        font-size: 14px;
+                    `;
+                    errorDiv.textContent = `消息已被清理：${fileName}`;
+                    
+                    // 替换图片元素
+                    img.parentNode.replaceChild(errorDiv, img);
+                }
+            });
+            
+            // 处理所有音频元素
+            document.querySelectorAll('.audio-element').forEach(async audio => {
+                const fileUrl = audio.src;
+                const fileName = audio.getAttribute('data-file-name') || '未知音频';
+                const filePath = audio.getAttribute('data-file-path') || fileUrl;
+                
+                // 优先从IndexedDB获取音频
+                try {
+                    const fileData = await indexedDBManager.getFile(filePath);
+                    if (fileData && fileData.data) {
+                        // 从IndexedDB获取成功，转换为Blob URL
+                        const blob = new Blob([fileData.data], { type: fileData.type });
+                        const blobUrl = URL.createObjectURL(blob);
+                        audio.src = blobUrl;
+                        return;
+                    }
+                } catch (error) {
+                    // 忽略IndexedDB错误，继续尝试从服务器获取
+                }
+                
+                // IndexedDB中没有，尝试从服务器获取，最多重试3次
+                let success = false;
+                for (let i = 0; i < 3 && !success; i++) {
+                    try {
+                        const response = await fetch(fileUrl, {
+                            credentials: 'include',
+                            cache: 'no-cache'
+                        });
+                        
+                        if (response.ok) {
+                            // 请求成功，获取Blob并转换为Blob URL
+                            const blob = await response.blob();
+                            const blobUrl = URL.createObjectURL(blob);
+                            audio.src = blobUrl;
+                            success = true;
+                            
+                            // 缓存到IndexedDB
+                            try {
+                                await indexedDBManager.saveFile({
+                                    id: filePath,
+                                    name: fileName,
+                                    type: blob.type,
+                                    size: blob.size,
+                                    data: blob,
+                                    url: fileUrl,
+                                    uploadedAt: new Date().toISOString(),
+                                    fileType: 'audio'
+                                });
+                            } catch (cacheError) {
+                                // 忽略缓存错误
+                            }
+                        } else if (response.status === 404) {
+                            // 忽略404错误，不向控制台报错
+                            break; // 404直接退出重试
+                        }
+                    } catch (error) {
+                        // 忽略所有错误，不向控制台报错
+                    }
+                    
+                    // 重试间隔1秒
+                    if (!success && i < 2) {
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                    }
+                }
+                
+                // 如果所有尝试都失败，显示"消息已被清理：{文件名}"
+                if (!success) {
+                    // 创建一个错误提示元素，替换音频元素
+                    const errorDiv = document.createElement('div');
+                    errorDiv.style.cssText = `
+                        background: #f8f9fa;
+                        border: 1px solid #dee2e6;
+                        border-radius: 8px;
+                        padding: 20px;
+                        text-align: center;
+                        color: #6c757d;
+                        font-size: 14px;
+                    `;
+                    errorDiv.textContent = `消息已被清理：${fileName}`;
+                    
+                    // 替换音频元素
+                    audio.parentNode.replaceChild(errorDiv, audio);
+                }
+            });
+        }
+        
         // 处理媒体文件加载失败
         function handleMediaLoadError(media, filePath, fileName, fileType) {
             // 初始化重试计数器（仅在第一次调用时）
@@ -6579,21 +7894,21 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             // 检查是否已达到最大重试次数
             if (fileRetryCounter[filePath] >= MAX_RETRIES) {
                 // 达到最大重试次数，显示已清理提示
-                if (media.tagName === 'IMG') {
-                    media.style.display = 'none';
-                    const mediaContainer = media.parentElement;
-                    if (mediaContainer) {
-                        mediaContainer.innerHTML = `<div class="message-media"><div class="file-info" style="text-align: center; padding: 20px; color: #999;"><h4>文件不存在或已被清理</h4><p>${fileName}</p></div></div>`;
-                    }
-                } else if (media.tagName === 'AUDIO' || media.tagName === 'VIDEO') {
-                    const audioContainer = media.parentElement;
-                    if (audioContainer) {
-                        const mediaContainer = audioContainer.parentElement;
-                        if (mediaContainer) {
-                            mediaContainer.innerHTML = `<div class="message-media"><div class="file-info" style="text-align: center; padding: 20px; color: #999;"><h4>文件不存在或已被清理</h4><p>${fileName}</p></div></div>`;
-                        }
-                    }
-                }
+                const errorDiv = document.createElement('div');
+                errorDiv.style.cssText = `
+                    background: #f8f9fa;
+                    border: 1px solid #dee2e6;
+                    border-radius: 8px;
+                    padding: 20px;
+                    text-align: center;
+                    color: #6c757d;
+                    font-size: 14px;
+                `;
+                errorDiv.textContent = `消息已被清理：${fileName}`;
+                
+                // 替换媒体元素
+                media.parentNode.replaceChild(errorDiv, media);
+                
                 // 移除重试计数器
                 delete fileRetryCounter[filePath];
                 return;
@@ -6603,49 +7918,16 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             fileRetryCounter[filePath]++;
             
             // 执行获取媒体文件操作
-            fetchMediaFromServer(media, filePath, fileName, fileType);
-        }
-        
-        // 从服务器获取媒体文件并缓存
-        function fetchMediaFromServer(media, filePath, fileName, fileType) {
-            // 先移除之前的error事件监听器，避免无限循环
-            media.onerror = null;
-            
-            fetch(filePath)
-                .then(response => {
-                    if (response.ok) {
-                        // 文件存在，获取文件大小
-                        const fileSize = parseInt(response.headers.get('content-length') || '0');
-                        // 只在cookie不存在时才缓存文件
-                        if (isFileExpired(filePath, fileType)) {
-                            setFileCookie(filePath, fileType, fileSize);
-                        }
-                        // 刷新媒体元素
-                        if (media.tagName === 'IMG') {
-                            media.src = filePath + '?' + new Date().getTime();
-                        } else if (media.tagName === 'AUDIO' || media.tagName === 'VIDEO') {
-                            media.src = filePath + '?' + new Date().getTime();
-                            media.load();
-                        }
-                        // 重置重试计数器
-                        delete fileRetryCounter[filePath];
-                        // 重新添加error事件监听器
-                        media.onerror = function() {
-                            handleMediaLoadError(media, filePath, fileName, fileType);
-                        };
-                    } else {
-                        // 文件不存在，继续重试
-                        setTimeout(() => {
-                            handleMediaLoadError(media, filePath, fileName, fileType);
-                        }, 1000); // 1秒后重试
-                    }
-                })
-                .catch(error => {
-                    // 网络错误，继续重试
-                    setTimeout(() => {
-                        handleMediaLoadError(media, filePath, fileName, fileType);
-                    }, 1000); // 1秒后重试
-                });
+            // 这里不再使用fetchMediaFromServer，而是直接使用新的加载逻辑
+            setTimeout(() => {
+                // 重新加载媒体文件
+                if (media.tagName === 'IMG') {
+                    media.src = media.src + '?' + new Date().getTime();
+                } else if (media.tagName === 'AUDIO' || media.tagName === 'VIDEO') {
+                    media.src = media.src + '?' + new Date().getTime();
+                    media.load();
+                }
+            }, 1000); // 1秒后重试
         }
         
         // 视频播放器相关变量
@@ -7203,18 +8485,30 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             // 全屏变化事件
             document.addEventListener('fullscreenchange', () => {
                 if (document.fullscreenElement) {
-                    // 进入全屏，始终显示控件
+                    // 进入全屏，隐藏标题栏，显示控制按钮
+                    videoControls.classList.remove('hidden');
+                    videoHeader.classList.add('hidden');
+                    clearTimeout(hideControlsTimer);
+                    
+                    // 确保视频元素充满整个屏幕
+                    videoPlayer.style.height = '100%';
+                    videoElement.style.height = '100%';
+                    videoElement.style.width = '100%';
+                } else {
+                    // 退出全屏，显示标题栏，恢复自动隐藏逻辑
                     videoControls.classList.remove('hidden');
                     videoHeader.classList.remove('hidden');
-                    clearTimeout(hideControlsTimer);
-                } else {
-                    // 退出全屏，恢复自动隐藏逻辑
                     if (!videoElement.paused) {
                         hideControlsTimer = setTimeout(() => {
                             videoControls.classList.add('hidden');
                             videoHeader.classList.add('hidden');
                         }, 3000);
                     }
+                    
+                    // 恢复原始尺寸
+                    videoPlayer.style.height = '';
+                    videoElement.style.height = '';
+                    videoElement.style.width = '';
                 }
             });
             
@@ -7224,7 +8518,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         
         // 打开视频播放器
         // 打开视频播放器
-        function openVideoPlayer(videoUrl, videoName, videoSize) {
+        async function openVideoPlayer(videoUrl, videoName, videoSize) {
             const videoModal = document.getElementById('video-player-modal');
             const videoElement = document.getElementById('custom-video-element');
             const videoTitle = document.getElementById('video-player-title');
@@ -7241,7 +8535,29 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             // 显示视频播放器弹窗
             videoModal.classList.add('visible');
             
-            // 检查是否已经缓存，避免二次缓存
+            // 优先从IndexedDB获取视频
+            try {
+                const fileData = await indexedDBManager.getFile(videoUrl);
+                if (fileData && fileData.data) {
+                    // 从IndexedDB获取成功，转换为Blob URL
+                    const blob = new Blob([fileData.data], { type: fileData.type });
+                    const blobUrl = URL.createObjectURL(blob);
+                    videoElement.src = blobUrl;
+                    videoElement.play().catch(error => {
+                        console.error('播放视频失败:', error);
+                        // 播放失败时保持视频源不变，等待用户手动点击
+                        videoElement.pause();
+                    });
+                    // 不显示缓存状态
+                    cacheStatus.style.display = 'none';
+                    return;
+                }
+            } catch (error) {
+                // 忽略IndexedDB错误，继续尝试其他方式
+                console.error('从IndexedDB获取视频失败:', error);
+            }
+            
+            // 如果IndexedDB中没有，检查是否已经缓存（兼容旧版本）
             if (!isFileExpired(videoUrl, 'video')) {
                 console.log('视频已缓存，直接使用URL播放');
                 // 视频已缓存，直接使用URL播放，不重新缓存
@@ -7272,7 +8588,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         }
         
         // 缓存完整视频
-        function cacheVideo(videoUrl, videoName, videoSize, videoElement, cacheStatus) {
+        async function cacheVideo(videoUrl, videoName, videoSize, videoElement, cacheStatus) {
             // 检查是否已有缓存进程在运行
             if (isCaching) {
                 console.log('已有缓存进程在运行，跳过当前缓存');
@@ -7288,7 +8604,29 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 return;
             }
             
-            // 检查当前视频是否已经被缓存，避免二次缓存
+            // 优先从IndexedDB获取视频
+            try {
+                const fileData = await indexedDBManager.getFile(videoUrl);
+                if (fileData && fileData.data) {
+                    // 从IndexedDB获取成功，转换为Blob URL
+                    const blob = new Blob([fileData.data], { type: fileData.type });
+                    const blobUrl = URL.createObjectURL(blob);
+                    videoElement.src = blobUrl;
+                    videoElement.play().catch(error => {
+                        console.error('播放视频失败:', error);
+                        // 播放失败时保持视频源不变，等待用户手动点击
+                        videoElement.pause();
+                    });
+                    cacheStatus.style.display = 'none';
+                    isCaching = false;
+                    return;
+                }
+            } catch (error) {
+                // 忽略IndexedDB错误，继续尝试其他方式
+                console.error('从IndexedDB获取视频失败:', error);
+            }
+            
+            // 如果IndexedDB中没有，检查是否已经缓存（兼容旧版本）
             if (!isFileExpired(videoUrl, 'video')) {
                 console.log('视频已缓存，直接使用缓存播放');
                 // 直接使用视频URL，浏览器会自动使用缓存
@@ -7361,9 +8699,9 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                             cacheStatus.style.display = 'none';
                         }, 1000);
                         
-                        // 设置cookie缓存信息
+                        // 设置localStorage缓存信息
                         const fileType = 'video';
-                        setFileCookie(videoUrl, fileType, totalBytes);
+                        setFileCache(videoUrl, fileType, totalBytes);
                         
                         // 重置缓存标志
                         isCaching = false;
@@ -7626,6 +8964,103 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 });
             });
         }
+        
+        // 初始化视频元素，将视频URL转换为Blob URL
+        async function initChatVideos() {
+            document.querySelectorAll('.video-element').forEach(async video => {
+                // 只处理没有src或src为空的视频元素
+                if (!video.src || video.src === '') {
+                    const fileUrl = video.getAttribute('data-file-url');
+                    const fileName = video.getAttribute('data-file-name');
+                    const filePath = video.getAttribute('data-file-path');
+                    
+                    if (fileUrl) {
+                        // 优先从IndexedDB获取视频
+                        try {
+                            const fileData = await indexedDBManager.getFile(filePath);
+                            if (fileData && fileData.data) {
+                                // 从IndexedDB获取成功，转换为Blob URL
+                                const blob = new Blob([fileData.data], { type: fileData.type });
+                                const blobUrl = URL.createObjectURL(blob);
+                                video.src = blobUrl;
+                                return;
+                            }
+                        } catch (error) {
+                            // 忽略IndexedDB错误，继续尝试从服务器获取
+                        }
+                        
+                        // IndexedDB中没有，尝试从服务器获取，最多重试3次
+                        let success = false;
+                        for (let i = 0; i < 3 && !success; i++) {
+                            try {
+                                const response = await fetch(fileUrl, {
+                                    credentials: 'include',
+                                    cache: 'no-cache'
+                                });
+                                
+                                if (response.ok) {
+                                    // 请求成功，获取Blob并转换为Blob URL
+                                    const blob = await response.blob();
+                                    const blobUrl = URL.createObjectURL(blob);
+                                    video.src = blobUrl;
+                                    success = true;
+                                    
+                                    // 缓存到IndexedDB
+                                    try {
+                                        await indexedDBManager.saveFile({
+                                            id: filePath,
+                                            name: fileName,
+                                            type: blob.type,
+                                            size: blob.size,
+                                            data: blob,
+                                            url: fileUrl,
+                                            uploadedAt: new Date().toISOString(),
+                                            fileType: 'video'
+                                        });
+                                    } catch (cacheError) {
+                                        // 忽略缓存错误
+                                    }
+                                } else if (response.status === 404) {
+                                    // 忽略404错误，不向控制台报错
+                                    break; // 404直接退出重试
+                                }
+                            } catch (error) {
+                                // 忽略所有错误，不向控制台报错
+                            }
+                            
+                            // 重试间隔1秒
+                            if (!success && i < 2) {
+                                await new Promise(resolve => setTimeout(resolve, 1000));
+                            }
+                        }
+                        
+                        // 如果所有尝试都失败，显示"消息已被清理：{文件名}"
+                        if (!success) {
+                            // 创建一个错误提示元素，替换视频元素
+                            const errorDiv = document.createElement('div');
+                            errorDiv.style.cssText = `
+                                background: #f8f9fa;
+                                border: 1px solid #dee2e6;
+                                border-radius: 8px;
+                                padding: 20px;
+                                text-align: center;
+                                color: #6c757d;
+                                font-size: 14px;
+                            `;
+                            errorDiv.textContent = `消息已被清理：${fileName}`;
+                            
+                            // 替换视频元素
+                            video.parentNode.replaceChild(errorDiv, video);
+                        }
+                    }
+                }
+            });
+        }
+        
+        // 在DOM加载完成后初始化聊天视频
+        document.addEventListener('DOMContentLoaded', function() {
+            initChatVideos();
+        });
         
         // 录音功能
         let mediaRecorder = null;
@@ -8046,7 +9481,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                     const fileName = fileLink.getAttribute('data-file-name');
                     if (filePath && fileName) {
                         const fileType = getFileType(fileName);
-                        setFileCookie(filePath, fileType, 0);
+                        setFileCache(filePath, fileType, 0);
                     }
                 });
                 
@@ -8055,6 +9490,9 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 
                 // 初始化新添加的视频元素
                 initVideoElements();
+                
+                // 初始化新添加的聊天视频，转换为Blob URL
+                initChatVideos();
                     }
                 })
                 .catch(error => {
@@ -8098,10 +9536,38 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             
             let contentHtml;
             if (msg.type === 'file' || msg.file_path) {
-                const file_path = msg.file_path;
+                let file_path = msg.file_path;
                 const file_name = msg.file_name;
                 const file_size = msg.file_size;
                 const file_type = msg.type;
+                
+                // 从localStorage获取文件数据
+                function getFileUrlFromLocalStorage(filePath) {
+                    if (typeof(Storage) === "undefined") {
+                        return filePath;
+                    }
+                    
+                    // 检查是否是localStorage文件ID，支持多种前缀
+            if (filePath && (filePath.startsWith('Picture_') || filePath.startsWith('Video_') || filePath.startsWith('Audio_') || filePath.startsWith('File_'))) {
+                const fileData = localStorage.getItem(filePath);
+                if (fileData) {
+                    try {
+                        const fileInfo = JSON.parse(fileData);
+                        return fileInfo.data;
+                    } catch (e) {
+                        console.error('Failed to parse file data from localStorage:', e);
+                    }
+                }
+            }
+            // 对于服务器文件，自动添加.upload后缀
+            if (filePath && !filePath.endsWith('.upload')) {
+                return filePath + '.upload';
+            }
+            return filePath;
+                }
+                
+                // 从localStorage获取文件URL
+                const fileUrl = getFileUrlFromLocalStorage(file_path);
                 
                 // 检测文件的实际类型
                 const ext = file_name.toLowerCase().split('.').pop();
@@ -8112,17 +9578,13 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 if (imageExts.includes(ext)) {
                     // 图片类型
                     contentHtml = `<div class='message-media'>
-                        <img src='${file_path}' alt='${file_name}' class='message-image' data-file-name='${file_name}' data-file-type='image' data-file-path='${file_path}'>
+                        <img src='${fileUrl}' alt='${file_name}' class='message-image' data-file-name='${file_name}' data-file-type='image' data-file-path='${file_path}'>
                     </div>`;
-                    // 只在cookie不存在时才缓存文件
-                    if (isFileExpired(file_path, 'image')) {
-                        setFileCookie(file_path, 'image', file_size);
-                    }
                 } else if (audioExts.includes(ext)) {
                     // 音频类型
                     contentHtml = `<div class='message-media' style='position: relative;'>
                         <div class='custom-audio-player'>
-                            <audio src='${file_path}' class='audio-element' data-file-name='${file_name}' data-file-type='audio' data-file-path='${file_path}'></audio>
+                            <audio src='${fileUrl}' class='audio-element' data-file-name='${file_name}' data-file-type='audio' data-file-path='${file_path}'></audio>
                             <button class='audio-play-btn' title='播放'></button>
                             <div class='audio-progress-container'>
                                 <div class='audio-progress-bar'>
@@ -8140,15 +9602,15 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                             </div>
                         </div>
                     </div>`;
-                    // 只在cookie不存在时才缓存文件
+                    // 只在localStorage缓存不存在时才缓存文件
                     if (isFileExpired(file_path, 'audio')) {
-                        setFileCookie(file_path, 'audio', file_size);
+                        setFileCache(file_path, 'audio', file_size);
                     }
                 } else if (videoExts.includes(ext)) {
-                    // 视频类型
+                    // 视频类型 - 使用空src，后续通过JS加载为Blob URL
                     contentHtml = `<div class='message-media' style='position: relative;'>
                         <div class='video-container' style='position: relative;'>
-                            <video src='${file_path}' class='video-element' data-file-name='${file_name}' data-file-type='video' data-file-path='${file_path}' controlsList='nodownload'>
+                            <video src='' class='video-element' data-file-name='${file_name}' data-file-type='video' data-file-path='${file_path}' data-file-url='${fileUrl}' controlsList='nodownload'>
                             </video>
                             <!-- 视频操作按钮 -->
                             <div class='media-actions' style='position: absolute; top: 10px; right: 10px; display: flex; gap: 5px; opacity: 1 !important;'>
@@ -8161,9 +9623,9 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                             </div>
                         </div>
                     </div>`;
-                    // 只在cookie不存在时才缓存文件
+                    // 只在localStorage缓存不存在时才缓存文件
                     if (isFileExpired(file_path, 'video')) {
-                        setFileCookie(file_path, 'video', file_size);
+                        setFileCache(file_path, 'video', file_size);
                     }
                 } else {
                 // 其他文件类型
@@ -8175,9 +9637,9 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                     </div>
                     <button style='background: #667eea; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; transition: all 0.2s ease;' onclick="event.stopPropagation(); addDownloadTask('${file_name}', '${file_path}', ${file_size}, 'file');">下载</button>
                 </div>`;
-                // 只在cookie不存在时才缓存文件
+                // 只在localStorage缓存不存在时才缓存文件
                 if (isFileExpired(file_path, 'file')) {
-                    setFileCookie(file_path, 'file', file_size);
+                    setFileCache(file_path, 'file', file_size);
                 }
             }
             } else {
@@ -8188,29 +9650,44 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 contentHtml = `<div class='message-text'>${messageWithLinks}</div>`;
             }
             
-            const timeHtml = `<div class='message-time'>${new Date(msg.created_at).toLocaleString('zh-CN', {year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute:'2-digit'})}</div>`;
+            // 将时间格式化为 X年X月X日X时X分
+            const date = new Date(msg.created_at);
+            const formattedTime = `${date.getFullYear()}年${(date.getMonth() + 1).toString().padStart(2, '0')}月${date.getDate().toString().padStart(2, '0')}日${date.getHours().toString().padStart(2, '0')}时${date.getMinutes().toString().padStart(2, '0')}分`;
+            const timeHtml = `<div class='message-time'>${formattedTime}</div>`;
             
-            // 只有发送者可以看到撤回按钮
+            // 只有发送者可以看到操作按钮
             let messageActionsHtml = '';
             if (isSent) {
+                // 检查消息是否在2分钟内，只有2分钟内的消息可以撤回
+                const messageTime = new Date(msg.created_at);
+                const now = new Date();
+                const diffInMinutes = (now - messageTime) / (1000 * 60);
+                
+                // 生成撤回按钮HTML，只有2分钟内的消息才显示
+                const recallButtonHtml = diffInMinutes <= 2 ? `
+                    <button class='message-action-item' onclick="event.stopPropagation(); recallMessage(this, '${msg.id}', '${chatType}', '${chatId}')" 
+                            style='display: block; width: 100%; padding: 8px 16px; text-align: left; border: none; 
+                                   background: none; cursor: pointer; font-size: 14px; color: #333; transition: background-color 0.2s ease;'>撤回</button>
+                ` : '';
+                
+                // 始终显示三个点按钮，只有2分钟内的消息才显示撤回选项
                 messageActionsHtml = `
-                    <div class='message-actions' style='position: absolute; top: 8px; right: 8px; display: flex; align-items: center; gap: 5px; z-index: 4000;'>
+                    <div class='message-actions' style='position: absolute; top: 50%; right: -10px; transform: translateY(-50%); display: flex; align-items: center; gap: 5px; z-index: 4000;'>
                         <div style='position: relative; z-index: 4000;'>
-                            <button class='message-action-btn' onclick="event.stopPropagation(); toggleMessageActions(event, this)" 
-                                    style='width: 24px; height: 24px; font-size: 12px; background: rgba(0,0,0,0.1); border: none; border-radius: 50%; 
-                                           color: #666; cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: 0.6; 
+                            <button class='message-action-btn' onclick="toggleMessageActions(this)" 
+                                    style='width: 28px; height: 28px; font-size: 18px; background: rgba(0,0,0,0.2); border: none; border-radius: 50%; 
+                                           color: #333; cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: 1; 
                                            transition: all 0.2s ease; position: relative; z-index: 4000;'>⋮</button>
-                            <div class='message-actions-menu' style='display: none; position: absolute; top: 30px; right: 0; 
+                                <div class='message-actions-menu' style='display: none; position: absolute; top: 35px; right: 0; 
                                                                  background: white; border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,0.15); 
                                                                  padding: 8px 0; z-index: 5000; min-width: 80px;'>
-                                <button class='message-action-item' onclick="event.stopPropagation(); recallMessage('${msg.id}', '${chatType}', '${chatId}')" 
-                                        style='display: block; width: 100%; padding: 8px 16px; text-align: left; border: none; 
-                                               background: none; cursor: pointer; font-size: 14px; color: #333; transition: background-color 0.2s ease;'>撤回</button>
+                                    ${recallButtonHtml}
+                                </div>
                             </div>
-                        </div>
-                    </div>`;
+                        </div>`;
             }
             
+            // 为发送者的消息添加右键和长按事件
             if (isSent) {
                 // 发送者的消息，头像在右，内容在左
                 messageDiv.innerHTML = `
@@ -8221,6 +9698,21 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                     </div>
                     <div class='message-avatar'>${avatarHtml}</div>
                 `;
+                
+                // 添加右键事件，禁止浏览器默认右键菜单
+                messageDiv.addEventListener('contextmenu', function(event) {
+                    event.preventDefault(); // 禁止浏览器默认右键菜单
+                });
+                
+
+                
+                // 添加点击事件关闭菜单
+                messageDiv.addEventListener('click', function() {
+                    const menu = this.querySelector('.message-actions-menu');
+                    if (menu) {
+                        menu.style.display = 'none';
+                    }
+                });
             } else {
                 // 接收者的消息，头像在左，内容在右
                 messageDiv.innerHTML = `
@@ -8279,91 +9771,16 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         });
         
         // 撤回消息
-        function recallMessage(messageId, chatType, chatId) {
-            if (confirm('确定要撤回这条消息吗？')) {
-                // 找到对应的消息元素并获取原始内容
-                const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
-                let originalContent = '';
-                let isTextMessage = false;
-                
-                if (messageElement) {
-                    // 检查是否为文本消息
-                    const textElement = messageElement.querySelector('.message-text:not([style*="italic"])');
-                    if (textElement && !messageElement.querySelector('.message-media, .message-file, .custom-audio-player, .video-container')) {
-                        originalContent = textElement.textContent || textElement.innerText;
-                        isTextMessage = true;
-                    }
-                }
-                
-                fetch('recall_message.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: `message_id=${messageId}&chat_type=${chatType}&chat_id=${chatId}`
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        // 找到对应的消息元素并移除
-                        const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
-                        if (messageElement) {
-                            // 替换为撤回提示，包含重新编辑按钮
-                            const editButton = isTextMessage ? `
-                                <button onclick="event.stopPropagation(); editRecalledMessage('${messageId}', '${chatType}', '${chatId}', '${encodeURIComponent(originalContent)}')" style='margin-left: 10px; padding: 2px 8px; font-size: 12px; background: #12b7f5; color: white; border: none; border-radius: 10px; cursor: pointer;'>重新编辑</button>
-                            ` : '';
-                            
-                            messageElement.innerHTML = `
-                                <div class='message-content'>
-                                    <div class='message-text' style='color: #999; font-style: italic; display: flex; align-items: center;'>
-                                        你撤回了一条消息${editButton}
-                                    </div>
-                                    <div class='message-time'>${new Date().toLocaleString('zh-CN', {year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute:'2-digit'})}</div>
-                                </div>
-                                <div class='message-avatar'>
-                                    <?php if (!empty($current_user['avatar'])): ?>
-                                        <img src='<?php echo $current_user['avatar']; ?>' alt='<?php echo $username; ?>' style='width: 100%; height: 100%; border-radius: 50%; object-fit: cover;'>
-                                    <?php else: ?>
-                                        <?php echo substr($username, 0, 2); ?>
-                                    <?php endif; ?>
-                                </div>
-                            `;
-                        }
-                        showNotification('消息撤回成功', 'success');
-                    } else {
-                        showNotification('消息撤回失败：' + (data.message || '未知错误'), 'error');
-                    }
-                })
-                .catch(error => {
-                    console.error('撤回消息失败:', error);
-                    showNotification('消息撤回失败，网络错误', 'error');
-                });
-            }
-        }
-        
-        // 重新编辑撤回的消息
-        function editRecalledMessage(messageId, chatType, chatId, originalContent) {
-            // 将撤回的消息内容填充到输入框
-            const messageInput = document.getElementById('message-input');
-            messageInput.value = decodeURIComponent(originalContent);
-            messageInput.focus();
-            
-            // 滚动到底部
-            messageInput.scrollTop = messageInput.scrollHeight;
-            
-            // 可以选择自动发送编辑后的消息，或者让用户手动发送
-            // 如果需要自动发送，可以调用 sendMessage() 函数
-        }
+
         
         // 切换消息操作菜单
-        function toggleMessageActions(event, button) {
-            event.stopPropagation();
-            
+        function toggleMessageActions(button) {
             // 关闭所有其他消息操作菜单
-            document.querySelectorAll('.message-actions-menu').forEach(menu => {
-                menu.style.display = 'none';
+            document.querySelectorAll('.message-actions-menu, .message-action-menu').forEach(menu => {
+                if (menu !== button.nextElementSibling) {
+                    menu.style.display = 'none';
+                }
             });
-            
             // 切换当前菜单
             const menu = button.nextElementSibling;
             menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
@@ -9050,6 +10467,13 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         let initialX = 0;
         let initialY = 0;
         
+        // HOYO-MiX 音乐模式相关变量
+        let currentMusicMode = 'random'; // 当前音乐模式：'random' 或 'hoyo'
+        let hoyoSongList = []; // HOYO-MiX 歌曲列表
+        let hoyoCurrentIndex = 0; // 当前播放的歌曲索引
+        let hoyoUsedPages = []; // 已使用的随机页码列表
+        let hoyoCurrentPage = 0; // 当前页码
+        
         // 格式化时间显示（秒 -> mm:ss）
         function formatTime(seconds) {
             if (isNaN(seconds)) return '0:00';
@@ -9212,6 +10636,174 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             audioPlayer.volume = 0.8; // 默认音量80%
         }
         
+        // 获取当前音乐模式
+        async function getCurrentMusicMode() {
+            try {
+                const settings = await indexedDBManager.getSettings();
+                return settings['setting-music-mode'] || 'random';
+            } catch (error) {
+                return localStorage.getItem('setting-music-mode') || 'random';
+            }
+        }
+        
+        // 生成1-329之间的随机页码，确保不重复
+        function generateRandomPage() {
+            if (hoyoUsedPages.length >= 329) {
+                // 重置已使用列表
+                hoyoUsedPages = [];
+            }
+            
+            let page;
+            do {
+                page = Math.floor(Math.random() * 329) + 1;
+            } while (hoyoUsedPages.includes(page));
+            
+            hoyoUsedPages.push(page);
+            return page;
+        }
+        
+        // 获取HOYO-MiX歌曲列表
+        async function getHoyoSongList() {
+            try {
+                // 生成随机页码
+                const page = generateRandomPage();
+                hoyoCurrentPage = page;
+                
+                // 请求歌曲列表
+                const response = await fetch(`https://api.vkeys.cn/v2/music/tencent/singer/songlist?mid=001uz8tl04tdL8&page=${page}`);
+                const data = await response.json();
+                
+                if (data.code === 200 && data.data && Array.isArray(data.data)) {
+                    // 提取歌曲ID列表
+                    const songIds = data.data.map(item => item.id).filter(id => id);
+                    
+                    if (songIds.length > 0) {
+                        // 获取每首歌的详细信息
+                        const songDetails = [];
+                        for (const id of songIds) {
+                            try {
+                                const detailResponse = await fetch(`https://api.vkeys.cn/v2/music/tencent?id=${id}`);
+                                const detailData = await detailResponse.json();
+                                
+                                if (detailData.code === 200 && detailData.data) {
+                                    songDetails.push({
+                                        id: id,
+                                        name: detailData.data.song || '未知歌曲',
+                                        artistsname: detailData.data.singer || '未知歌手',
+                                        picurl: detailData.data.cover || '',
+                                        url: detailData.data.url || ''
+                                    });
+                                }
+                            } catch (error) {
+                                console.error(`获取歌曲${id}详情失败:`, error);
+                                // 忽略失败的歌曲，继续处理下一首
+                            }
+                        }
+                        
+                        return songDetails;
+                    }
+                }
+                
+                return [];
+            } catch (error) {
+                console.error('获取HOYO-MiX歌曲列表失败:', error);
+                return [];
+            }
+        }
+        
+        // 加载HOYO-MiX歌曲
+        async function loadHoyoSong() {
+            // 如果歌曲列表为空或已播放完毕，获取新的歌曲列表
+            if (hoyoSongList.length === 0 || hoyoCurrentIndex >= hoyoSongList.length) {
+                document.getElementById('player-status').textContent = '正在获取HOYO-MiX歌曲列表...';
+                hoyoSongList = await getHoyoSongList();
+                hoyoCurrentIndex = 0;
+                
+                // 如果获取失败，显示错误信息
+                if (hoyoSongList.length === 0) {
+                    document.getElementById('player-status').textContent = '获取HOYO-MiX歌曲失败，请重试';
+                    return false;
+                }
+            }
+            
+            // 获取当前要播放的歌曲
+            const song = hoyoSongList[hoyoCurrentIndex];
+            currentSong = song;
+            hoyoCurrentIndex++;
+            
+            // 更新歌曲信息
+            document.getElementById('song-title').textContent = `${song.name} - ${song.artistsname}`;
+            document.getElementById('artist-name').textContent = song.artistsname;
+            
+            // 在进度条上边显示歌曲信息
+            const progressSongInfo = document.getElementById('progress-song-info');
+            progressSongInfo.textContent = `${song.name} - ${song.artistsname}`;
+            
+            // 设置专辑图片，确保使用HTTPS
+            const albumImage = document.getElementById('album-image');
+            if (song.picurl) {
+                let picUrl = song.picurl;
+                if (picUrl.startsWith('http://')) {
+                    picUrl = picUrl.replace('http://', 'https://');
+                }
+                albumImage.src = picUrl;
+                albumImage.style.display = 'block';
+            } else {
+                albumImage.style.display = 'none';
+            }
+            
+            // 确保使用HTTPS
+            let audioUrl = song.url;
+            if (audioUrl && audioUrl.startsWith('http://')) {
+                audioUrl = audioUrl.replace('http://', 'https://');
+            }
+            
+            // 如果没有音频URL，尝试下一首
+            if (!audioUrl) {
+                return await loadHoyoSong();
+            }
+            
+            // 设置音频源
+            const audioPlayer = document.getElementById('audio-player');
+            
+            // 移除之前的事件监听器
+            audioPlayer.removeEventListener('canplaythrough', updateDuration);
+            audioPlayer.removeEventListener('timeupdate', updateProgress);
+            audioPlayer.removeEventListener('ended', loadNewSong);
+            
+            // 设置新的音频源
+            audioPlayer.src = audioUrl;
+            
+            // 重新添加事件监听器
+            audioPlayer.addEventListener('canplaythrough', updateDuration);
+            audioPlayer.addEventListener('timeupdate', updateProgress);
+            audioPlayer.addEventListener('ended', loadNewSong);
+            
+            // 添加错误处理
+            audioPlayer.addEventListener('error', (event) => {
+                console.error('音频播放错误:', event);
+                // 播放出错时尝试下一首
+                setTimeout(() => {
+                    loadNewSong();
+                }, 1000);
+            });
+            
+            // 自动播放，添加错误处理
+            try {
+                await audioPlayer.play();
+                isPlaying = true;
+                document.getElementById('play-btn').textContent = '⏸';
+                document.getElementById('player-status').textContent = '正在播放';
+                return true;
+            } catch (playError) {
+                console.error('自动播放失败:', playError);
+                isPlaying = false;
+                document.getElementById('play-btn').textContent = '▶';
+                document.getElementById('player-status').textContent = '已暂停（点击播放）';
+                return true;
+            }
+        }
+        
         // 初始化音乐播放器
         async function initMusicPlayer() {
             try {
@@ -9242,6 +10834,16 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             document.getElementById('player-status').textContent = '正在加载音乐...';
             
             try {
+                // 获取当前音乐模式
+                currentMusicMode = await getCurrentMusicMode();
+                
+                if (currentMusicMode === 'hoyo') {
+                    // HOYO-MiX模式
+                    await loadHoyoSong();
+                    return;
+                }
+                
+                // 随机音乐模式
                 // 请求音乐数据
                 const response = await fetch('https://api.qqsuu.cn/api/dm-randmusic?sort=%E7%83%AD%E6%AD%8C%E6%A6%9C&format=json');
                 const data = await response.json();

@@ -117,6 +117,9 @@ CREATE TABLE IF NOT EXISTS group_members (
     UNIQUE KEY unique_group_member (group_id, user_id)
 );
 
+-- 更新全员群聊名称为世界大厅
+UPDATE groups SET name = REPLACE(name, '全员群聊', '世界大厅') WHERE all_user_group > 0;
+
 -- 群聊消息表
 CREATE TABLE IF NOT EXISTS group_messages (
     id INT AUTO_INCREMENT PRIMARY KEY,
