@@ -533,6 +533,63 @@
             }
         }
 
+        /* 开关样式 */
+        .toggle-switch {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: relative;
+            display: inline-block;
+            width: 46px;
+            height: 24px;
+            background-color: #e0e0e0;
+            border-radius: 24px;
+            transition: .4s;
+            margin-right: 12px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            border-radius: 50%;
+            transition: .4s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        input:checked + .slider {
+            background: linear-gradient(135deg, #12b7f5 0%, #00a2e8 100%);
+        }
+
+        input:focus + .slider {
+            box-shadow: 0 0 1px #12b7f5;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(22px);
+        }
+        
+        .toggle-label {
+            font-size: 15px;
+            color: #333;
+            font-weight: 600;
+        }
+
         /* 进度条样式 */
         .progress-container {
             margin-top: 20px;
@@ -655,9 +712,26 @@
                         <input type="text" id="db-host" name="host" value="localhost" placeholder="例如: localhost">
                         <div class="hint">如果数据库和网站在同一台服务器上，通常填写 localhost 或 127.0.0.1</div>
                     </div>
-                    <!-- 隐藏的默认配置 -->
-                    <input type="hidden" id="db-name" name="database" value="chat">
-                    <input type="hidden" id="db-user" name="username" value="root">
+                    
+                    <div class="form-group">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="compat-mode">
+                            <span class="slider"></span>
+                            <span class="toggle-label">兼容模式 (自定义数据库用户)</span>
+                        </label>
+                    </div>
+
+                    <!-- 兼容模式字段 -->
+                    <div id="compat-fields" style="display: none;">
+                        <div class="form-group">
+                            <label for="db-name">数据库名称</label>
+                            <input type="text" id="db-name" name="database" value="chat" placeholder="例如: chat">
+                        </div>
+                        <div class="form-group">
+                            <label for="db-user">数据库用户名</label>
+                            <input type="text" id="db-user" name="username" value="root" placeholder="例如: root">
+                        </div>
+                    </div>
 
                     <div class="form-row">
                         <div class="form-group">
@@ -1168,6 +1242,15 @@
         window.onload = function() {
             getVersionInfo();
             nextBtn.onclick = handleNext;
+
+            // 兼容模式切换
+            const compatMode = document.getElementById('compat-mode');
+            const compatFields = document.getElementById('compat-fields');
+            if (compatMode && compatFields) {
+                compatMode.addEventListener('change', function() {
+                    compatFields.style.display = this.checked ? 'block' : 'none';
+                });
+            }
         };
     </script>
 </body>
