@@ -201,10 +201,16 @@ function importDatabase() {
             // ... (复用下面的配置文件更新逻辑) ...
             $configFile = dirname(__DIR__) . '/config.php';
             if (file_exists($configFile)) {
-                $configContent = file_get_contents($configFile);
-                $escapedPassword = addslashes($password);
                 $lines = file($configFile);
                 $newLines = [];
+                $escapedPassword = addslashes($password);
+             $escapedUser = addslashes($username);
+             $escapedName = addslashes($database);
+             $escapedHost = addslashes($host);
+             if ($port != 3306) {
+                 $escapedHost .= ";port=" . intval($port);
+             }
+                
                 foreach ($lines as $line) {
                     if (strpos($line, "define('DB_PASS'") !== false) {
                         $newLine = preg_replace("/\?: '([^']*)'\);/", "?: '$escapedPassword');", $line);
@@ -212,6 +218,15 @@ function importDatabase() {
                              $newLine = "define('DB_PASS', getEnvVar('DB_PASS') ?: getEnvVar('DB_PASSWORD') ?: getEnvVar('MYSQL_ROOT_PASSWORD') ?: getConfig('db_password') ?: '$escapedPassword');" . PHP_EOL;
                         }
                         $newLines[] = $newLine;
+                    } elseif (strpos($line, "define('DB_USER'") !== false) {
+                        $newLine = preg_replace("/\?: '([^']*)'\);/", "?: '$escapedUser');", $line);
+                        $newLines[] = $newLine ?: $line;
+                    } elseif (strpos($line, "define('DB_NAME'") !== false) {
+                        $newLine = preg_replace("/\?: '([^']*)'\);/", "?: '$escapedName');", $line);
+                        $newLines[] = $newLine ?: $line;
+                    } elseif (strpos($line, "define('DB_HOST'") !== false) {
+                        $newLine = preg_replace("/\?: '([^']*)'\);/", "?: '$escapedHost');", $line);
+                        $newLines[] = $newLine ?: $line;
                     } else {
                         $newLines[] = $line;
                     }
@@ -274,10 +289,16 @@ function importDatabase() {
         
         // 直接读取并修改config.php中的DB_PASS默认值
         if (file_exists($configFile)) {
-            $configContent = file_get_contents($configFile);
-            $escapedPassword = addslashes($password);
             $lines = file($configFile);
             $newLines = [];
+            $escapedPassword = addslashes($password);
+            $escapedUser = addslashes($username);
+            $escapedName = addslashes($database);
+            $escapedHost = addslashes($host);
+            if ($port != 3306) {
+                $escapedHost .= ";port=" . intval($port);
+            }
+            
             foreach ($lines as $line) {
                 if (strpos($line, "define('DB_PASS'") !== false) {
                     $newLine = preg_replace("/\?: '([^']*)'\);/", "?: '$escapedPassword');", $line);
@@ -285,6 +306,15 @@ function importDatabase() {
                          $newLine = "define('DB_PASS', getEnvVar('DB_PASS') ?: getEnvVar('DB_PASSWORD') ?: getEnvVar('MYSQL_ROOT_PASSWORD') ?: getConfig('db_password') ?: '$escapedPassword');" . PHP_EOL;
                     }
                     $newLines[] = $newLine;
+                } elseif (strpos($line, "define('DB_USER'") !== false) {
+                    $newLine = preg_replace("/\?: '([^']*)'\);/", "?: '$escapedUser');", $line);
+                    $newLines[] = $newLine ?: $line;
+                } elseif (strpos($line, "define('DB_NAME'") !== false) {
+                    $newLine = preg_replace("/\?: '([^']*)'\);/", "?: '$escapedName');", $line);
+                    $newLines[] = $newLine ?: $line;
+                } elseif (strpos($line, "define('DB_HOST'") !== false) {
+                    $newLine = preg_replace("/\?: '([^']*)'\);/", "?: '$escapedHost');", $line);
+                    $newLines[] = $newLine ?: $line;
                 } else {
                     $newLines[] = $line;
                 }

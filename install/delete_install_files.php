@@ -14,6 +14,8 @@ $rootDir = dirname(__DIR__);
 $filesToDelete = [
     $rootDir . '/install.php',
     $rootDir . '/db.sql',
+    $rootDir . '/lock', // 删除部署锁文件
+    $rootDir . '/.lock', // 删除旧的部署锁文件
     $rootDir . '/install/delete_install_files.php' // 删除自己
 ];
 
