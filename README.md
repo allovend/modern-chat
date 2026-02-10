@@ -187,8 +187,11 @@ define('DB_PASS', 'your_password');
 ```bash
 chmod 777 uploads/
 ```
+#### 5. 解锁网页
 
-#### 5. 启动 web 服务器
+删除网站目录下的lock文件并正式解锁 web 服务器。
+
+#### 6. 启动 web 服务器
 
 使用 Apache 或 Nginx 启动您的 web 服务器，然后访问项目目录。
 
