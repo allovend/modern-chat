@@ -241,24 +241,10 @@ require_once 'db.php';
         .helper-links {
             margin-top: 20px;
             display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        .helper-links-top {
-            display: flex;
             justify-content: space-between;
             align-items: center;
-        }
-
-        .helper-links-bottom {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            padding-top: 15px;
-            border-top: 1px solid #e0e0e0;
-            font-size: 13px;
-            color: #999;
+            font-size: 14px;
+            color: #666;
         }
 
         .helper-links a {
@@ -273,15 +259,182 @@ require_once 'db.php';
             text-decoration: underline;
         }
 
-        .helper-links-bottom a {
-            font-weight: 400;
-            color: #999;
+        /* 协议复选框样式 */
+        .agreement-checkbox {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
         }
 
-        .helper-links-bottom a:hover {
-            color: #12b7f5;
+        .agreement-checkbox input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            margin: 0 10px 0 0;
+            cursor: pointer;
+            accent-color: #12b7f5;
         }
-        
+
+        .agreement-checkbox label {
+            font-size: 13px;
+            color: #666;
+            cursor: pointer;
+            flex: 1;
+            margin: 0;
+        }
+
+        .agreement-checkbox a {
+            color: #12b7f5;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .agreement-checkbox a:hover {
+            text-decoration: underline;
+        }
+
+        /* 协议预览弹窗样式 */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            animation: modalSlideIn 0.3s ease-out;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 24px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 20px;
+            color: #333;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 28px;
+            color: #999;
+            cursor: pointer;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .modal-close:hover {
+            background: #f5f5f5;
+            color: #333;
+        }
+
+        .modal-body {
+            padding: 24px;
+            overflow-y: auto;
+            flex: 1;
+            line-height: 1.8;
+            color: #555;
+            font-size: 14px;
+        }
+
+        .modal-body h1, .modal-body h2, .modal-body h3 {
+            color: #333;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+
+        .modal-body h1 { font-size: 20px; }
+        .modal-body h2 { font-size: 18px; }
+        .modal-body h3 { font-size: 16px; }
+
+        .modal-body ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+
+        .modal-body li {
+            margin: 5px 0;
+        }
+
+        .modal-footer {
+            padding: 16px 24px;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        .modal-btn {
+            padding: 10px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .modal-btn-primary {
+            background: #12b7f5;
+            color: white;
+        }
+
+        .modal-btn-primary:hover {
+            background: #00a2e8;
+        }
+
+        .modal-btn-secondary {
+            background: #f5f5f5;
+            color: #666;
+        }
+
+        .modal-btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
         /* 验证码容器样式 */
         #captcha {
             display: flex;
@@ -295,11 +448,11 @@ require_once 'db.php';
                 margin: 20px;
                 padding: 30px 20px;
             }
-            
+
             h1 {
                 font-size: 24px;
             }
-            
+
             .helper-links {
                 flex-direction: column;
                 align-items: flex-start;
@@ -418,24 +571,25 @@ require_once 'db.php';
                 
                 <!-- 浏览器指纹隐藏字段 -->
                 <input type="hidden" name="browser_fingerprint" id="browser_fingerprint">
-                
+
+                <!-- 协议同意复选框 -->
+                <div class="agreement-checkbox">
+                    <input type="checkbox" id="agree_terms" name="agree_terms">
+                    <label for="agree_terms">
+                        我已阅读并同意 <a href="javascript:void(0)" onclick="showModal('terms')">《用户协议》</a> 和 <a href="javascript:void(0)" onclick="showModal('privacy')">《隐私协议》</a>
+                    </label>
+                </div>
+
                 <button type="submit" class="btn">登录</button>
             </form>
             
             <div class="helper-links">
-                <div class="helper-links-top">
-                    <div class="forget-password">
-                        忘记密码？ <a href="forgetpassword.php">点击这里</a>
-                    </div>
-                    
-                    <div class="register-link">
-                        还没有账户？ <a href="register.php">立即注册</a>
-                    </div>
+                <div class="forget-password">
+                    忘记密码？ <a href="forgetpassword.php">点击这里</a>
                 </div>
-
-                <div class="helper-links-bottom">
-                    <a href="Agreement/terms_of_service.md" target="_blank">用户协议</a>
-                    <a href="Agreement/privacy_policy.md" target="_blank">隐私协议</a>
+                
+                <div class="register-link">
+                    还没有账户？ <a href="register.php">立即注册</a>
                 </div>
             </div>
         </div>
@@ -455,6 +609,23 @@ require_once 'db.php';
             </div>
         </div>
         <?php } ?>
+    </div>
+
+    <!-- 协议预览弹窗 -->
+    <div class="modal-overlay" id="agreementModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">协议标题</h2>
+                <button class="modal-close" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                协议内容加载中...
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn modal-btn-secondary" onclick="closeModal()">关闭</button>
+                <button class="modal-btn modal-btn-primary" onclick="agreeAndClose()">已阅读并同意</button>
+            </div>
+        </div>
     </div>
     
     <script src="./js/qrcode.min.js"></script>
@@ -700,6 +871,13 @@ require_once 'db.php';
         
         // 表单提交处理，生成浏览器指纹
         async function handleLoginSubmit(form) {
+            // 检查是否同意协议
+            const agreeCheckbox = document.getElementById('agree_terms');
+            if (!agreeCheckbox.checked) {
+                alert('请先阅读并同意用户协议和隐私协议');
+                return false;
+            }
+
             // 检查极验验证码是否通过
             if (!geetestCaptcha || !geetestCaptcha.getValidate()) {
                 alert('请完成验证码验证');
@@ -741,6 +919,95 @@ require_once 'db.php';
         document.addEventListener('DOMContentLoaded', () => {
             if (document.getElementById('scan-login').classList.contains('active')) {
                 initScanLogin();
+            }
+        });
+
+        // 协议预览功能
+        const agreements = {
+            terms: {
+                title: '用户协议',
+                url: 'Agreement/terms_of_service.md'
+            },
+            privacy: {
+                title: '隐私协议',
+                url: 'Agreement/privacy_policy.md'
+            }
+        };
+
+        let currentAgreement = null;
+
+        // 显示协议弹窗
+        async function showModal(type) {
+            currentAgreement = type;
+            const modal = document.getElementById('agreementModal');
+            const titleEl = document.getElementById('modalTitle');
+            const bodyEl = document.getElementById('modalBody');
+
+            titleEl.textContent = agreements[type].title;
+            bodyEl.innerHTML = '<div style="text-align: center; padding: 40px;">加载中...</div>';
+
+            modal.classList.add('active');
+
+            try {
+                const response = await fetch(agreements[type].url);
+                if (response.ok) {
+                    const content = await response.text();
+                    bodyEl.innerHTML = renderMarkdown(content);
+                } else {
+                    bodyEl.innerHTML = '<div style="text-align: center; padding: 40px; color: #ff4d4f;">加载失败，请稍后重试</div>';
+                }
+            } catch (error) {
+                console.error('加载协议失败:', error);
+                bodyEl.innerHTML = '<div style="text-align: center; padding: 40px; color: #ff4d4f;">加载失败，请稍后重试</div>';
+            }
+        }
+
+        // 关闭弹窗
+        function closeModal() {
+            document.getElementById('agreementModal').classList.remove('active');
+            currentAgreement = null;
+        }
+
+        // 同意并关闭
+        function agreeAndClose() {
+            const agreeCheckbox = document.getElementById('agree_terms');
+            agreeCheckbox.checked = true;
+            closeModal();
+        }
+
+        // 简单的 Markdown 渲染
+        function renderMarkdown(text) {
+            return text
+                // 标题
+                .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+                .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+                .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+                // 分隔线
+                .replace(/^---$/gm, '<hr style="margin: 20px 0; border: none; border-top: 1px solid #e0e0e0;">')
+                // 粗体
+                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                // 列表
+                .replace(/^- (.+)$/gm, '<li>$1</li>')
+                .replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>')
+                // 段落
+                .replace(/^([^<\n].+)$/gm, '<p>$1</p>')
+                // 清理空段落
+                .replace(/<p><\/p>/g, '')
+                .replace(/<p>(<h[1-6]>)/g, '$1')
+                .replace(/(<\/h[1-6]>)<\/p>/g, '$1');
+        }
+
+        // 点击遮罩层关闭弹窗
+        document.getElementById('agreementModal').addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal-overlay')) {
+                closeModal();
+            }
+        });
+
+        // ESC键关闭弹窗
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
             }
         });
     </script>
