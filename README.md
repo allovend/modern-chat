@@ -21,11 +21,14 @@
 
   - https://chat.hyacine.com.cn/chat
   - 如果觉得项目好可以向开发者赞助（自愿）
+  - wx:
     <p>
-    
-    <img src="https://www.varesa.top/wallpapers/mm_facetoface_collect_qrcode_1770705339865.png"/>
-    <img src="https://www.varesa.top/wallpapers/1770705388.jpg" />
-</p>
+    <img src="https://www.varesa.top/wallpapers/1770705339865.png"/>
+    </p>
+  - zfb:
+    <p>
+    <img src="https://www.varesa.top/wallpapers/177070538832.jpg" />
+    </p>
 ---
 
 <p>
