@@ -260,39 +260,24 @@ require_once 'db.php';
         }
 
         /* 协议复选框样式 */
-        .agreement-checkbox {
-            display: flex;
-            align-items: center;
+        .agreement-hint {
             margin-bottom: 20px;
             padding: 12px;
             background: #f8f9fa;
             border-radius: 8px;
             border: 1px solid #e0e0e0;
-        }
-
-        .agreement-checkbox input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
-            margin: 0 10px 0 0;
-            cursor: pointer;
-            accent-color: #12b7f5;
-        }
-
-        .agreement-checkbox label {
             font-size: 13px;
             color: #666;
-            cursor: pointer;
-            flex: 1;
-            margin: 0;
+            text-align: center;
         }
 
-        .agreement-checkbox a {
+        .agreement-hint a {
             color: #12b7f5;
             text-decoration: none;
             font-weight: 600;
         }
 
-        .agreement-checkbox a:hover {
+        .agreement-hint a:hover {
             text-decoration: underline;
         }
 
@@ -435,6 +420,74 @@ require_once 'db.php';
             background: #e0e0e0;
         }
 
+        .modal-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .modal-btn-primary:disabled {
+            background: #ccc;
+        }
+
+        /* 阅读进度提示 */
+        .read-progress {
+            position: sticky;
+            top: 0;
+            background: white;
+            padding: 12px 24px;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 13px;
+            color: #666;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 10;
+        }
+
+        .read-progress-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 180px;
+        }
+
+        .read-progress-bar {
+            flex: 1;
+            height: 4px;
+            background: #e0e0e0;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .read-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #12b7f5, #00a2e8);
+            width: 0;
+            transition: width 0.3s ease;
+        }
+
+        .read-progress-text {
+            min-width: 80px;
+            text-align: right;
+            font-size: 12px;
+            color: #999;
+        }
+
+        .read-progress .check-icon {
+            display: none;
+            color: #52c41a;
+            font-size: 14px;
+        }
+
+        .read-progress.completed .check-icon {
+            display: block;
+        }
+
+        .read-progress.completed .read-progress-text {
+            color: #52c41a;
+            font-weight: 600;
+        }
+
         /* 验证码容器样式 */
         #captcha {
             display: flex;
@@ -572,15 +625,12 @@ require_once 'db.php';
                 <!-- 浏览器指纹隐藏字段 -->
                 <input type="hidden" name="browser_fingerprint" id="browser_fingerprint">
 
-                <!-- 协议同意复选框 -->
-                <div class="agreement-checkbox">
-                    <input type="checkbox" id="agree_terms" name="agree_terms">
-                    <label for="agree_terms">
-                        我已阅读并同意 <a href="javascript:void(0)" onclick="showModal('terms')">《用户协议》</a> 和 <a href="javascript:void(0)" onclick="showModal('privacy')">《隐私协议》</a>
-                    </label>
+                <!-- 协议同意提示 -->
+                <div class="agreement-hint">
+                    登录即表示您已阅读并同意 <a href="javascript:void(0)" onclick="showModal('terms')">《用户协议》</a> 和 <a href="javascript:void(0)" onclick="showModal('privacy')">《隐私协议》</a>
                 </div>
 
-                <button type="submit" class="btn">登录</button>
+                <button type="submit" class="btn" id="loginBtn">登录</button>
             </form>
             
             <div class="helper-links">
@@ -618,12 +668,23 @@ require_once 'db.php';
                 <h2 id="modalTitle">协议标题</h2>
                 <button class="modal-close" onclick="closeModal()">×</button>
             </div>
+            <div class="read-progress" id="readProgress">
+                <div class="read-progress-info">
+                    <span class="check-icon">✓</span>
+                    <span>阅读进度</span>
+                    <span id="timeRemaining" style="font-size: 12px; color: #999;">还需阅读 10 秒</span>
+                </div>
+                <div class="read-progress-bar">
+                    <div class="read-progress-fill" id="progressFill"></div>
+                </div>
+                <span class="read-progress-text" id="progressText">0%</span>
+            </div>
             <div class="modal-body" id="modalBody">
                 协议内容加载中...
             </div>
             <div class="modal-footer">
                 <button class="modal-btn modal-btn-secondary" onclick="closeModal()">关闭</button>
-                <button class="modal-btn modal-btn-primary" onclick="agreeAndClose()">已阅读并同意</button>
+                <button class="modal-btn modal-btn-primary" id="agreeBtn" disabled onclick="agreeAndClose()">请先完整阅读协议</button>
             </div>
         </div>
     </div>
@@ -871,10 +932,13 @@ require_once 'db.php';
         
         // 表单提交处理，生成浏览器指纹
         async function handleLoginSubmit(form) {
-            // 检查是否同意协议
-            const agreeCheckbox = document.getElementById('agree_terms');
-            if (!agreeCheckbox.checked) {
-                alert('请先阅读并同意用户协议和隐私协议');
+            // 检查是否两个协议都已阅读
+            if (!canLogin()) {
+                const missing = [];
+                if (!readStatus.terms.completed) missing.push('用户协议');
+                if (!readStatus.privacy.completed) missing.push('隐私协议');
+
+                alert('请先完整阅读协议：' + missing.join('、'));
                 return false;
             }
 
@@ -934,7 +998,15 @@ require_once 'db.php';
             }
         };
 
+        const MIN_READ_TIME = 10; // 最小阅读时间（秒）
+
         let currentAgreement = null;
+        let readStatus = {
+            terms: { scrolledToBottom: false, readTime: 0, completed: false },
+            privacy: { scrolledToBottom: false, readTime: 0, completed: false }
+        };
+        let readTimer = null;
+        let readStartTime = null;
 
         // 显示协议弹窗
         async function showModal(type) {
@@ -942,9 +1014,39 @@ require_once 'db.php';
             const modal = document.getElementById('agreementModal');
             const titleEl = document.getElementById('modalTitle');
             const bodyEl = document.getElementById('modalBody');
+            const agreeBtn = document.getElementById('agreeBtn');
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            const timeRemaining = document.getElementById('timeRemaining');
+            const readProgress = document.getElementById('readProgress');
 
             titleEl.textContent = agreements[type].title;
             bodyEl.innerHTML = '<div style="text-align: center; padding: 40px;">加载中...</div>';
+
+            // 重置进度
+            progressFill.style.width = '0%';
+            progressText.textContent = '0%';
+            readProgress.classList.remove('completed');
+            timeRemaining.textContent = '还需阅读 ' + MIN_READ_TIME + ' 秒';
+
+            // 清除之前的计时器
+            if (readTimer) {
+                clearInterval(readTimer);
+                readTimer = null;
+            }
+
+            // 根据阅读状态设置按钮
+            if (readStatus[type].completed) {
+                agreeBtn.disabled = false;
+                agreeBtn.textContent = '已阅读并同意';
+                readProgress.classList.add('completed');
+                progressFill.style.width = '100%';
+                progressText.textContent = '100%';
+                timeRemaining.textContent = '已完成阅读';
+            } else {
+                agreeBtn.disabled = true;
+                agreeBtn.textContent = '请先完整阅读协议';
+            }
 
             modal.classList.add('active');
 
@@ -953,6 +1055,11 @@ require_once 'db.php';
                 if (response.ok) {
                     const content = await response.text();
                     bodyEl.innerHTML = renderMarkdown(content);
+
+                    // 添加滚动监听
+                    setTimeout(() => {
+                        setupScrollListener(type);
+                    }, 100);
                 } else {
                     bodyEl.innerHTML = '<div style="text-align: center; padding: 40px; color: #ff4d4f;">加载失败，请稍后重试</div>';
                 }
@@ -962,17 +1069,100 @@ require_once 'db.php';
             }
         }
 
+        // 设置滚动监听
+        function setupScrollListener(type) {
+            const bodyEl = document.getElementById('modalBody');
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            const agreeBtn = document.getElementById('agreeBtn');
+            const readProgress = document.getElementById('readProgress');
+            const timeRemaining = document.getElementById('timeRemaining');
+
+            // 如果该协议尚未完成，开始计时
+            if (!readStatus[type].completed) {
+                readStartTime = Date.now();
+                readTimer = setInterval(() => {
+                    const elapsed = Math.floor((Date.now() - readStartTime) / 1000);
+                    const remaining = Math.max(0, MIN_READ_TIME - elapsed);
+
+                    if (remaining > 0) {
+                        timeRemaining.textContent = '还需阅读 ' + remaining + ' 秒';
+                    } else {
+                        timeRemaining.textContent = '阅读时间已达要求';
+                        checkCanAgree(type);
+                    }
+                }, 1000);
+            }
+
+            bodyEl.onscroll = function() {
+                const scrollTop = bodyEl.scrollTop;
+                const scrollHeight = bodyEl.scrollHeight;
+                const clientHeight = bodyEl.clientHeight;
+
+                // 计算滚动百分比
+                const scrollPercent = Math.min(100, Math.round((scrollTop / (scrollHeight - clientHeight)) * 100));
+
+                progressFill.style.width = scrollPercent + '%';
+                progressText.textContent = scrollPercent + '%';
+
+                // 判断是否滚动到底部（允许5px误差）
+                if (scrollTop + clientHeight >= scrollHeight - 5) {
+                    readStatus[type].scrolledToBottom = true;
+                    checkCanAgree(type);
+                }
+            };
+        }
+
+        // 检查是否可以同意
+        function checkCanAgree(type) {
+            const agreeBtn = document.getElementById('agreeBtn');
+            const readProgress = document.getElementById('readProgress');
+            const timeRemaining = document.getElementById('timeRemaining');
+
+            const elapsed = Math.floor((Date.now() - readStartTime) / 1000);
+            const timeMet = elapsed >= MIN_READ_TIME;
+            const scrolled = readStatus[type].scrolledToBottom;
+
+            if (scrolled && timeMet) {
+                readStatus[type].completed = true;
+                readStatus[type].readTime = elapsed;
+
+                agreeBtn.disabled = false;
+                agreeBtn.textContent = '已阅读并同意';
+                readProgress.classList.add('completed');
+                timeRemaining.textContent = '已完成阅读';
+
+                // 清除计时器
+                if (readTimer) {
+                    clearInterval(readTimer);
+                    readTimer = null;
+                }
+            }
+        }
+
         // 关闭弹窗
         function closeModal() {
+            const bodyEl = document.getElementById('modalBody');
+            if (bodyEl.onscroll) {
+                bodyEl.onscroll = null;
+            }
+            if (readTimer) {
+                clearInterval(readTimer);
+                readTimer = null;
+            }
             document.getElementById('agreementModal').classList.remove('active');
             currentAgreement = null;
         }
 
         // 同意并关闭
         function agreeAndClose() {
-            const agreeCheckbox = document.getElementById('agree_terms');
-            agreeCheckbox.checked = true;
             closeModal();
+        }
+
+        // 检查登录是否允许
+        function canLogin() {
+            // 两个协议都必须完成阅读
+            return readStatus.terms.completed && readStatus.privacy.completed;
         }
 
         // 简单的 Markdown 渲染
