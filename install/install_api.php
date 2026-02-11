@@ -592,7 +592,8 @@ function skipSmsConfig() {
     try {
         // 1. 覆盖文件
         $sourceDir = __DIR__;
-        $targetDir = dirname(__DIR__) . '/../';
+        // 修正路径：目标是项目根目录，即 install/ 的上一级
+        $targetDir = dirname(__DIR__) . '/';
         
         $filesToCopy = ['register.php', 'register_process.php'];
         
@@ -600,22 +601,40 @@ function skipSmsConfig() {
             $source = $sourceDir . '/' . $file;
             $target = $targetDir . $file;
             
+            // 确保清除文件状态缓存，避免 file_exists 返回旧结果
+            clearstatcache();
+            
             if (file_exists($source)) {
-                if (!copy($source, $target)) {
-                    InstallCommon::jsonResponse(false, "无法复制文件 $file");
+                // 如果目标文件存在，先删除
+                if (file_exists($target)) {
+                    // 尝试修改权限，防止因只读导致无法删除
+                    @chmod($target, 0777);
+                    if (!unlink($target)) {
+                        InstallCommon::jsonResponse(false, "无法删除目标文件 {$file} (路径: $target)，请检查权限或文件是否被占用");
+                    }
+                }
+                
+                // 移动文件（剪切）
+                if (!rename($source, $target)) {
+                    // 如果移动失败，尝试复制
+                    if (!copy($source, $target)) {
+                        InstallCommon::jsonResponse(false, "无法移动或复制文件 $file (从 $source 到 $target)");
+                    } else {
+                        // 复制成功后删除源文件
+                        unlink($source);
+                    }
                 }
             } else {
-                // 如果源文件不存在，可能是路径问题，尝试上一级
-                // 注意：install_api.php 在 install/ 目录下
-                // 那么 __DIR__ 是 .../install/
-                // 源文件应该在 .../install/register.php
-                // 我们在前面读取目录时看到 register.php 在 install/ 下
-                InstallCommon::jsonResponse(false, "源文件 $file 不存在");
+                // 如果源文件不存在，检查目标文件是否存在
+                // 如果目标文件已存在，我们假设之前可能已经移动过了，不报错
+                if (!file_exists($target)) {
+                     InstallCommon::jsonResponse(false, "源文件 $file 不存在且目标文件也不存在 (源: $source)");
+                }
             }
         }
         
         // 2. 确保 config.json 中 phone_sms 为 false
-        $configFile = dirname(__DIR__) . '/../config/config.json';
+        $configFile = dirname(__DIR__) . '/config/config.json';
         if (file_exists($configFile)) {
             $config = json_decode(file_get_contents($configFile), true);
             if (json_last_error() === JSON_ERROR_NONE) {
