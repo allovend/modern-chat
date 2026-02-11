@@ -5943,7 +5943,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             }
             
             console.log('发送撤回请求:', formData.toString());
-            fetch('send_message.php', {
+            fetch('recall_message.php', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded'
