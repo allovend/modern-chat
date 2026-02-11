@@ -25,7 +25,17 @@ $filesToDelete = [
     $rootDir . '/install/register.php',
     $rootDir . '/install/register_process.php',
     $rootDir . '/install/utils/mysql_error.php',
-    $rootDir . '/test.php'
+    $rootDir . '/test.php',
+    $rootDir . '/add_all_user_group_field.sql',
+    $rootDir . '/install/install_api.php',
+    $rootDir . '/composer.json',
+    $rootDir . '/composer.lock',
+    $rootDir . '/create_ban_table.sql',
+    $rootDir . '/create_group_invitation_tables.sql',
+    $rootDir . '/create_user_group_tables.sql',
+    $rootDir . '/create_ip_registration_table.sql',
+    $rootDir . '/create_user_tables.sql',
+    $rootDir . '/prohibited_words.sql'
 ];
 
 // 需要删除的目录（必须为空才能删除）
