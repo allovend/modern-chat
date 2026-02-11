@@ -235,16 +235,9 @@ $selected_group = null;
 // 初始化变量
 $selected_friend_id = null;
 
-// 如果没有选中的聊天对象，自动选择第一个好友或群聊
+// 如果没有选中的聊天对象，不自动选择
 if (!$selected_id) {
-    if ($chat_type === 'friend' && !empty($friends) && isset($friends[0]['id'])) {
-        $selected_id = $friends[0]['id'];
-        $selected_friend = $friends[0];
-        $selected_friend_id = $selected_id;
-    } elseif ($chat_type === 'group' && !empty($groups) && isset($groups[0]['id'])) {
-        $selected_id = $groups[0]['id'];
-        $selected_group = $group->getGroupInfo($selected_id);
-    }
+    // 手机端保持在列表页
 } else {
     // 有选中的聊天对象，获取详细信息
     if ($chat_type === 'friend') {
@@ -1181,21 +1174,22 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         
         .audio-progress-bar {
             width: 100%;
-            height: 18px;
-            background: #e9ecef;
-            border-radius: 10px;
+            height: 4px;
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 2px;
             cursor: pointer;
             overflow: visible;
             position: relative;
             z-index: 2002;
             pointer-events: all;
             transition: all 0.2s ease;
+            margin-top: 0; /* 移除垂直居中微调 */
         }
         
         .audio-progress {
             height: 100%;
             background: linear-gradient(90deg, #12b7f5 0%, #00a2e8 100%);
-            border-radius: 10px;
+            border-radius: 2px;
             transition: width 0.1s ease;
             position: relative;
             z-index: 2003;
@@ -1204,33 +1198,35 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         .audio-progress::after {
             content: '';
             position: absolute;
-            right: -15px;
+            right: -5px;
             top: 50%;
             transform: translateY(-50%);
-            width: 32px;
-            height: 32px;
+            width: 10px;
+            height: 10px;
             background: white;
             border-radius: 50%;
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
             z-index: 2004;
             transition: all 0.2s ease;
             cursor: pointer;
-            border: 3px solid #12b7f5;
+            border: 2px solid #12b7f5;
         }
         
         .audio-progress-bar:hover {
-            height: 22px;
+            height: 6px;
         }
         
         .audio-progress-bar:hover .audio-progress::after {
-            transform: translateY(-50%) scale(1.3);
+            transform: translateY(-50%) scale(1.1);
         }
         
         .audio-time {
-            font-size: 12px;
+            font-size: 11px;
             color: #666;
-            min-width: 40px;
+            min-width: 32px;
             text-align: center;
+            margin-left: 8px;
+            flex-shrink: 0;
         }
         
         .message.sent .audio-time {
@@ -2037,10 +2033,10 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 </div>
                 
                 <!-- 设置项：退出登录 -->
-                <div class="setting-item" style="display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-top: 1px solid #eaeaea; margin-top: 10px;">
+                <div class="setting-item" style="display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-top: 1px solid var(--border-color); margin-top: 10px;">
                     <div>
-                        <div style="font-size: 14px; font-weight: 600; color: #333;">退出登录</div>
-                        <div style="font-size: 12px; color: #999; margin-top: 2px;">退出当前账号，返回登录页面</div>
+                        <div style="font-size: 14px; font-weight: 600; color: var(--text-color);">退出登录</div>
+                        <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">退出当前账号，返回登录页面</div>
                     </div>
                     <button onclick="logout()" style="
                         padding: 8px 16px;
@@ -2059,23 +2055,23 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
     
     <!-- 密保设置弹窗 -->
     <div id="security-question-modal" class="modal" style="display: none;">
-        <div class="modal-content" style="width: 400px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #eaeaea;">
-                <h2 style="color: #333; font-size: 18px; font-weight: 600;">密保设置</h2>
-                <button id="security-question-close" onclick="closeSecurityQuestionModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #666;">×</button>
+        <div class="modal-content" style="width: 400px; background: var(--modal-bg); color: var(--text-color);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid var(--border-color);">
+                <h2 style="color: var(--text-color); font-size: 18px; font-weight: 600;">密保设置</h2>
+                <button id="security-question-close" onclick="closeSecurityQuestionModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-secondary);">×</button>
             </div>
             <form id="security-question-form" method="POST" action="">
                 <input type="hidden" name="action" value="set_security_question">
                 <div style="margin-bottom: 15px;">
-                    <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #333;">请设置密保问题</label>
-                    <input type="text" name="security_question" placeholder="例如：您的出生地是哪里？" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600; color: var(--text-color);">请设置密保问题</label>
+                    <input type="text" name="security_question" placeholder="例如：您的出生地是哪里？" required style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 4px; font-size: 14px; background: var(--input-bg); color: var(--text-color);">
                 </div>
                 <div style="margin-bottom: 15px;">
-                    <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #333;">答案</label>
-                    <input type="text" name="security_answer" placeholder="请输入答案" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600; color: var(--text-color);">答案</label>
+                    <input type="text" name="security_answer" placeholder="请输入答案" required style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 4px; font-size: 14px; background: var(--input-bg); color: var(--text-color);">
                 </div>
                 <div style="margin-top: 20px;">
-                    <button type="submit" style="width: 100%; padding: 12px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; transition: background-color 0.2s;">
+                    <button type="submit" style="width: 100%; padding: 12px; background: var(--primary-color); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; transition: background-color 0.2s;">
                         确定
                     </button>
                 </div>
@@ -2085,118 +2081,109 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
     
     <!-- 更多设置弹窗 -->
     <div id="more-settings-modal" class="modal" style="display: none;">
-        <div class="modal-content" style="width: 500px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #eaeaea;">
-                <h2 style="color: #333; font-size: 20px; font-weight: 600;">更多设置</h2>
-                <button onclick="closeMoreSettingsModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #666;">×</button>
+        <div class="modal-content" style="width: 90%; max-width: 500px; background: var(--modal-bg); color: var(--text-color);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid var(--border-color);">
+                <h2 style="color: var(--text-color); font-size: 18px; font-weight: 600;">更多设置</h2>
+                <button onclick="closeMoreSettingsModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-secondary);">×</button>
             </div>
             <div class="more-settings-content">
                 <!-- 用户信息部分 -->
-                <div style="display: flex; align-items: flex-start; padding: 20px; background: #f8f9fa; border-radius: 8px; margin-bottom: 20px;">
-                    <!-- 左侧32*32头像 -->
+                <div style="display: flex; align-items: flex-start; padding: 15px; background: var(--input-bg); border-radius: 8px; margin-bottom: 15px;">
+                    <!-- 左侧头像 -->
                     <div style="margin-right: 15px; text-align: center;">
                         <?php if (isset($current_user['avatar']) && $current_user['avatar'] && $current_user['avatar'] !== 'deleted_user'): ?>
-                            <img src="<?php echo $current_user['avatar']; ?>" alt="用户头像" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">
+                            <img src="<?php echo $current_user['avatar']; ?>" alt="用户头像" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
                         <?php else: ?>
-                            <div style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 14px;">
+                            <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 16px;">
                                 <?php echo substr($username, 0, 1); ?>
                             </div>
                         <?php endif; ?>
                         <button onclick="showChangeAvatarModal()" style="
                             margin-top: 8px;
                             padding: 4px 8px;
-                            background: #667eea;
+                            background: var(--primary-color);
                             color: white;
                             border: none;
                             border-radius: 4px;
                             cursor: pointer;
                             font-size: 11px;
-                            transition: background-color 0.2s;
                         ">修改头像</button>
                     </div>
                     
                     <!-- 右侧用户信息 -->
                     <div style="flex: 1;">
-                        <div style="display: flex; align-items: center; margin-bottom: 4px;">
-                            <div style="font-size: 16px; font-weight: 600; color: #333; margin-right: 10px;"><?php echo htmlspecialchars($username); ?></div>
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                            <div style="font-size: 16px; font-weight: 600; color: var(--text-color);"><?php echo htmlspecialchars($username); ?></div>
                             <button onclick="showChangeNameModal()" style="
-                                padding: 6px 12px;
-                                background: #667eea;
+                                padding: 4px 10px;
+                                background: var(--primary-color);
                                 color: white;
                                 border: none;
-                                border-radius: 6px;
+                                border-radius: 4px;
                                 cursor: pointer;
                                 font-size: 12px;
-                                transition: background-color 0.2s;
                             ">修改名称</button>
                         </div>
-                        <div style="display: flex; align-items: center; margin-bottom: 15px;">
-                            <div style="font-size: 14px; color: #666; margin-right: 10px;"><?php echo htmlspecialchars($current_user['email']); ?></div>
+                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                            <div style="font-size: 13px; color: var(--text-secondary); word-break: break-all; margin-right: 5px;"><?php echo htmlspecialchars($current_user['email']); ?></div>
                             <button onclick="showChangeEmailModal()" style="
-                                padding: 6px 12px;
-                                background: #667eea;
+                                padding: 4px 10px;
+                                background: var(--primary-color);
                                 color: white;
                                 border: none;
-                                border-radius: 6px;
+                                border-radius: 4px;
                                 cursor: pointer;
                                 font-size: 12px;
-                                transition: background-color 0.2s;
                             ">修改邮箱</button>
                         </div>
                     </div>
                 </div>
                 
                 <!-- 密码修改部分 -->
-                <div style="padding: 20px; background: #f8f9fa; border-radius: 8px; margin-bottom: 20px;">
+                <div style="padding: 15px; background: var(--input-bg); border-radius: 8px; margin-bottom: 15px;">
                     <div style="display: flex; align-items: center; justify-content: space-between;">
-                        <div style="font-size: 14px; color: #666;">密码相关</div>
+                        <div style="font-size: 14px; color: var(--text-color);">密码安全</div>
                         <button onclick="showChangePasswordModal()" style="
-                            padding: 8px 16px;
-                            background: #ff4d4f;
+                            padding: 6px 12px;
+                            background: var(--danger-color);
                             color: white;
                             border: none;
                             border-radius: 6px;
                             cursor: pointer;
                             font-size: 13px;
-                            transition: background-color 0.2s;
                         ">修改密码</button>
                     </div>
                 </div>
 
                 <!-- 手机号绑定部分 -->
-                <?php
-                // 读取phone_sms配置
-                $phone_sms_enabled = getConfig('phone_sms', false);
-                // 确保是布尔值
-                $phone_sms_enabled = filter_var($phone_sms_enabled, FILTER_VALIDATE_BOOLEAN);
-                
-                if ($phone_sms_enabled):
-                ?>
-                <div style="padding: 20px; background: #f8f9fa; border-radius: 8px; margin-bottom: 20px;">
+                <?php if (getConfig('phone_sms', false)): ?>
+                <div style="padding: 15px; background: var(--input-bg); border-radius: 8px; margin-bottom: 15px;">
                     <div style="display: flex; align-items: center; justify-content: space-between;">
                         <div>
-                            <div style="font-size: 14px; font-weight: 500; color: #333;">
-                                <?php echo !empty($current_user['phone']) ? '修改绑定手机号' : '手机号绑定'; ?>
+                            <div style="font-size: 14px; font-weight: 500; color: var(--text-color);">
+                                <?php echo !empty($current_user['phone']) ? '修改绑定手机' : '绑定手机号'; ?>
                             </div>
-                            <div style="font-size: 12px; color: #666;" id="security-phone-text">
+                            <div style="font-size: 12px; color: var(--text-secondary);" id="security-phone-text">
                                 <?php echo !empty($current_user['phone']) ? substr($current_user['phone'], 0, 3) . '****' . substr($current_user['phone'], -4) : '未绑定'; ?>
                             </div>
                         </div>
                         <button onclick="showPhoneBindModal()" style="
                             padding: 6px 12px;
-                            background: #667eea;
+                            background: var(--primary-color);
                             color: white;
                             border: none;
                             border-radius: 6px;
                             cursor: pointer;
                             font-size: 13px;
-                            transition: background-color 0.2s;
                         ">
                             <?php echo !empty($current_user['phone']) ? '修改' : '绑定'; ?>
                         </button>
                     </div>
                 </div>
                 <?php endif; ?>
+            </div>
+        </div>
+    </div>
                 
 
 
@@ -2697,14 +2684,14 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
     
     <!-- 群聊封禁提示弹窗 -->
     <div id="group-ban-modal" class="modal" style="display: none;">
-        <div class="modal-content">
-            <h2 style="color: #d32f2f; margin-bottom: 20px; font-size: 24px;">群聊已被封禁</h2>
-            <div id="group-ban-info" style="color: #666; margin-bottom: 25px; font-size: 14px;">
+        <div class="modal-content" style="background: var(--modal-bg); color: var(--text-color);">
+            <h2 style="color: var(--danger-color); margin-bottom: 20px; font-size: 24px;">群聊已被封禁</h2>
+            <div id="group-ban-info" style="color: var(--text-secondary); margin-bottom: 25px; font-size: 14px;">
                 <!-- 群聊封禁信息将通过JavaScript动态加载 -->
             </div>
             <button onclick="document.getElementById('group-ban-modal').style.display = 'none'" style="
                 padding: 12px 30px;
-                background: #667eea;
+                background: var(--primary-color);
                 color: white;
                 border: none;
                 border-radius: 8px;
@@ -2896,44 +2883,6 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         </div>
     </div>
     
-    <!-- 设置弹窗 -->
-    <div id="settings-modal" class="modal" style="display: none;">
-        <div class="modal-content">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h2 style="color: #333; font-size: 20px; font-weight: 600;">设置</h2>
-                <button onclick="document.getElementById('settings-modal').style.display = 'none'" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #666;">×</button>
-            </div>
-            <div class="settings-content">
-                <div class="setting-item">
-                    <label for="use-popup-for-links" class="setting-label">使用弹窗显示链接</label>
-                    <label class="switch">
-                        <input type="checkbox" id="use-popup-for-links" checked>
-                        <span class="slider"></span>
-                    </label>
-                </div>
-
-            </div>
-            <div style="margin-top: 20px; display: flex; justify-content: flex-end;">
-                <button onclick="saveSettings()" style="
-                    padding: 10px 20px;
-                    background: #667eea;
-                    color: white;
-                    border: none;
-                    border-radius: 6px;
-                    cursor: pointer;
-                    font-size: 14px;
-                    font-weight: 500;
-                ">
-                    保存设置
-                </button>
-            </div>
-        </div>
-    </div>
-    
-
-
-
-
     <!-- 反馈弹窗 -->
     <div id="feedback-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 2000; justify-content: center; align-items: center;">
         <div style="background: white; border-radius: 12px; width: 90%; max-width: 500px; overflow: hidden; display: flex; flex-direction: column;">
@@ -3178,7 +3127,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         </div>
         
         <!-- 聊天区域 -->
-        <div class="chat-area">
+        <div class="chat-area" style="<?php echo (!$selected_id ? 'display: none;' : ''); ?>">
                 <!-- 聊天区域顶部 -->
                 <div class="chat-header">
                     <button class="btn-icon" onclick="showChatList()" title="返回主页面" style="margin-right: 10px; color: #666; background: transparent; border: none; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center;">←</button>
@@ -4529,6 +4478,11 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         // 加载设置
         async function loadSettings() {
             try {
+                // 检查indexedDBManager是否存在
+                if (typeof indexedDBManager === 'undefined' || !indexedDBManager.getSettings) {
+                    throw new Error('IndexedDB manager not available');
+                }
+
                 // 从IndexedDB加载设置
                 const settings = await indexedDBManager.getSettings();
                 const linkPopup = settings['setting-link-popup'] !== false;
@@ -4536,9 +4490,14 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 const musicMode = settings['setting-music-mode'] || 'random';
                 
                 // 设置开关状态
-                document.getElementById('setting-link-popup').checked = linkPopup;
-                document.getElementById('setting-music-player').checked = musicPlayer;
-                document.getElementById('setting-music-mode').value = musicMode;
+                const linkPopupEl = document.getElementById('setting-link-popup');
+                if (linkPopupEl) linkPopupEl.checked = linkPopup;
+                
+                const musicPlayerEl = document.getElementById('setting-music-player');
+                if (musicPlayerEl) musicPlayerEl.checked = musicPlayer;
+                
+                const musicModeEl = document.getElementById('setting-music-mode');
+                if (musicModeEl) musicModeEl.value = musicMode;
             } catch (error) {
                 console.error('加载设置失败:', error);
                 // 从localStorage迁移设置到IndexedDB
@@ -4547,12 +4506,19 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 const musicMode = localStorage.getItem('setting-music-mode') || 'random';
                 
                 // 设置开关状态
-                document.getElementById('setting-link-popup').checked = linkPopup;
-                document.getElementById('setting-music-player').checked = musicPlayer;
-                document.getElementById('setting-music-mode').value = musicMode;
+                const linkPopupEl = document.getElementById('setting-link-popup');
+                if (linkPopupEl) linkPopupEl.checked = linkPopup;
+                
+                const musicPlayerEl = document.getElementById('setting-music-player');
+                if (musicPlayerEl) musicPlayerEl.checked = musicPlayer;
+                
+                const musicModeEl = document.getElementById('setting-music-mode');
+                if (musicModeEl) musicModeEl.value = musicMode;
                 
                 // 保存到IndexedDB
-                await saveSettings();
+                if (typeof saveSettings === 'function') {
+                    await saveSettings();
+                }
             }
         }
         
@@ -4636,11 +4602,12 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         }
         
         // 加载缓存统计信息
-        function loadCacheStats() {
+        async function loadCacheStats() {
             const statsContainer = document.getElementById('cache-stats');
+            if (!statsContainer) return;
             
             // 解析缓存信息
-            const cacheInfo = parseCacheCookies();
+            const cacheInfo = await parseCacheCookies();
             
             // 生成统计HTML
             let statsHtml = `
@@ -5087,46 +5054,57 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             }
         });
         
-        // 撤回消息功能 - 全局函数
-        window.recallMessage = function(button, messageId, chatType, chatId) {
-            console.log('调用撤回消息函数:', {button, messageId, chatType, chatId});
+        // 撤回消息
+        function recallMessage(btn, messageId, chatType, chatId) {
+            // 如果传入的是临时ID，尝试从DOM元素获取最新的真实ID
+            if (messageId.startsWith('temp_') || messageId.startsWith('msg_')) {
+                const messageElement = btn.closest('.message');
+                if (messageElement && messageElement.dataset.messageId) {
+                    // 如果DOM上的ID已经更新（不再是临时ID），则使用DOM上的ID
+                    if (messageElement.dataset.messageId !== messageId) {
+                        messageId = messageElement.dataset.messageId;
+                    }
+                }
+            }
+            
+            if (!confirm('确定要撤回这条消息吗？')) {
+                return;
+            }
+
+            console.log('调用撤回消息函数:', {btn, messageId, chatType, chatId});
+            
             // 获取消息元素
-            const messageElement = button.closest('.message');
+            const messageElement = btn.closest('.message');
             if (!messageElement) {
                 console.error('未找到消息元素');
                 showNotification('未找到消息元素', 'error');
                 return;
             }
-            const messageTime = parseInt(messageElement.dataset.messageTime);
-            const now = Date.now();
-            const timeDiff = (now - messageTime) / 1000 / 60; // 转换为分钟
             
-            // 检查是否在2分钟内
-            if (timeDiff > 2) {
-                showNotification('消息已超过2分钟，无法撤回', 'error');
-                return;
+            // 检查时间 (可选，服务器也会检查)
+            if (messageElement.dataset.messageTime) {
+                const messageTime = parseInt(messageElement.dataset.messageTime);
+                const now = Date.now();
+                const timeDiff = (now - messageTime) / 1000 / 60; // 转换为分钟
+                if (timeDiff > 2) {
+                    showNotification('消息已超过2分钟，无法撤回', 'error');
+                    return;
+                }
             }
-            
-            // 从消息元素的data-message-id属性获取真实的消息ID，而不是使用传入的临时ID
-            const realMessageId = messageElement.dataset.messageId;
-            const realChatType = messageElement.dataset.chatType;
-            const realChatId = messageElement.dataset.chatId;
-            
-            console.log('真实消息ID:', realMessageId, '真实聊天类型:', realChatType, '真实聊天ID:', realChatId);
             
             // 发送撤回请求到服务器
             const formData = new URLSearchParams();
             formData.append('action', 'recall');
-            formData.append('message_id', realMessageId);
-            formData.append('chat_type', realChatType);
-            if (realChatType === 'friend') {
-                formData.append('friend_id', realChatId);
+            formData.append('message_id', messageId);
+            formData.append('chat_type', chatType);
+            if (chatType === 'friend') {
+                formData.append('friend_id', chatId);
             } else {
-                formData.append('id', realChatId);
+                formData.append('id', chatId);
             }
             
             console.log('发送撤回请求:', formData.toString());
-            fetch('send_message.php', {
+            fetch('recall_message.php', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded'
@@ -5138,17 +5116,13 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 console.log('撤回请求响应:', data);
                 if (data.success) {
                     // 撤回成功，更新消息显示为撤回状态
+                    // 保留头像部分，只替换内容
+                    const avatarHtml = messageElement.querySelector('.message-avatar').outerHTML;
                     messageElement.innerHTML = `
                         <div class='message-content'>
                             <div class='message-text' style='color: #999; font-style: italic;'>[消息已撤回]</div>
                         </div>
-                        <div class='message-avatar'>
-                            <?php if (!empty($current_user['avatar'])): ?>
-                                <img src='<?php echo $current_user['avatar']; ?>' alt='<?php echo $username; ?>' style='width: 100%; height: 100%; border-radius: 50%; object-fit: cover;'>
-                            <?php else: ?>
-                                <?php echo substr($username, 0, 2); ?>
-                            <?php endif; ?>
-                        </div>
+                        ${avatarHtml}
                     `;
                     showNotification('消息已撤回', 'success');
                 } else {
@@ -6033,7 +6007,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             });
         }
         
-        function sendFile(file) {
+        function sendFile(file, blobUrl = null) {
             const chatType = '<?php echo $chat_type; ?>';
             const chatId = '<?php echo $selected_id; ?>';
             
@@ -6132,14 +6106,28 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                             percentageText.textContent = '100%';
                             
                             // 准备消息数据
+                            // 清理文件名：如果包含 IndexedDB ID 前缀，则去除
+                            let displayFileName = optimizedFile.name;
+                            if (displayFileName.startsWith('Audio_') || displayFileName.startsWith('Video_') || displayFileName.startsWith('Picture_') || displayFileName.startsWith('File_')) {
+                                // 尝试从ID中提取原始文件名，或者生成一个更友好的名称
+                                // 简单策略：如果是 Audio_ 开头，显示为 "语音消息.webm"
+                                if (displayFileName.startsWith('Audio_')) {
+                                    displayFileName = '语音消息.webm';
+                                } else {
+                                    // 移除前缀和可能的时间戳ID
+                                    displayFileName = displayFileName.replace(/^(Audio|Video|Picture|File)_.*?_/, '');
+                                }
+                            }
+
                             const messageData = {
                                 id: 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
                                 sender_id: '<?php echo $user_id; ?>',
                                 content: '',
                                 file_path: fileId, // 使用localStorage文件ID作为路径
-                                file_name: optimizedFile.name,
+                                file_name: displayFileName, // 使用清理后的友好文件名
                                 file_size: optimizedFile.size,
                                 file_type: optimizedFile.type,
+                                blob_url: blobUrl, // 传入Blob URL用于立即播放
                                 type: 'file',
                                 created_at: new Date().toISOString(),
                                 status: 'sent',
@@ -6208,9 +6196,54 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                                 xhr.onload = function() {
                                     if (xhr.status === 200) {
                                         // 请求成功
-                                        const data = JSON.parse(xhr.responseText);
-                                        if (!data.success) {
-                                            showNotification('消息发送失败', 'error');
+                                        try {
+                                            const data = JSON.parse(xhr.responseText);
+                                            if (!data.success) {
+                                                showNotification('消息发送失败', 'error');
+                                            } else if (data.message && data.message.file_path) {
+                                                // 更新DOM中的音频源为服务器路径，防止本地缓存失效导致404
+                                                const uploadedMessageId = data.message_id; // 服务器返回的消息ID
+                                                
+                                                // 关键修复：更新消息元素的ID为服务器返回的真实ID
+                                                // 这样getNewMessages轮询时就不会重复添加这条消息了
+                                                if (uploadedMessageId) {
+                                                    messageElement.dataset.messageId = uploadedMessageId;
+                                                }
+                                                
+                                                // 查找对应的消息元素 (注意：这里我们可能找不到它，因为我们只有temp ID或没有ID)
+                                                // 更好的方式是使用我们刚刚创建的 messageElement 引用
+                                                
+                                                // 更新音频元素
+                                                const audioElements = messageElement.querySelectorAll('.audio-element');
+                                                audioElements.forEach(audio => {
+                                                    // 只有当src是本地ID时才更新，或者强制更新
+                                                    // 将 file_path 属性更新为服务器路径
+                                                    audio.setAttribute('data-file-path', data.message.file_path);
+                                                    
+                                                    // 如果当前src是ID格式（不是blob或http），则更新src
+                                                    // 但实际上，我们希望它在下次加载时使用服务器路径。
+                                                    // 如果当前正在播放，不要打断。
+                                                    // 重点是：如果本地缓存丢失，我们需要一种机制回退。
+                                                    
+                                                    // 我们可以将服务器URL存储在另一个属性中，或者如果当前src加载失败，就使用这个
+                                                    // 但目前最简单的是：如果它是ID，就替换为服务器URL？
+                                                    // 不，ID用于IndexedDB。
+                                                    
+                                                    // 让我们直接更新 data-file-path，这样下次加载页面或重新渲染时会使用正确的路径
+                                                    // 并且，如果当前src失效（404），audio元素的 error 事件监听器应该处理它
+                                                });
+                                                
+                                                // 还要更新 message-file 链接
+                                                const fileLinks = messageElement.querySelectorAll('.message-file, .message-image, .video-element');
+                                                fileLinks.forEach(el => {
+                                                    el.setAttribute('data-file-path', data.message.file_path);
+                                                });
+                                                
+                                                // 强制将文件路径保存到 localStorage 映射（如果需要）
+                                                // 但最重要的是更新 HTML 中的 data-file-path
+                                            }
+                                        } catch (e) {
+                                            console.error('解析响应失败', e);
                                         }
                                     } else {
                                         // 请求失败
@@ -6369,10 +6402,12 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                     <div class='message-content'>
                         <div class='message-text'>${messageWithLinks}</div>
                         <div class='message-time'>${formattedTime}</div>
-                        <div class='message-actions' style='position: relative;'>
-                            <button class='message-action-btn' onclick='toggleMessageActions(this)' style='width: 28px; height: 28px; font-size: 18px; background: rgba(0,0,0,0.1); border: none; border-radius: 50%; color: #333; cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: 1; transition: all 0.2s ease;'>...</button>
-                            <div class='message-action-menu' style='display: none; position: absolute; top: 100%; right: 0; background: white; border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,0.15); padding: 8px 0; z-index: 5000; min-width: 100px;'>
-                                <button class='message-action-item' onclick='recallMessage(this, "${tempMessageId}", "${chatType}", "${chatId}")' style='width: 100%; text-align: left; padding: 8px 16px; border: none; background: transparent; cursor: pointer; transition: all 0.2s ease; color: #333;'>撤回消息</button>
+                        <div class='message-actions'>
+                            <div style='position: relative; z-index: 4000;'>
+                                <button class='message-action-btn' onclick='toggleMessageActions(this)' style='width: 28px; height: 28px; font-size: 18px; background: rgba(0,0,0,0.1); border: none; border-radius: 50%; color: #333; cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: 1; transition: all 0.2s ease;'>⋮</button>
+                                <div class='message-actions-menu' style='display: none; position: absolute; top: 100%; right: 0; background: white; border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,0.15); padding: 8px 0; z-index: 5000; min-width: 100px;'>
+                                    <button class='message-action-item' onclick='recallMessage(this, "${tempMessageId}", "${chatType}", "${chatId}")' style='width: 100%; text-align: left; padding: 8px 16px; border: none; background: transparent; cursor: pointer; transition: all 0.2s ease; color: #333;'>撤回消息</button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -6442,11 +6477,13 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         // 初始化音频播放器
         function initAudioPlayers() {
             document.querySelectorAll('.custom-audio-player').forEach(player => {
-                // 检查是否已经添加了操作按钮，如果已添加则跳过
-                // 检查方式：查看是否已经有.media-action-btn或.audio-actions
-                if (player.querySelector('.media-action-btn') || player.querySelector('.audio-actions')) {
+                // 检查是否已经初始化
+                if (player.classList.contains('initialized')) {
                     return;
                 }
+                
+                // 标记为已初始化
+                player.classList.add('initialized');
                 
                 const audio = player.querySelector('.audio-element');
                 const playBtn = player.querySelector('.audio-play-btn');
@@ -6454,6 +6491,11 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 const progress = player.querySelector('.audio-progress');
                 const currentTimeEl = player.querySelector('.current-time');
                 const durationEl = player.querySelector('.audio-duration');
+                
+                // 检查必要元素是否存在
+                if (!audio || !playBtn || !progressBar || !progress || !currentTimeEl || !durationEl) {
+                    return;
+                }
                 
                 // 设置音频时长
                 audio.addEventListener('loadedmetadata', function() {
@@ -6507,40 +6549,63 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 // 进度条拖动功能
                 let isDragging = false;
                 
-                // 开始拖动
-                progressBar.addEventListener('mousedown', function() {
+                const handleDragStart = (e) => {
                     isDragging = true;
-                });
+                    updateProgressFromEvent(e);
+                };
                 
-                // 拖动中
-                document.addEventListener('mousemove', function(e) {
+                const handleDragMove = (e) => {
                     if (!isDragging) return;
-                    
-                    // 确保duration有效才允许拖动
-                    if (isNaN(audio.duration) || audio.duration <= 0) {
-                        return;
-                    }
+                    e.preventDefault(); // 防止触摸滚动
+                    updateProgressFromEvent(e);
+                };
+                
+                const handleDragEnd = () => {
+                    isDragging = false;
+                };
+                
+                const updateProgressFromEvent = (e) => {
+                    if (isNaN(audio.duration) || audio.duration <= 0) return;
                     
                     const progressWidth = progressBar.clientWidth;
                     const rect = progressBar.getBoundingClientRect();
-                    let clickX = e.clientX - rect.left;
                     
-                    // 限制拖动范围在进度条内
+                    // 获取X坐标 (兼容鼠标和触摸)
+                    let clientX;
+                    if (e.type.startsWith('touch')) {
+                        clientX = e.touches[0].clientX;
+                    } else {
+                        clientX = e.clientX;
+                    }
+                    
+                    let clickX = clientX - rect.left;
+                    
+                    // 限制范围
                     clickX = Math.max(0, Math.min(clickX, progressWidth));
                     
                     const duration = audio.duration;
-                    audio.currentTime = (clickX / progressWidth) * duration;
-                });
+                    const newTime = (clickX / progressWidth) * duration;
+                    
+                    audio.currentTime = newTime;
+                    
+                    // 实时更新UI
+                    const progressPercent = (newTime / duration) * 100;
+                    progress.style.width = progressPercent + '%';
+                    currentTimeEl.textContent = formatTime(newTime);
+                };
                 
-                // 结束拖动
-                document.addEventListener('mouseup', function() {
-                    isDragging = false;
-                });
+                // 鼠标事件
+                progressBar.addEventListener('mousedown', handleDragStart);
+                document.addEventListener('mousemove', handleDragMove);
+                document.addEventListener('mouseup', handleDragEnd);
                 
-                // 鼠标离开窗口时结束拖动
-                document.addEventListener('mouseleave', function() {
-                    isDragging = false;
-                });
+                // 触摸事件
+                progressBar.addEventListener('touchstart', handleDragStart, { passive: false });
+                document.addEventListener('touchmove', handleDragMove, { passive: false });
+                document.addEventListener('touchend', handleDragEnd);
+                
+                // 鼠标离开窗口
+                document.addEventListener('mouseleave', handleDragEnd);
             });
         }
 
@@ -7888,6 +7953,12 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             // 处理所有图片元素
             document.querySelectorAll('.message-image').forEach(async img => {
                 const fileUrl = img.src;
+                
+                // 如果src已经是blob:开头，说明已经是本地Blob URL，无需再次处理
+                if (fileUrl && fileUrl.startsWith('blob:')) {
+                    return;
+                }
+
                 const fileName = img.getAttribute('data-file-name') || '未知图片';
                 const filePath = img.getAttribute('data-file-path') || fileUrl;
                 
@@ -7952,7 +8023,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 
                 // 如果所有尝试都失败，显示"消息已被清理：{文件名}"
                 if (!success) {
-                    // 创建一个错误提示元素，替换图片元素
+                    // 创建一个错误提示元素
                     const errorDiv = document.createElement('div');
                     errorDiv.style.cssText = `
                         background: #f8f9fa;
@@ -7966,13 +8037,21 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                     errorDiv.textContent = `消息已被清理：${fileName}`;
                     
                     // 替换图片元素
-                    img.parentNode.replaceChild(errorDiv, img);
+                    if (img.parentNode) {
+                        img.parentNode.replaceChild(errorDiv, img);
+                    }
                 }
             });
             
             // 处理所有音频元素
             document.querySelectorAll('.audio-element').forEach(async audio => {
                 const fileUrl = audio.src;
+                
+                // 如果src已经是blob:开头，说明已经是本地Blob URL，无需再次处理
+                if (fileUrl && fileUrl.startsWith('blob:')) {
+                    return;
+                }
+
                 const fileName = audio.getAttribute('data-file-name') || '未知音频';
                 const filePath = audio.getAttribute('data-file-path') || fileUrl;
                 
@@ -8037,7 +8116,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 
                 // 如果所有尝试都失败，显示"消息已被清理：{文件名}"
                 if (!success) {
-                    // 创建一个错误提示元素，替换音频元素
+                    // 创建一个错误提示元素
                     const errorDiv = document.createElement('div');
                     errorDiv.style.cssText = `
                         background: #f8f9fa;
@@ -8050,8 +8129,15 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                     `;
                     errorDiv.textContent = `消息已被清理：${fileName}`;
                     
-                    // 替换音频元素
-                    audio.parentNode.replaceChild(errorDiv, audio);
+                    // 查找父级播放器容器
+                    const playerContainer = audio.closest('.custom-audio-player');
+                    if (playerContainer && playerContainer.parentNode) {
+                        // 替换整个播放器容器
+                        playerContainer.parentNode.replaceChild(errorDiv, playerContainer);
+                    } else if (audio.parentNode) {
+                        // 如果找不到容器，仅替换音频元素
+                        audio.parentNode.replaceChild(errorDiv, audio);
+                    }
                 }
             });
         }
@@ -8079,7 +8165,23 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 errorDiv.textContent = `消息已被清理：${fileName}`;
                 
                 // 替换媒体元素
-                media.parentNode.replaceChild(errorDiv, media);
+                if (media.tagName === 'AUDIO') {
+                    const playerContainer = media.closest('.custom-audio-player');
+                    if (playerContainer && playerContainer.parentNode) {
+                        playerContainer.parentNode.replaceChild(errorDiv, playerContainer);
+                    } else if (media.parentNode) {
+                        media.parentNode.replaceChild(errorDiv, media);
+                    }
+                } else if (media.tagName === 'VIDEO') {
+                    const videoContainer = media.closest('.video-container');
+                    if (videoContainer && videoContainer.parentNode) {
+                        videoContainer.parentNode.replaceChild(errorDiv, videoContainer);
+                    } else if (media.parentNode) {
+                        media.parentNode.replaceChild(errorDiv, media);
+                    }
+                } else if (media.parentNode) {
+                    media.parentNode.replaceChild(errorDiv, media);
+                }
                 
                 // 移除重试计数器
                 delete fileRetryCounter[filePath];
@@ -9208,7 +9310,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                         
                         // 如果所有尝试都失败，显示"消息已被清理：{文件名}"
                         if (!success) {
-                            // 创建一个错误提示元素，替换视频元素
+                            // 创建一个错误提示元素
                             const errorDiv = document.createElement('div');
                             errorDiv.style.cssText = `
                                 background: #f8f9fa;
@@ -9221,8 +9323,14 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                             `;
                             errorDiv.textContent = `消息已被清理：${fileName}`;
                             
-                            // 替换视频元素
-                            video.parentNode.replaceChild(errorDiv, video);
+                            // 查找父级视频容器并替换
+                            const videoContainer = video.closest('.video-container');
+                            if (videoContainer && videoContainer.parentNode) {
+                                videoContainer.parentNode.replaceChild(errorDiv, videoContainer);
+                            } else if (video.parentNode) {
+                                // 如果找不到容器，仅替换视频元素
+                                video.parentNode.replaceChild(errorDiv, video);
+                            }
                         }
                     }
                 }
@@ -9271,14 +9379,16 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                         const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
                         const audioUrl = URL.createObjectURL(audioBlob);
                         
-                        // 创建录音文件名（使用当前时间戳）
-                        const fileName = `录音_${Date.now()}.webm`;
+                        // 创建录音文件名（使用简单格式：录音_时间.webm）
+                        const now = new Date();
+                        const timeStr = `${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2,'0')}${now.getDate().toString().padStart(2,'0')}_${now.getHours().toString().padStart(2,'0')}${now.getMinutes().toString().padStart(2,'0')}${now.getSeconds().toString().padStart(2,'0')}`;
+                        const fileName = `录音_${timeStr}.webm`;
                         
                         // 创建File对象
                         const audioFile = new File([audioBlob], fileName, { type: 'audio/webm' });
                         
-                        // 发送录音文件
-                        sendFile(audioFile);
+                        // 发送录音文件，传入blobUrl以便立即播放
+                        sendFile(audioFile, audioUrl);
                         
                         console.log('录音完成并发送', audioUrl);
                     };
@@ -9617,8 +9727,18 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             if (!chatId) return;
             
             // 获取最后一条消息的ID
-            const lastMessage = document.querySelector('.message:last-child');
-            const lastMessageId = lastMessage ? lastMessage.dataset.messageId : 0;
+            const messages = document.querySelectorAll('.message');
+            let lastMessageId = 0;
+            // 从后往前查找最近一条非临时消息的ID
+            for (let i = messages.length - 1; i >= 0; i--) {
+                const id = messages[i].dataset.messageId;
+                // 假设服务器ID是纯数字，临时ID包含非数字字符（如 'temp_' 或 'msg_'）
+                // 这里简单判断：如果是数字则认为是有效ID
+                if (id && /^\d+$/.test(id)) {
+                    lastMessageId = id;
+                    break;
+                }
+            }
             
             // 构造请求URL
             let url;
@@ -9709,6 +9829,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             }
             
             let contentHtml;
+            let hasInternalMenu = false;
             if (msg.type === 'file' || msg.file_path) {
                 let file_path = msg.file_path;
                 const file_name = msg.file_name;
@@ -9738,10 +9859,18 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 }
                 
                 // 从localStorage获取文件URL
-                const fileUrl = getFileUrlFromLocalStorage(file_path);
+                // 如果有传入的blob_url，优先使用它
+                const fileUrl = msg.blob_url || getFileUrlFromLocalStorage(file_path);
                 
                 // 检测文件的实际类型
-                const ext = file_name.toLowerCase().split('.').pop();
+                // 如果文件名包含 localStorage ID 前缀（如 Audio_...），尝试提取真实扩展名或默认为 webm/mp3
+                let ext;
+                if (file_name.startsWith('Audio_')) {
+                    ext = 'webm'; // 录音文件默认格式
+                } else {
+                    ext = file_name.toLowerCase().split('.').pop();
+                }
+                
                 const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'];
                 const audioExts = ['mp3', 'wav', 'ogg', 'aac', 'wma', 'm4a', 'webm'];
                 const videoExts = ['mp4', 'avi', 'mov', 'wmv', 'flv'];
@@ -9752,6 +9881,17 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                         <img src='${fileUrl}' alt='${file_name}' class='message-image' data-file-name='${file_name}' data-file-type='image' data-file-path='${file_path}'>
                     </div>`;
                 } else if (audioExts.includes(ext)) {
+                    hasInternalMenu = true;
+                    // 检查是否可以撤回
+                    const messageTime = new Date(msg.created_at);
+                    const now = new Date();
+                    const diffInMinutes = (now - messageTime) / (1000 * 60);
+                    const canRecall = isSent && diffInMinutes <= 2;
+                    let recallHtml = '';
+                    if (canRecall) {
+                        recallHtml = `<button class='file-action-item' onclick="event.stopPropagation(); recallMessage(this, '${msg.id}', '${chatType}', '${chatId}')" style='display: block; width: 100%; padding: 8px 16px; text-align: left; border: none; background: none; cursor: pointer; font-size: 14px; color: #333; transition: background-color 0.2s ease;'>撤回</button>`;
+                    }
+
                     // 音频类型
                     contentHtml = `<div class='message-media' style='position: relative;'>
                         <div class='custom-audio-player'>
@@ -9767,8 +9907,9 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                             <!-- 音频操作按钮 -->
                             <div style='position: relative; display: inline-block; margin-left: 10px;'>
                                 <button class='media-action-btn' onclick="event.stopPropagation(); toggleMediaActionsMenu(event, this)" style='width: 28px; height: 28px; font-size: 14px; background: rgba(0,0,0,0.1); border: none; border-radius: 50%; color: #666; cursor: pointer;'>⋮</button>
-                                <div class='file-actions-menu' style='display: none; position: absolute; top: 35px; right: 0; background: white; border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,0.15); padding: 8px 0; z-index: 1000;'>
+                                <div class='file-actions-menu' style='display: none; position: absolute; top: 35px; right: 0; background: white; border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,0.15); padding: 8px 0; z-index: 5000; min-width: 80px;'>
                                     <button class='file-action-item' onclick="event.stopPropagation(); addDownloadTask('${file_name}', '${file_path}', ${file_size}, 'audio');" style='display: block; width: 100%; padding: 8px 16px; text-align: left; border: none; background: none; cursor: pointer; font-size: 14px; color: #333; transition: background-color 0.2s ease;'>下载</button>
+                                    ${recallHtml}
                                 </div>
                             </div>
                         </div>
@@ -9778,6 +9919,17 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                         setFileCache(file_path, 'audio', file_size);
                     }
                 } else if (videoExts.includes(ext)) {
+                    hasInternalMenu = true;
+                    // 检查是否可以撤回
+                    const messageTime = new Date(msg.created_at);
+                    const now = new Date();
+                    const diffInMinutes = (now - messageTime) / (1000 * 60);
+                    const canRecall = isSent && diffInMinutes <= 2;
+                    let recallHtml = '';
+                    if (canRecall) {
+                        recallHtml = `<button class='file-action-item' onclick="event.stopPropagation(); recallMessage(this, '${msg.id}', '${chatType}', '${chatId}')" style='display: block; width: 100%; padding: 8px 16px; text-align: left; border: none; background: none; cursor: pointer; font-size: 14px; color: #333; transition: background-color 0.2s ease;'>撤回</button>`;
+                    }
+
                     // 视频类型 - 使用空src，后续通过JS加载为Blob URL
                     contentHtml = `<div class='message-media' style='position: relative;'>
                         <div class='video-container' style='position: relative;'>
@@ -9787,8 +9939,9 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                             <div class='media-actions' style='position: absolute; top: 10px; right: 10px; display: flex; gap: 5px; opacity: 1 !important;'>
                                 <div style='position: relative;'>
                                     <button class='media-action-btn' onclick="event.stopPropagation(); toggleMediaActionsMenu(event, this)" style='width: 32px; height: 32px; font-size: 16px; background: rgba(0,0,0,0.6); border: none; border-radius: 50%; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center;'>⋮</button>
-                                    <div class='file-actions-menu' style='display: none; position: absolute; top: 40px; right: 0; background: white; border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,0.15); padding: 8px 0; z-index: 1000;'>
+                                    <div class='file-actions-menu' style='display: none; position: absolute; top: 40px; right: 0; background: white; border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,0.15); padding: 8px 0; z-index: 5000; min-width: 80px;'>
                                         <button class='file-action-item' onclick="event.stopPropagation(); addDownloadTask('${file_name}', '${file_path}', ${file_size}, 'video');" style='display: block; width: 100%; padding: 8px 16px; text-align: left; border: none; background: none; cursor: pointer; font-size: 14px; color: #333; transition: background-color 0.2s ease;'>下载</button>
+                                        ${recallHtml}
                                     </div>
                                 </div>
                             </div>
@@ -9835,7 +9988,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 const diffInMinutes = (now - messageTime) / (1000 * 60);
                 
                 // 只有2分钟内的消息才显示三个点按钮和撤回选项
-                if (diffInMinutes <= 2) {
+                if (diffInMinutes <= 2 && !hasInternalMenu) {
                     const recallButtonHtml = `
                     <button class='message-action-item' onclick="event.stopPropagation(); recallMessage(this, '${msg.id}', '${chatType}', '${chatId}')" 
                             style='display: block; width: 100%; padding: 8px 16px; text-align: left; border: none; 
@@ -9845,7 +9998,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                     messageActionsHtml = `
                     <div class='message-actions' style='position: absolute; top: 50%; right: -10px; transform: translateY(-50%); display: flex; align-items: center; gap: 5px; z-index: 4000;'>
                         <div style='position: relative; z-index: 4000;'>
-                            <button class='message-action-btn' onclick="toggleMessageActions(this)" 
+                            <button class='message-action-btn' onclick="event.stopPropagation(); toggleMessageActions(this)" 
                                     style='width: 28px; height: 28px; font-size: 18px; background: rgba(0,0,0,0.2); border: none; border-radius: 50%; 
                                            color: var(--text-color); cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: 1; 
                                            transition: all 0.2s ease; position: relative; z-index: 4000;'>⋮</button>
