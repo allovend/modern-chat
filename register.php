@@ -447,6 +447,19 @@
             </div>
             
             <div class="form-group">
+                <label for="phone">手机号</label>
+                <input type="tel" id="phone" name="phone" required pattern="^1[3-9]\d{9}$" placeholder="请输入11位手机号">
+            </div>
+            
+            <div class="form-group">
+                <label for="sms_code">短信验证码</label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="sms_code" name="sms_code" required maxlength="6" placeholder="请输入6位验证码" style="flex: 1;">
+                    <button type="button" id="send_sms_btn" class="btn" style="width: auto; padding: 0 20px; margin-bottom: 0; background: #ccc; cursor: not-allowed;" disabled>获取验证码</button>
+                </div>
+            </div>
+            
+            <div class="form-group">
                 <label for="password">密码</label>
                 <input type="password" id="password" name="password" required minlength="6">
             </div>
@@ -519,15 +532,146 @@
     <script>
         // 极验验证码初始化
         let geetestCaptcha = null;
+        let smsCountdownTimer = null;
+        const SMS_COOLDOWN_KEY = 'sms_cooldown_end_time';
         
+        // 检查是否有未完成的倒计时
+        function checkSmsCooldown() {
+            const endTime = localStorage.getItem(SMS_COOLDOWN_KEY);
+            if (endTime) {
+                const now = Date.now();
+                const remaining = Math.ceil((parseInt(endTime) - now) / 1000);
+                
+                if (remaining > 0) {
+                    startSmsCountdown(remaining);
+                } else {
+                    localStorage.removeItem(SMS_COOLDOWN_KEY);
+                    resetSmsButton();
+                }
+            }
+        }
+        
+        // 启动倒计时
+        function startSmsCountdown(seconds) {
+            const btn = document.getElementById('send_sms_btn');
+            
+            // 如果是新启动的倒计时（即不是从localStorage恢复的），设置结束时间
+            if (!localStorage.getItem(SMS_COOLDOWN_KEY)) {
+                const endTime = Date.now() + (seconds * 1000);
+                localStorage.setItem(SMS_COOLDOWN_KEY, endTime);
+            }
+            
+            btn.disabled = true;
+            btn.style.background = '#ccc';
+            btn.style.cursor = 'not-allowed';
+            
+            clearInterval(smsCountdownTimer);
+            
+            function updateBtn() {
+                btn.textContent = `${seconds}秒后重试`;
+                if (seconds <= 0) {
+                    clearInterval(smsCountdownTimer);
+                    localStorage.removeItem(SMS_COOLDOWN_KEY);
+                    resetSmsButton();
+                }
+                seconds--;
+            }
+            
+            updateBtn(); // 立即执行一次
+            smsCountdownTimer = setInterval(updateBtn, 1000);
+        }
+        
+        // 重置短信按钮状态
+        function resetSmsButton() {
+            const btn = document.getElementById('send_sms_btn');
+            // 只有当极验验证通过后才启用按钮
+            if (geetestCaptcha && geetestCaptcha.getValidate()) {
+                btn.disabled = false;
+                btn.style.background = 'linear-gradient(135deg, #12b7f5 0%, #00a2e8 100%)';
+                btn.style.cursor = 'pointer';
+            } else {
+                btn.disabled = true;
+                btn.style.background = '#ccc';
+                btn.style.cursor = 'not-allowed';
+            }
+            btn.textContent = '获取验证码';
+        }
+
         // 初始化极验验证码
         initGeetest4({
             captchaId: '55574dfff9c40f2efeb5a26d6d188245'
         }, function (captcha) {
             // captcha为验证码实例
             geetestCaptcha = captcha;
-            captcha.appendTo("#captcha");// 调用appendTo将验证码插入到页的某一个元素中
+            captcha.appendTo("#captcha");
+            
+            // 监听验证成功事件
+            captcha.onSuccess(function() {
+                const btn = document.getElementById('send_sms_btn');
+                // 如果没有在倒计时中，则启用按钮
+                if (!localStorage.getItem(SMS_COOLDOWN_KEY)) {
+                    btn.disabled = false;
+                    btn.style.background = 'linear-gradient(135deg, #12b7f5 0%, #00a2e8 100%)';
+                    btn.style.cursor = 'pointer';
+                }
+            });
         });
+        
+        // 发送短信验证码
+        document.getElementById('send_sms_btn').addEventListener('click', function() {
+            if (this.disabled) return;
+            
+            const phone = document.getElementById('phone').value;
+            if (!/^1[3-9]\d{9}$/.test(phone)) {
+                alert('请输入有效的11位手机号');
+                return;
+            }
+            
+            const validate = geetestCaptcha.getValidate();
+            if (!validate) {
+                alert('请先完成验证码验证');
+                return;
+            }
+            
+            // 准备发送数据
+            const formData = new FormData();
+            formData.append('phone', phone);
+            formData.append('geetest_challenge', validate.lot_number);
+            formData.append('geetest_validate', validate.captcha_output);
+            formData.append('geetest_seccode', validate.pass_token);
+            formData.append('gen_time', validate.gen_time);
+            formData.append('captcha_id', '55574dfff9c40f2efeb5a26d6d188245');
+            
+            // 禁用按钮防止重复点击
+            this.disabled = true;
+            this.textContent = '发送中...';
+            
+            fetch('send_sms.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('验证码已发送，请注意查收');
+                    startSmsCountdown(60);
+                } else {
+                    alert(data.message || '发送失败');
+                    // 如果不是倒计时引起的失败，恢复按钮
+                    if (!data.message.includes('秒后')) {
+                         resetSmsButton();
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('发送请求失败，请检查网络');
+                resetSmsButton();
+            });
+        });
+        
+        // 页面加载时检查倒计时
+        checkSmsCooldown();
         
         // 浏览器指纹生成功能
         function generateBrowserFingerprint() {

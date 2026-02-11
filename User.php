@@ -165,6 +165,40 @@ class User {
         // 使用RedisManager更新用户活动时间
         $this->redisManager->updateUserActivity($user_id);
     }
+
+    /**
+     * 更新用户信息
+     * @param int $user_id 用户ID
+     * @param array $data 更新的数据
+     * @return bool 是否更新成功
+     */
+    public function updateUser($user_id, $data) {
+        try {
+            $allowed_fields = ['username', 'email', 'phone', 'signature', 'gender', 'birthday', 'location'];
+            $updates = [];
+            $params = [];
+            
+            foreach ($allowed_fields as $field) {
+                if (isset($data[$field])) {
+                    $updates[] = "$field = ?";
+                    $params[] = $data[$field];
+                }
+            }
+            
+            if (empty($updates)) {
+                return false; // 没有要更新的字段
+            }
+            
+            $params[] = $user_id;
+            $sql = "UPDATE users SET " . implode(', ', $updates) . " WHERE id = ?";
+            
+            $stmt = $this->conn->prepare($sql);
+            return $stmt->execute($params);
+        } catch(PDOException $e) {
+            error_log("Update User Error: " . $e->getMessage());
+            return false;
+        }
+    }
     
     /**
      * 获取所有用户信息（管理员功能）

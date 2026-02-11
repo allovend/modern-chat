@@ -1,9 +1,18 @@
 // service-worker.js
 const CACHE_NAME = 'chat-app-cache-v1';
 const CACHE_ASSETS = [
-    '/js/beacon.min.js',
-    '/js/jsQR.min.js',
-    '/js/qrcode.min.js'
+    'js/beacon.min.js',
+    'js/jsQR.min.js',
+    'js/qrcode.min.js',
+    'new_year_pic/1770599871501.jpg',
+    'new_year_pic/1770599893555.jpg',
+    'new_year_pic/1770599913345.jpg',
+    'new_year_pic/1770599930698.jpg',
+    'new_year_pic/1770599954482.jpg',
+    'new_music/好运来 - 祖海.mp3',
+    'new_music/恭喜发财 - 刘德华.mp3',
+    'new_music/春节序曲 - 中国国家交响乐团.mp3',
+    'new_music/春风十里报新年 - 接个吻，开一枪、火鸡、吕口口、Lambert凌杰、杨胖雨.mp3',
 ];
 
 // 安装阶段：缓存必要的静态资源

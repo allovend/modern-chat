@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/install_check.php';
 // 启用错误报告以便调试
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
@@ -17,10 +18,10 @@ require_once 'config.php';
 require_once 'db.php';
 
 // 检查用户是否登录
-// if (!isset($_SESSION['user_id'])) {
-//     header('Location: login.php');
-//     exit;
-// }
+if (!isset($_SESSION['user_id'])) {
+    header('Location: login.php');
+    exit;
+}
 
 // 确保必要字段存在
 
@@ -166,6 +167,62 @@ if (!$current_user || !is_array($current_user)) {
 // 检查用户是否是管理员，或者用户名是Admin且邮箱以admin@开头
 if (!(isset($current_user['is_admin']) && $current_user['is_admin']) && !((isset($current_user['username']) && $current_user['username'] === 'Admin') && (isset($current_user['email']) && strpos($current_user['email'], 'admin@') === 0))) {
     header('Location: login.php?error=权限不足，请先登录管理员账号。');
+    exit;
+}
+
+// 处理歌单配置更新
+if (isset($_POST['action']) && $_POST['action'] == 'save_playlists') {
+    $password = isset($_POST['password']) ? $_POST['password'] : '';
+    
+    // 验证管理员密码
+    if (!validateAdminPassword($password, $current_user, $conn)) {
+        header('Location: admin.php?error=密码错误，操作失败&tab=playlists');
+        exit;
+    }
+
+    $names = $_POST['playlist_name'] ?? [];
+    $types = $_POST['playlist_type'] ?? [];
+    $contents = $_POST['playlist_content'] ?? [];
+    
+    $new_config = [];
+    
+    for ($i = 0; $i < count($names); $i++) {
+        $name = trim($names[$i]);
+        if (empty($name)) continue;
+        
+        $type = $types[$i];
+        $content = $contents[$i];
+        
+        $data = null;
+        if ($type === 'local') {
+            $data = trim($content);
+        } else {
+            // URL模式，处理 JSON 格式的字符串
+            // 首先尝试解码 JSON
+            $decoded = json_decode($content, true);
+            
+            if (is_array($decoded)) {
+                $data = $decoded;
+            } else {
+                 // 如果不是有效的 JSON，尝试按行分割（兼容旧格式或直接输入）
+                 $data = array_filter(array_map('trim', explode("\n", $content)));
+                 $data = array_values($data);
+            }
+        }
+        
+        $new_config[$name] = [
+            'type' => $type,
+            'data' => $data
+        ];
+    }
+    
+    // 确保config目录存在
+    if (!is_dir('config')) {
+        mkdir('config', 0777, true);
+    }
+
+    file_put_contents('config/song_config.json', json_encode($new_config, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+    header("Location: admin.php?success=" . urlencode("歌单配置已保存") . "&tab=playlists");
     exit;
 }
 
@@ -768,12 +825,15 @@ if (isset($_POST['action']) && in_array($_POST['action'], [
                     
                     if ($existing_ban) {
                         // 更新现有封禁记录
-                        $stmt = $conn->prepare("UPDATE ip_bans SET ban_duration = ?, ban_end = ?, status = 'active', attempts = attempts + 1 WHERE ip_address = ?");
+                        // 注意：如果表中没有attempts字段，这里会报错。根据用户反馈，确实没有attempts字段。
+                        // 修正：移除attempts字段的更新
+                        $stmt = $conn->prepare("UPDATE ip_bans SET ban_duration = ?, ban_end = ?, status = 'active' WHERE ip_address = ?");
                         $stmt->execute([$ban_duration, $ban_end, $ip_address]);
                     } else {
                         // 创建新的封禁记录
-                        $stmt = $conn->prepare("INSERT INTO ip_bans (ip_address, ban_reason, ban_duration, ban_start, ban_end, status, attempts) VALUES (?, ?, ?, NOW(), ?, 'active', ?)");
-                        $stmt->execute([$ip_address, '手动封禁', $ban_duration, $ban_end, 1]);
+                        // 修正：移除attempts字段
+                        $stmt = $conn->prepare("INSERT INTO ip_bans (ip_address, ban_reason, ban_duration, ban_start, ban_end, status) VALUES (?, ?, ?, NOW(), ?, 'active')");
+                        $stmt->execute([$ip_address, '手动封禁', $ban_duration, $ban_end]);
                     }
                     
                     header('Location: admin.php?success=IP地址已成功封禁');
@@ -800,12 +860,14 @@ if (isset($_POST['action']) && in_array($_POST['action'], [
                     
                     if ($existing_ban) {
                         // 更新现有封禁记录
-                        $stmt = $conn->prepare("UPDATE browser_bans SET ban_duration = ?, ban_end = ?, status = 'active', attempts = attempts + 1 WHERE fingerprint = ?");
+                        // 修正：移除attempts字段
+                        $stmt = $conn->prepare("UPDATE browser_bans SET ban_duration = ?, ban_end = ?, status = 'active' WHERE fingerprint = ?");
                         $stmt->execute([$ban_duration, $ban_end, $fingerprint]);
                     } else {
                         // 创建新的封禁记录
-                        $stmt = $conn->prepare("INSERT INTO browser_bans (fingerprint, ban_reason, ban_duration, ban_start, ban_end, status, attempts) VALUES (?, ?, ?, NOW(), ?, 'active', ?)");
-                        $stmt->execute([$fingerprint, '手动封禁', $ban_duration, $ban_end, 1]);
+                        // 修正：移除attempts字段
+                        $stmt = $conn->prepare("INSERT INTO browser_bans (fingerprint, ban_reason, ban_duration, ban_start, ban_end, status) VALUES (?, ?, ?, NOW(), ?, 'active')");
+                        $stmt->execute([$fingerprint, '手动封禁', $ban_duration, $ban_end]);
                     }
                     
                     header('Location: admin.php?success=浏览器指纹已成功封禁');
@@ -1078,7 +1140,8 @@ try {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>管理页面 - Modern Chat</title>
+    <title>后台管理 - Modern Chat</title>
+    <link rel="icon" href="aconvert.ico" type="image/x-icon">
     <style>
         * {
             margin: 0;
@@ -1087,42 +1150,70 @@ try {
         }
         
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f0f2f5;
+            font-family: 'Microsoft YaHei', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f2f5 url('https://bing.biturl.top/?resolution=1920&format=image&index=0&mkt=zh-CN') no-repeat center center; /* 移除fixed，使用默认滚动 */
+            background-size: cover;
             color: #333;
+            min-height: 100vh;
+            text-rendering: optimizeSpeed; /* 优化文本渲染速度 */
+        }
+
+        /* 优化背景遮罩，减少重绘 */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(240, 242, 245, 0.85); /* 增加不透明度，减少背景图渲染压力 */
+            z-index: -1;
+            /* 移除 backdrop-filter: blur(5px); 这种高性能消耗属性 */
         }
         
         .container {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 30px 20px;
         }
         
         .header {
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px;
+            background: #fff; /* 纯色背景比半透明性能更好 */
+            padding: 20px 30px;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); /* 简化阴影 */
+            /* 移除 backdrop-filter */
+            border: 1px solid #eee;
+            margin-bottom: 30px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            transform: translateZ(0); /* 开启硬件加速 */
+        }
+
+        .header:hover {
+            /* 移除 hover 时的 transform 动画，减少重排 */
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
         }
         
         .header h1 {
-            font-size: 24px;
-            color: #667eea;
+            font-size: 26px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 700;
         }
         
         .header .user-info {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 15px;
         }
         
         .header .avatar {
-            width: 40px;
-            height: 40px;
+            width: 44px;
+            height: 44px;
             border-radius: 50%;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             display: flex;
@@ -1130,66 +1221,103 @@ try {
             justify-content: center;
             color: white;
             font-weight: 600;
+            box-shadow: 0 4px 10px rgba(102, 126, 234, 0.3);
         }
         
         .header .username {
             font-weight: 600;
+            font-size: 16px;
         }
         
         .header .logout-btn {
-            padding: 8px 16px;
-            background: #ff4757;
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #ff4757 0%, #ff6b81 100%);
             color: white;
             border: none;
-            border-radius: 6px;
+            border-radius: 25px;
             cursor: pointer;
             font-size: 14px;
-            transition: background-color 0.2s;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(255, 71, 87, 0.3);
         }
         
         .header .logout-btn:hover {
-            background: #ff3742;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(255, 71, 87, 0.4);
         }
         
         .section {
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px;
+            background: #fff;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            border: 1px solid #eee;
+            margin-bottom: 30px;
+            transform: translateZ(0); /* 开启硬件加速 */
         }
         
         .section h2 {
-            font-size: 20px;
-            margin-bottom: 20px;
+            font-size: 22px;
+            margin-bottom: 25px;
             color: #333;
-            border-bottom: 2px solid #667eea;
-            padding-bottom: 10px;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 12px;
+            position: relative;
+        }
+
+        .section h2::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 60px;
+            height: 2px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
         }
         
         .section h3 {
-            font-size: 16px;
-            margin-bottom: 15px;
-            color: #666;
+            font-size: 18px;
+            margin-bottom: 20px;
+            color: #555;
+            font-weight: 600;
         }
         
         .groups-list {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 15px;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 25px;
         }
         
         .group-item {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 8px;
-            border: 1px solid #e0e0e0;
-            transition: transform 0.2s, box-shadow 0.2s;
-            min-height: 300px;
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            border: none;
+            transition: all 0.3s ease;
+            min-height: 320px;
             max-height: none;
             overflow: hidden;
             display: flex;
             flex-direction: column;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            position: relative;
+        }
+        
+        .group-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .group-item:hover::before {
+            opacity: 1;
         }
         
         /* 隐藏滚动条 */
@@ -1205,105 +1333,130 @@ try {
         /* 确保按钮区域有足够空间 */
         .group-item > div:last-child {
             margin-top: auto;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
         }
         
         .group-item:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
         }
         
         .group-item h4 {
-            font-size: 16px;
-            margin-bottom: 10px;
-            color: #667eea;
+            font-size: 18px;
+            margin-bottom: 12px;
+            color: #333;
+            font-weight: 700;
         }
         
         .group-item p {
             font-size: 14px;
             margin-bottom: 8px;
             color: #666;
+            line-height: 1.5;
         }
         
         .group-item .members {
-            margin-top: 10px;
+            margin-top: 15px;
             font-size: 13px;
             color: #888;
+            background: #f8f9fa;
+            padding: 8px 12px;
+            border-radius: 6px;
         }
         
         .delete-group-btn {
-            margin-top: 10px;
-            padding: 6px 12px;
-            background: #ff4757;
+            margin-top: 15px;
+            padding: 8px 16px;
+            background: linear-gradient(135deg, #ff4757 0%, #ff6b81 100%);
             color: white;
             border: none;
-            border-radius: 4px;
+            border-radius: 6px;
             cursor: pointer;
-            font-size: 12px;
-            transition: background-color 0.2s;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.2s;
+            width: 100%;
+            text-align: center;
         }
         
         .delete-group-btn:hover {
-            background: #ff3742;
+            opacity: 0.9;
+            transform: translateY(-1px);
         }
         
         .messages-container {
             max-height: 400px;
             overflow-y: auto;
             background: #f8f9fa;
-            padding: 15px;
-            border-radius: 8px;
-            margin-top: 15px;
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 20px;
+            border: 1px solid #eee;
         }
         
         /* 隐藏滚动条 */
         .messages-container::-webkit-scrollbar {
-            display: none;
+            width: 6px;
         }
-        
-        .messages-container {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
+        .messages-container::-webkit-scrollbar-thumb {
+            background-color: #ddd;
+            border-radius: 3px;
         }
         
         .message {
             background: white;
-            padding: 10px;
-            border-radius: 8px;
-            margin-bottom: 10px;
-            border: 1px solid #e0e0e0;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            border: none;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.03);
+            transition: transform 0.2s;
+        }
+
+        .message:hover {
+            transform: translateX(5px);
         }
         
         .message-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #f0f0f0;
         }
         
         .message-sender {
-            font-weight: 600;
+            font-weight: 700;
             color: #667eea;
         }
         
         .message-time {
             font-size: 12px;
-            color: #888;
+            color: #999;
         }
         
         .message-content {
             font-size: 14px;
-            color: #333;
+            color: #444;
+            line-height: 1.6;
         }
         
         .message-file {
-            margin-top: 5px;
+            margin-top: 10px;
             font-size: 13px;
             color: #666;
+            background: #f0f2f5;
+            padding: 8px;
+            border-radius: 6px;
+            display: inline-block;
         }
         
         .message-file a {
             color: #667eea;
             text-decoration: none;
+            font-weight: 600;
         }
         
         .message-file a:hover {
@@ -1311,46 +1464,69 @@ try {
         }
         
         .success-message {
-            background: #d4edda;
+            background: rgba(212, 237, 218, 0.9);
             color: #155724;
-            padding: 10px;
-            border-radius: 6px;
-            margin-bottom: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            border: 1px solid #c3e6cb;
+            backdrop-filter: blur(5px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
         }
         
         .error-message {
-            background: #f8d7da;
+            background: rgba(248, 215, 218, 0.9);
             color: #721c24;
-            padding: 10px;
-            border-radius: 6px;
-            margin-bottom: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            border: 1px solid #f5c6cb;
+            backdrop-filter: blur(5px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
         }
         
         .tabs {
             display: flex;
-            margin-bottom: 20px;
-            border-bottom: 1px solid #e0e0e0;
+            margin-bottom: 25px;
+            border-bottom: 1px solid #eee;
+            gap: 10px;
+            flex-wrap: wrap; /* 允许换行，防止挤压 */
         }
         
         .tab {
-            padding: 10px 20px;
+            padding: 12px 25px;
             background: transparent;
             border: none;
-            border-bottom: 2px solid transparent;
+            border-bottom: 3px solid transparent;
             cursor: pointer;
             font-size: 16px;
             color: #666;
-            transition: all 0.2s;
+            transition: all 0.3s;
+            font-weight: 600;
+            border-radius: 8px 8px 0 0;
+            white-space: nowrap; /* 防止文字换行 */
+            flex-shrink: 0; /* 防止宽度被压缩 */
+        }
+        
+        .tab:hover {
+            background: rgba(102, 126, 234, 0.05);
+            color: #667eea;
         }
         
         .tab.active {
             border-bottom-color: #667eea;
             color: #667eea;
-            font-weight: 600;
+            background: rgba(102, 126, 234, 0.1);
         }
         
         .tab-content {
             display: none;
+            animation: fadeIn 0.4s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         
         .tab-content.active {
@@ -1361,19 +1537,19 @@ try {
         .status-pending {
             background: #e3f2fd;
             color: #1976d2;
-            padding: 4px 8px;
-            border-radius: 4px;
+            padding: 4px 10px;
+            border-radius: 20px;
             font-size: 12px;
-            font-weight: 500;
+            font-weight: 600;
         }
         
         .status-approved {
             background: #e8f5e8;
             color: #388e3c;
-            padding: 4px 8px;
-            border-radius: 4px;
+            padding: 4px 10px;
+            border-radius: 20px;
             font-size: 12px;
-            font-weight: 500;
+            font-weight: 600;
         }
         
         .status-rejected {
@@ -1508,10 +1684,10 @@ try {
         </div>
 
         <?php if (isset($_GET['success'])): ?>
-            <div class="success-message"><?php echo htmlspecialchars($_GET['success']); ?></div>
+            <div class="success-message"><?php echo htmlspecialchars(urldecode($_GET['success'])); ?></div>
         <?php endif; ?>
         <?php if (isset($_GET['error'])): ?>
-            <div class="error-message"><?php echo htmlspecialchars($_GET['error']); ?></div>
+            <div class="error-message"><?php echo htmlspecialchars(urldecode($_GET['error'])); ?></div>
         <?php endif; ?>
 
         <div class="section">
@@ -1529,6 +1705,7 @@ try {
                 <button class="tab" onclick="openTab(event, 'prohibited_words')">违禁词管理</button>
                 <button class="tab" onclick="openTab(event, 'system_settings')">系统设置</button>
                 <button class="tab" onclick="openTab(event, 'announcements')">公告发布</button>
+                <button class="tab" onclick="openTab(event, 'playlists')">歌单管理</button>
             </div>
 
             <!-- 群聊管理 -->
@@ -2185,6 +2362,331 @@ try {
                 </div>
             </div>
             
+            <!-- 歌单管理 -->
+            <div id="playlists" class="tab-content">
+                <h3>歌单配置</h3>
+                <div class="settings-list">
+                    <form action="admin.php" method="POST" id="playlist-form">
+                        <input type="hidden" name="action" value="save_playlists">
+                        
+                        <div id="playlist-items-container">
+                            <?php
+                            $song_config_file = 'config/song_config.json';
+                            $playlists = [];
+                            if (file_exists($song_config_file)) {
+                                $playlists = json_decode(file_get_contents($song_config_file), true);
+                            }
+                            
+                            if (empty($playlists)) {
+                                // 默认空项
+                                $playlists = ['New Playlist' => ['type' => 'local', 'data' => '']];
+                            }
+                            
+                            $index = 0;
+                            foreach ($playlists as $name => $settings):
+                                $type = $settings['type'];
+                                $data = $settings['data'];
+                                
+                                // 如果是URL类型且数据是数组，保持数组格式；否则如果是字符串（旧格式），转为数组
+                                if ($type === 'url' && !is_array($data)) {
+                                    $data = array_filter(array_map('trim', explode("\n", $data)));
+                                    $data = array_values($data);
+                                }
+                                // 本地类型保持字符串
+                                $displayData = $type === 'local' ? (is_array($data) ? '' : $data) : '';
+                                $urlDataJson = $type === 'url' ? json_encode($data) : '[]';
+                            ?>
+                            <div class="setting-item playlist-item" style="flex-direction: column; align-items: stretch; gap: 10px; background: #f9f9f9; margin: 10px; border-radius: 8px; border: 1px solid #eee;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <h4 style="margin: 0; color: #667eea;">歌单 #<?php echo $index + 1; ?></h4>
+                                    <button type="button" onclick="removePlaylistItem(this)" style="background: #ff4757; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer;">删除</button>
+                                </div>
+                                
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                                    <div>
+                                        <label style="display: block; margin-bottom: 5px; font-weight: 600;">歌单名称</label>
+                                        <input type="text" name="playlist_name[]" value="<?php echo htmlspecialchars($name); ?>" class="search-input" required placeholder="输入歌单名称">
+                                    </div>
+                                    <div>
+                                        <label style="display: block; margin-bottom: 5px; font-weight: 600;">类型</label>
+                                        <select name="playlist_type[]" class="search-input" onchange="togglePlaylistInput(this)">
+                                            <option value="local" <?php echo $type === 'local' ? 'selected' : ''; ?>>本地目录 (Local)</option>
+                                            <option value="url" <?php echo $type === 'url' ? 'selected' : ''; ?>>网络链接 (URL)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">内容配置</label>
+                                    <div class="playlist-desc" style="font-size: 12px; color: #666; margin-bottom: 5px;">
+                                        <?php echo $type === 'local' ? '请输入网站根目录下的文件夹路径（例如：new_music）' : '配置音频URL列表'; ?>
+                                    </div>
+                                    
+                                    <!-- 本地路径输入框 -->
+                                    <textarea name="playlist_content[]" class="search-input local-input" rows="5" style="resize: vertical; display: <?php echo $type === 'local' ? 'block' : 'none'; ?>;" <?php echo $type === 'local' ? 'required' : 'disabled'; ?>><?php echo htmlspecialchars($displayData); ?></textarea>
+                                    
+                                    <!-- URL列表编辑器 -->
+                                    <div class="url-editor-container" style="display: <?php echo $type === 'url' ? 'block' : 'none'; ?>;">
+                                        <input type="hidden" name="playlist_content[]" class="url-json-input" value='<?php echo htmlspecialchars($urlDataJson, ENT_QUOTES); ?>' <?php echo $type === 'url' ? '' : 'disabled'; ?>>
+                                        
+                                        <!-- URL表格 -->
+                                        <div class="url-table-wrapper" style="background: white; border: 1px solid #ddd; border-radius: 4px; overflow: hidden; margin-bottom: 10px;">
+                                            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                                                <thead style="background: #f1f3f5; border-bottom: 1px solid #ddd;">
+                                                    <tr>
+                                                        <th style="padding: 8px; text-align: center; width: 50px; color: #555;">ID</th>
+                                                        <th style="padding: 8px; text-align: left; color: #555;">URL</th>
+                                                        <th style="padding: 8px; text-align: center; width: 120px; color: #555;">操作</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody class="url-table-body">
+                                                    <!-- JS将在这里渲染行 -->
+                                                </tbody>
+                                            </table>
+                                            <div class="empty-tip" style="padding: 20px; text-align: center; color: #999; display: none;">暂无URL</div>
+                                        </div>
+                                        
+                                        <!-- 添加区域 -->
+                                        <div style="display: flex; gap: 10px;">
+                                            <input type="text" class="new-url-input search-input" placeholder="输入音频URL (http/https...)" style="margin-bottom: 0; flex: 1;">
+                                            <button type="button" onclick="addUrlRow(this)" style="padding: 8px 16px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; white-space: nowrap;">添加</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <?php $index++; endforeach; ?>
+                        </div>
+                        
+                        <div style="padding: 15px 20px;">
+                            <button type="button" onclick="addPlaylistItem()" style="background: #667eea; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-right: 10px;">+ 添加新歌单</button>
+                        </div>
+                        
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <label>管理员密码确认</label>
+                                <div class="setting-description">保存敏感配置需要验证管理员密码</div>
+                            </div>
+                            <div style="width: 200px;">
+                                <input type="password" name="password" class="search-input" placeholder="请输入管理员密码" required style="margin-bottom: 0;">
+                            </div>
+                        </div>
+                        
+                        <div style="padding: 20px; text-align: right; background: #f8f9fa; border-top: 1px solid #e0e0e0;">
+                            <button type="submit" style="padding: 10px 25px; background: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600;">保存配置</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <script>
+            // 页面加载完成后初始化所有 URL 表格
+            document.addEventListener('DOMContentLoaded', function() {
+                document.querySelectorAll('.url-editor-container').forEach(container => {
+                    renderUrlTable(container);
+                });
+            });
+
+            // 渲染 URL 表格
+            function renderUrlTable(container) {
+                const hiddenInput = container.querySelector('.url-json-input');
+                const tbody = container.querySelector('.url-table-body');
+                const emptyTip = container.querySelector('.empty-tip');
+                
+                let urls = [];
+                try {
+                    urls = JSON.parse(hiddenInput.value || '[]');
+                } catch (e) {
+                    urls = [];
+                }
+                
+                tbody.innerHTML = '';
+                
+                if (urls.length === 0) {
+                    emptyTip.style.display = 'block';
+                } else {
+                    emptyTip.style.display = 'none';
+                    urls.forEach((url, index) => {
+                        const tr = document.createElement('tr');
+                        tr.style.borderBottom = '1px solid #f0f0f0';
+                        
+                        // 截断 URL 用于显示
+                        const shortUrl = url.length > 50 ? url.substring(0, 50) + '...' : url;
+                        
+                        tr.innerHTML = `
+                            <td style="padding: 8px; text-align: center; color: #666;">${index + 1}</td>
+                            <td style="padding: 8px; color: #333; font-family: monospace;" title="${url.replace(/"/g, '&quot;')}">${shortUrl}</td>
+                            <td style="padding: 8px; text-align: center;">
+                                <button type="button" onclick="editUrlRow(this, ${index})" style="padding: 4px 8px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 5px;">编辑</button>
+                                <button type="button" onclick="removeUrlRow(this, ${index})" style="padding: 4px 8px; background: #ff4757; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">删除</button>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+            }
+
+            // 添加 URL
+            function addUrlRow(btn) {
+                const container = btn.closest('.url-editor-container');
+                const input = container.querySelector('.new-url-input');
+                const url = input.value.trim();
+                
+                if (!url) {
+                    alert('请输入 URL');
+                    return;
+                }
+                
+                const hiddenInput = container.querySelector('.url-json-input');
+                let urls = [];
+                try {
+                    urls = JSON.parse(hiddenInput.value || '[]');
+                } catch (e) { urls = []; }
+                
+                urls.push(url);
+                hiddenInput.value = JSON.stringify(urls);
+                input.value = '';
+                
+                renderUrlTable(container);
+            }
+
+            // 删除 URL
+            function removeUrlRow(btn, index) {
+                if (!confirm('确定要删除此 URL 吗？')) return;
+                
+                const container = btn.closest('.url-editor-container');
+                const hiddenInput = container.querySelector('.url-json-input');
+                let urls = JSON.parse(hiddenInput.value || '[]');
+                
+                urls.splice(index, 1);
+                hiddenInput.value = JSON.stringify(urls);
+                
+                renderUrlTable(container);
+            }
+
+            // 编辑 URL
+            function editUrlRow(btn, index) {
+                const container = btn.closest('.url-editor-container');
+                const hiddenInput = container.querySelector('.url-json-input');
+                let urls = JSON.parse(hiddenInput.value || '[]');
+                const url = urls[index];
+                
+                const newUrl = prompt('编辑 URL:', url);
+                if (newUrl !== null && newUrl.trim() !== '') {
+                    urls[index] = newUrl.trim();
+                    hiddenInput.value = JSON.stringify(urls);
+                    renderUrlTable(container);
+                }
+            }
+
+            // 切换类型
+            function togglePlaylistInput(select) {
+                const item = select.closest('.playlist-item');
+                const desc = item.querySelector('.playlist-desc');
+                const localInput = item.querySelector('.local-input');
+                const urlEditor = item.querySelector('.url-editor-container');
+                const urlJsonInput = urlEditor.querySelector('.url-json-input');
+                
+                if (select.value === 'local') {
+                    desc.textContent = '请输入网站根目录下的文件夹路径（例如：new_music）';
+                    localInput.style.display = 'block';
+                    localInput.required = true;
+                    localInput.disabled = false;
+                    
+                    urlEditor.style.display = 'none';
+                    urlJsonInput.disabled = true; // 禁用以免提交
+                } else {
+                    desc.textContent = '配置音频URL列表';
+                    localInput.style.display = 'none';
+                    localInput.required = false;
+                    localInput.disabled = true;
+                    
+                    urlEditor.style.display = 'block';
+                    urlJsonInput.disabled = false;
+                    renderUrlTable(urlEditor);
+                }
+            }
+
+            function removePlaylistItem(btn) {
+                const container = document.getElementById('playlist-items-container');
+                if (container.children.length <= 1) {
+                    alert('至少保留一个歌单配置');
+                    return;
+                }
+                btn.closest('.playlist-item').remove();
+                updatePlaylistIndices();
+            }
+
+            function addPlaylistItem() {
+                const container = document.getElementById('playlist-items-container');
+                const template = `
+                    <div class="setting-item playlist-item" style="flex-direction: column; align-items: stretch; gap: 10px; background: #f9f9f9; margin: 10px; border-radius: 8px; border: 1px solid #eee;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <h4 style="margin: 0; color: #667eea;">新歌单</h4>
+                            <button type="button" onclick="removePlaylistItem(this)" style="background: #ff4757; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer;">删除</button>
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                            <div>
+                                <label style="display: block; margin-bottom: 5px; font-weight: 600;">歌单名称</label>
+                                <input type="text" name="playlist_name[]" class="search-input" required placeholder="输入歌单名称">
+                            </div>
+                            <div>
+                                <label style="display: block; margin-bottom: 5px; font-weight: 600;">类型</label>
+                                <select name="playlist_type[]" class="search-input" onchange="togglePlaylistInput(this)">
+                                    <option value="local">本地目录 (Local)</option>
+                                    <option value="url" selected>网络链接 (URL)</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; font-weight: 600;">内容配置</label>
+                            <div class="playlist-desc" style="font-size: 12px; color: #666; margin-bottom: 5px;">
+                                配置音频URL列表
+                            </div>
+                            
+                            <!-- 本地路径输入框 -->
+                            <textarea name="playlist_content[]" class="search-input local-input" rows="5" style="resize: vertical; display: none;" disabled></textarea>
+                            
+                            <!-- URL列表编辑器 -->
+                            <div class="url-editor-container" style="display: block;">
+                                <input type="hidden" name="playlist_content[]" class="url-json-input" value="[]">
+                                
+                                <div class="url-table-wrapper" style="background: white; border: 1px solid #ddd; border-radius: 4px; overflow: hidden; margin-bottom: 10px;">
+                                    <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                                        <thead style="background: #f1f3f5; border-bottom: 1px solid #ddd;">
+                                            <tr>
+                                                <th style="padding: 8px; text-align: center; width: 50px; color: #555;">ID</th>
+                                                <th style="padding: 8px; text-align: left; color: #555;">URL</th>
+                                                <th style="padding: 8px; text-align: center; width: 120px; color: #555;">操作</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="url-table-body">
+                                        </tbody>
+                                    </table>
+                                    <div class="empty-tip" style="padding: 20px; text-align: center; color: #999; display: block;">暂无URL</div>
+                                </div>
+                                
+                                <div style="display: flex; gap: 10px;">
+                                    <input type="text" class="new-url-input search-input" placeholder="输入音频URL (http/https...)" style="margin-bottom: 0; flex: 1;">
+                                    <button type="button" onclick="addUrlRow(this)" style="padding: 8px 16px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; white-space: nowrap;">添加</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', template);
+                updatePlaylistIndices();
+            }
+
+            function updatePlaylistIndices() {
+                const items = document.querySelectorAll('.playlist-item h4');
+                items.forEach((h4, index) => {
+                    h4.textContent = '歌单 #' + (index + 1);
+                });
+            }
+            </script>
+
             <!-- 封禁管理 -->
             <div id="ban_management" class="tab-content">
                 <h3>封禁管理</h3>

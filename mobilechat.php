@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/install_check.php';
 // 检查系统维护模式
 require_once 'config.php';
 if (getConfig('System_Maintenance', 0) == 1) {
@@ -280,7 +281,54 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>手机端 - Modern Chat</title>
+    <link rel="icon" href="aconvert.ico" type="image/x-icon">
     <style>
+        :root {
+            /* 浅色模式变量 */
+            --bg-color: #f2f2f2;
+            --text-color: #333333;
+            --text-secondary: #666666;
+            --text-desc: #999999;
+            --border-color: rgba(234, 234, 234, 0.5);
+            --panel-bg: rgba(255, 255, 255, 0.95);
+            --sidebar-bg: rgba(247, 247, 247, 0.9);
+            --message-sent-bg: #95ec69;
+            --message-received-bg: rgba(255, 255, 255, 0.9);
+            --hover-bg: rgba(245, 245, 245, 0.8);
+            --modal-bg: rgba(255, 255, 255, 0.98);
+            --input-bg: rgba(255, 255, 255, 0.9);
+            --shadow-color: rgba(0,0,0,0.1);
+            --primary-color: #667eea;
+            --danger-color: #ff4d4f;
+            --header-bg: rgba(255, 255, 255, 0.9);
+        }
+
+        [data-theme="dark"] {
+            /* 深色模式变量 */
+            --bg-color: #1a1b1e;
+            --text-color: #e1e1e6;
+            --text-secondary: #a1a1aa;
+            --text-desc: #71717a;
+            --border-color: rgba(44, 46, 51, 0.5);
+            --panel-bg: rgba(37, 38, 43, 0.95);
+            --sidebar-bg: rgba(32, 33, 36, 0.9);
+            --message-sent-bg: rgba(55, 65, 81, 0.9);
+            --message-received-bg: rgba(44, 46, 51, 0.9);
+            --hover-bg: rgba(44, 46, 51, 0.8);
+            --modal-bg: rgba(37, 38, 43, 0.98);
+            --input-bg: rgba(44, 46, 51, 0.9);
+            --shadow-color: rgba(0,0,0,0.5);
+            --primary-color: #5c7cfa;
+            --danger-color: #ff6b6b;
+            --header-bg: rgba(32, 33, 36, 0.9);
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -289,17 +337,19 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         
         body {
             font-family: 'Microsoft YaHei', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f2f2f2;
+            background: url('https://bing.biturl.top/?resolution=1920&format=image&index=0&mkt=zh-CN') no-repeat center center fixed;
+            background-size: cover;
             height: 100vh;
             overflow: hidden;
-            color: #333;
+            color: var(--text-color);
+            transition: color 0.3s;
         }
         
         /* 主容器 */
         .chat-container {
             display: flex;
             height: 100vh;
-            background: #fff;
+            background: transparent;
             width: 100vw;
             overflow: hidden;
         }
@@ -307,17 +357,18 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         /* 左侧边栏 - 微信风格 */
         .sidebar {
             width: 100%;
-            background: #fff;
+            background: transparent;
             display: flex;
             flex-direction: column;
             flex: 1;
             max-width: none;
+            backdrop-filter: blur(10px);
         }
         
         /* 左侧边栏顶部 - 用户信息 */
         .sidebar-header {
             height: 75px;
-            background: #f6f6f6;
+            background: var(--sidebar-bg);
             display: flex;
             align-items: center;
             padding: 10px 15px;
@@ -353,8 +404,8 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             width: 80%;
             max-width: 300px;
             height: 100vh;
-            background: white;
-            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+            background: var(--modal-bg);
+            box-shadow: 2px 0 10px var(--shadow-color);
             transition: left 0.3s ease;
             z-index: 1000;
             overflow-y: auto;
@@ -366,10 +417,10 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
 
         .menu-header {
             padding: 20px;
-            background: #f6f6f6;
-            color: #333;
+            background: var(--sidebar-bg);
+            color: var(--text-color);
             text-align: center;
-            border-bottom: 1px solid #eaeaea;
+            border-bottom: 1px solid var(--border-color);
         }
 
         .menu-avatar {
@@ -390,18 +441,18 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             font-size: 16px;
             font-weight: 600;
             margin-bottom: 5px;
-            color: #333;
+            color: var(--text-color);
         }
 
         .menu-email {
             font-size: 13px;
             margin-bottom: 5px;
-            color: #666;
+            color: var(--text-secondary);
         }
 
         .menu-ip {
             font-size: 11px;
-            color: #999;
+            color: var(--text-desc);
         }
 
         .menu-items {
@@ -413,9 +464,9 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             width: 100%;
             padding: 12px;
             margin-bottom: 8px;
-            background: #fff;
-            color: #333;
-            border: 1px solid #eaeaea;
+            background: var(--panel-bg);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
             border-radius: 4px;
             font-size: 14px;
             font-weight: 500;
@@ -426,9 +477,9 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         }
 
         .menu-item:hover {
-            background: #f5f5f5;
-            border-color: #12b7f5;
-            color: #12b7f5;
+            background: var(--hover-bg);
+            border-color: var(--primary-color);
+            color: var(--primary-color);
         }
 
         .menu-item-danger {
@@ -495,7 +546,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         /* 搜索栏 */
         .search-bar {
             padding: 10px 15px;
-            background: #f6f6f6;
+            background: var(--sidebar-bg);
         }
         
         .search-input {
@@ -504,13 +555,14 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             border: none;
             border-radius: 18px;
             font-size: 13px;
-            background: #f0f0f0;
+            background: var(--input-bg);
             outline: none;
             transition: all 0.3s ease;
+            color: var(--text-color);
         }
         
         .search-input:focus {
-            background: #e5e5e5;
+            background: var(--hover-bg);
             box-shadow: none;
         }
         
@@ -531,6 +583,9 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             position: relative;
             height: auto;
             min-height: 80px;
+            background: var(--panel-bg);
+            border-bottom: 1px solid var(--border-color);
+            overflow: visible !important;
         }
         
         /* 聊天项菜单容器 */
@@ -576,13 +631,14 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             position: absolute;
             top: 100%;
             right: 0;
-            background: white;
+            background: var(--modal-bg);
             border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            z-index: 9999;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            z-index: 99999;
             min-width: 120px;
             margin-top: 5px;
             overflow: visible;
+            border: 1px solid var(--border-color);
         }
         
         /* 确保聊天列表不会裁剪菜单 */
@@ -601,22 +657,22 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             cursor: pointer;
             text-align: left;
             font-size: 14px;
-            color: #333;
+            color: var(--text-color);
             transition: background-color 0.2s;
             border-radius: 8px;
         }
         
         /* 好友菜单项悬停效果 */
         .friend-menu-item:hover {
-            background-color: #f5f5f5;
+            background-color: var(--hover-bg);
         }
         
         .chat-item:hover {
-            background-color: #f5f5f5;
+            background-color: var(--hover-bg);
         }
         
         .chat-item.active {
-            background-color: #e5e5e5;
+            background-color: var(--hover-bg);
         }
         
         .chat-avatar {
@@ -649,11 +705,12 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            color: var(--text-color);
         }
         
         .chat-last-message {
             font-size: 12px;
-            color: #999;
+            color: var(--text-desc);
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -661,7 +718,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         
         .chat-time {
             font-size: 11px;
-            color: #999;
+            color: var(--text-desc);
             margin-left: 8px;
         }
         
@@ -680,8 +737,8 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         /* 左侧边栏底部 - 功能图标 */
         .sidebar-footer {
             height: 60px;
-            background: #f6f6f6;
-            border-top: 1px solid #eaeaea;
+            background: var(--sidebar-bg);
+            border-top: 1px solid var(--border-color);
             display: flex;
             align-items: center;
             justify-content: space-around;
@@ -697,13 +754,13 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             justify-content: center;
             font-size: 20px;
             cursor: pointer;
-            color: #666;
+            color: var(--text-secondary);
             transition: all 0.2s ease;
         }
         
         .footer-icon:hover {
-            background-color: #e5e5e5;
-            color: #12b7f5;
+            background-color: var(--hover-bg);
+            color: var(--primary-color);
         }
         
         /* 聊天区域 */
@@ -711,7 +768,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             flex: 1;
             display: flex;
             flex-direction: column;
-            background: #e5e5e5;
+            background: var(--bg-color);
             width: 100%;
             height: 100vh;
         }
@@ -719,7 +776,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         /* 聊天区域顶部 - 对方信息 */
         .chat-header {
             height: 60px;
-            background: #f6f6f6;
+            background: var(--header-bg);
             display: flex;
             align-items: center;
             padding: 0 15px;
@@ -737,7 +794,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         
         .chat-header-status {
             font-size: 12px;
-            color: #999;
+            color: var(--text-desc);
         }
         
         /* 消息容器 */
@@ -745,7 +802,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             flex: 1;
             overflow-y: auto;
             padding: 20px;
-            background: #f2f2f2;
+            background: var(--bg-color);
             min-height: 0;
             height: calc(100% - 120px);
             max-height: calc(100% - 120px);
@@ -816,27 +873,27 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         }
         
         .message.sent .message-content {
-            background: #9eea6a;
-            color: #333;
+            background: var(--message-sent-bg);
+            color: var(--text-color);
             border-bottom-right-radius: 4px;
         }
         
         .message.received .message-content {
-            background: #fff;
-            color: #333;
+            background: var(--message-received-bg);
+            color: var(--text-color);
             border-bottom-left-radius: 4px;
         }
         
         .message-time {
             font-size: 11px;
-            color: #999;
+            color: var(--text-desc);
             margin-top: 4px;
             text-align: right;
         }
         
         /* 输入区域 */
         .input-area {
-            background: #f6f6f6;
+            background: var(--header-bg);
             padding: 15px;
             display: block !important;
             visibility: visible !important;
@@ -846,10 +903,10 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             display: flex;
             align-items: flex-end;
             gap: 10px;
-            background: #fff;
+            background: var(--input-bg);
             padding: 10px 15px;
             border-radius: 20px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 1px 3px var(--shadow-color);
             width: 100%;
         }
         
@@ -866,6 +923,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             outline: none;
             max-height: 120px;
             overflow-y: auto;
+            color: var(--text-color);
         }
         
         .input-actions {
@@ -929,11 +987,14 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         }
         
         .modal-content {
-            background: white;
+            background: var(--modal-bg);
+            color: var(--text-color);
             border-radius: 8px;
             padding: 20px;
-            max-width: 500px;
+            max-width: 90%;
             width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
         }
         
         /* 聊天类型切换 */
@@ -1030,7 +1091,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         .custom-audio-player {
             display: flex;
             align-items: center;
-            background: #f8f9fa;
+            background: var(--input-bg);
             border-radius: 20px;
             padding: 20px 25px;
             max-width: 100%;
@@ -1042,7 +1103,8 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             height: auto;
             min-height: 110px;
             overflow: visible;
-            border: 2px solid transparent;
+            border: 2px solid var(--border-color);
+            color: var(--text-color);
         }
         
         /* 音频播放器头像 */
@@ -1056,7 +1118,8 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         }
         
         .message.sent .custom-audio-player {
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(18, 183, 245, 0.1);
+            border-color: rgba(18, 183, 245, 0.3);
         }
         
         .audio-element {
@@ -1869,17 +1932,17 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
     
     <!-- 设置弹窗 -->
     <div id="settings-modal" class="modal" style="display: none;">
-        <div class="modal-content" style="width: 400px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #eaeaea;">
-                <h2 style="color: #333; font-size: 18px; font-weight: 600;">设置</h2>
-                <button onclick="closeSettingsModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #666;">×</button>
+        <div class="modal-content" style="width: 90%; max-height: 80vh; overflow-y: auto; background: var(--modal-bg); color: var(--text-color);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid var(--border-color);">
+                <h2 style="color: var(--text-color); font-size: 18px; font-weight: 600;">设置</h2>
+                <button onclick="closeSettingsModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-secondary);">×</button>
             </div>
             <div class="settings-content">
                 <!-- 设置项：使用弹窗显示链接 -->
-                <div class="setting-item" style="display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #f0f0f0;">
+                <div class="setting-item" style="display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid var(--border-color);">
                     <div>
-                        <div style="font-size: 14px; font-weight: 600; color: #333;">使用弹窗显示链接</div>
-                        <div style="font-size: 12px; color: #999; margin-top: 2px;">点击链接时使用弹窗显示</div>
+                        <div style="font-size: 14px; font-weight: 600; color: var(--text-color);">使用弹窗显示链接</div>
+                        <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">点击链接时使用弹窗显示</div>
                     </div>
                     <label class="switch">
                         <input type="checkbox" id="setting-link-popup" checked>
@@ -1887,48 +1950,17 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                     </label>
                 </div>
                 
-                <!-- 设置项：音乐播放器 -->
-                <div class="setting-item" style="display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #f0f0f0;">
-                    <div>
-                        <div style="font-size: 14px; font-weight: 600; color: #333;">音乐播放器</div>
-                        <div style="font-size: 12px; color: #999; margin-top: 2px;">在聊天中播放音乐</div>
-                    </div>
-                    <label class="switch">
-                        <input type="checkbox" id="setting-music-player">
-                        <span class="slider"></span>
-                    </label>
-                </div>
-                
-                <!-- 设置项：音乐模式 -->
-                <div class="setting-item" style="display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #f0f0f0;">
-                    <div>
-                        <div style="font-size: 14px; font-weight: 600; color: #333;">音乐模式</div>
-                        <div style="font-size: 12px; color: #999; margin-top: 2px;">选择播放的音乐类型</div>
-                    </div>
-                    <select id="setting-music-mode" style="
-                        padding: 8px 12px;
-                        border: 1px solid #ddd;
-                        border-radius: 6px;
-                        background: white;
-                        font-size: 13px;
-                        cursor: pointer;
-                    ">
-                        <option value="random">随机音乐</option>
-                        <option value="hoyo">HOYO-MiX</option>
-                    </select>
-                </div>
-                
 
                 
                 <!-- 设置项：更多设置 -->
-                <div class="setting-item" style="display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #f0f0f0;">
+                <div class="setting-item" style="display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid var(--border-color);">
                     <div>
-                        <div style="font-size: 14px; font-weight: 600; color: #333;">更多设置</div>
-                        <div style="font-size: 12px; color: #999; margin-top: 2px;">修改个人信息</div>
+                        <div style="font-size: 14px; font-weight: 600; color: var(--text-color);">更多设置</div>
+                        <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">修改个人信息</div>
                     </div>
                     <button onclick="showMoreSettings()" style="
                         padding: 8px 16px;
-                        background: #667eea;
+                        background: var(--primary-color);
                         color: white;
                         border: none;
                         border-radius: 6px;
@@ -1939,14 +1971,14 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 </div>
                 
                 <!-- 设置项：管理缓存 -->
-                <div class="setting-item" style="display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #f0f0f0;">
+                <div class="setting-item" style="display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid var(--border-color);">
                     <div>
-                        <div style="font-size: 14px; font-weight: 600; color: #333;">管理已缓存文件</div>
-                        <div style="font-size: 12px; color: #999; margin-top: 2px;">查看和管理已缓存的文件</div>
+                        <div style="font-size: 14px; font-weight: 600; color: var(--text-color);">管理已缓存文件</div>
+                        <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">查看和管理已缓存的文件</div>
                     </div>
                     <button onclick="showCacheViewer()" style="
                         padding: 8px 16px;
-                        background: #667eea;
+                        background: var(--primary-color);
                         color: white;
                         border: none;
                         border-radius: 6px;
@@ -1957,14 +1989,14 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 </div>
                 
                 <!-- 设置项：清除缓存 -->
-                <div class="setting-item" style="display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #f0f0f0;">
+                <div class="setting-item" style="display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid var(--border-color);">
                     <div>
-                        <div style="font-size: 14px; font-weight: 600; color: #333;">清除文件缓存</div>
-                        <div style="font-size: 12px; color: #999; margin-top: 2px;">清除所有本地存储的文件数据，此操作不可恢复</div>
+                        <div style="font-size: 14px; font-weight: 600; color: var(--text-color);">清除文件缓存</div>
+                        <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">清除所有本地存储的文件数据，此操作不可恢复</div>
                     </div>
                     <button onclick="clearFileCache()" style="
                         padding: 8px 16px;
-                        background: #ff4d4f;
+                        background: var(--danger-color);
                         color: white;
                         border: none;
                         border-radius: 6px;
@@ -1977,12 +2009,12 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 <!-- 设置项：密保设置 -->
                 <div class="setting-item" style="display: flex; justify-content: space-between; align-items: center; padding: 15px 0;">
                     <div>
-                        <div style="font-size: 14px; font-weight: 600; color: #333;">密保设置</div>
-                        <div style="font-size: 12px; color: #999; margin-top: 2px;">设置密保问题和答案，用于账号安全</div>
+                        <div style="font-size: 14px; font-weight: 600; color: var(--text-color);">密保设置</div>
+                        <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">设置密保问题和答案，用于账号安全</div>
                     </div>
                     <button onclick="showSecurityQuestionModal()" style="
                         padding: 8px 16px;
-                        background: #667eea;
+                        background: var(--primary-color);
                         color: white;
                         border: none;
                         border-radius: 6px;
@@ -1990,6 +2022,18 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                         font-size: 13px;
                         transition: background-color 0.2s;
                     ">设置</button>
+                </div>
+                
+                <!-- 外观设置 -->
+                <div class="setting-item" style="display: flex; justify-content: space-between; align-items: center; padding: 15px 0;">
+                    <div>
+                        <div style="font-size: 14px; font-weight: 600; color: var(--text-color);">深色模式</div>
+                        <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">切换界面颜色为深色风格</div>
+                    </div>
+                    <label class="switch" style="position: relative; display: inline-block; width: 52px; height: 32px;">
+                        <input type="checkbox" id="dark-mode-toggle" onchange="toggleTheme(this.checked)" style="opacity: 0; width: 0; height: 0; position: absolute; z-index: -1;">
+                        <span class="slider"></span>
+                    </label>
                 </div>
                 
                 <!-- 设置项：退出登录 -->
@@ -2118,6 +2162,41 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                         ">修改密码</button>
                     </div>
                 </div>
+
+                <!-- 手机号绑定部分 -->
+                <?php
+                // 读取phone_sms配置
+                $phone_sms_enabled = getConfig('phone_sms', false);
+                // 确保是布尔值
+                $phone_sms_enabled = filter_var($phone_sms_enabled, FILTER_VALIDATE_BOOLEAN);
+                
+                if ($phone_sms_enabled):
+                ?>
+                <div style="padding: 20px; background: #f8f9fa; border-radius: 8px; margin-bottom: 20px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <div>
+                            <div style="font-size: 14px; font-weight: 500; color: #333;">
+                                <?php echo !empty($current_user['phone']) ? '修改绑定手机号' : '手机号绑定'; ?>
+                            </div>
+                            <div style="font-size: 12px; color: #666;" id="security-phone-text">
+                                <?php echo !empty($current_user['phone']) ? substr($current_user['phone'], 0, 3) . '****' . substr($current_user['phone'], -4) : '未绑定'; ?>
+                            </div>
+                        </div>
+                        <button onclick="showPhoneBindModal()" style="
+                            padding: 6px 12px;
+                            background: #667eea;
+                            color: white;
+                            border: none;
+                            border-radius: 6px;
+                            cursor: pointer;
+                            font-size: 13px;
+                            transition: background-color 0.2s;
+                        ">
+                            <?php echo !empty($current_user['phone']) ? '修改' : '绑定'; ?>
+                        </button>
+                    </div>
+                </div>
+                <?php endif; ?>
                 
 
 
@@ -2354,6 +2433,75 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         </div>
     </div>
     
+    <!-- 手机号绑定弹窗 -->
+    <div id="phone-bind-modal" class="modal" style="display: none; z-index: 10000;">
+        <div class="modal-content" style="width: 90%; max-width: 400px; background: var(--modal-bg, #fff); color: var(--text-color, #333);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid var(--border-color, #eaeaea);">
+                <h2 style="color: var(--text-color, #333); font-size: 18px; font-weight: 600;" id="phone-bind-title">绑定手机号</h2>
+                <button onclick="closePhoneBindModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-secondary, #666);">×</button>
+            </div>
+            <div style="padding: 0 20px 20px;">
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-size: 14px; color: var(--text-secondary, #666);">手机号</label>
+                    <input type="tel" id="bind-phone-input" placeholder="请输入手机号" style="
+                        width: 100%;
+                        padding: 10px;
+                        border: 1px solid var(--border-color, #ddd);
+                        border-radius: 4px;
+                        background: var(--input-bg, #fff);
+                        color: var(--text-color, #333);
+                        font-size: 14px;
+                        box-sizing: border-box;
+                    ">
+                </div>
+                
+                <!-- 极验验证码容器 -->
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <div id="bind-phone-captcha"></div>
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 5px; font-size: 14px; color: var(--text-secondary, #666);">验证码</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="bind-sms-code" placeholder="6位验证码" maxlength="6" style="
+                            flex: 1;
+                            padding: 10px;
+                            border: 1px solid var(--border-color, #ddd);
+                            border-radius: 4px;
+                            background: var(--input-bg, #fff);
+                            color: var(--text-color, #333);
+                            font-size: 14px;
+                            box-sizing: border-box;
+                        ">
+                        <button id="get-bind-code-btn" disabled style="
+                            padding: 0 15px;
+                            background: #ccc;
+                            color: white;
+                            border: none;
+                            border-radius: 4px;
+                            cursor: not-allowed;
+                            font-size: 13px;
+                            white-space: nowrap;
+                        ">获取验证码</button>
+                    </div>
+                </div>
+                
+                <button onclick="submitPhoneBind()" style="
+                    width: 100%;
+                    padding: 12px;
+                    background: var(--primary-color, #667eea);
+                    color: white;
+                    border: none;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    font-size: 14px;
+                    font-weight: 500;
+                    transition: background-color 0.2s;
+                ">确定</button>
+            </div>
+        </div>
+    </div>
+    
     <!-- 缓存查看弹窗 -->
     <div id="cache-viewer-modal" class="modal" style="display: none;">
         <div class="modal-content" style="width: 350px;">
@@ -2433,8 +2581,8 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         .switch {
             position: relative;
             display: inline-block;
-            width: 50px;
-            height: 24px;
+            width: 52px;
+            height: 32px;
         }
         
         .switch input {
@@ -2450,29 +2598,30 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             left: 0;
             right: 0;
             bottom: 0;
-            background-color: #ccc;
-            transition: .4s;
-            border-radius: 24px;
+            background-color: #e9e9ea;
+            transition: .3s;
+            border-radius: 32px;
         }
         
         .slider:before {
             position: absolute;
             content: "";
-            height: 16px;
-            width: 16px;
-            left: 4px;
-            bottom: 4px;
+            height: 28px;
+            width: 28px;
+            left: 2px;
+            bottom: 2px;
             background-color: white;
-            transition: .4s;
+            transition: .3s cubic-bezier(0.4, 0.0, 0.2, 1);
             border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         
         input:checked + .slider {
-            background-color: #12b7f5;
+            background-color: #0095ff;
         }
         
         input:checked + .slider:before {
-            transform: translateX(26px);
+            transform: translateX(20px);
         }
     </style>
     
@@ -2732,14 +2881,14 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
     
     <!-- 群聊成员弹窗 -->
     <div id="group-members-modal" class="modal" style="display: none;">
-        <div class="modal-content">
+        <div class="modal-content" style="background: var(--modal-bg); color: var(--text-color);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h2 style="color: #333; font-size: 20px; font-weight: 600;">群聊成员</h2>
-                <button onclick="closeGroupMembersModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #666;">×</button>
+                <h2 style="color: var(--text-color); font-size: 20px; font-weight: 600;">群聊成员</h2>
+                <button onclick="closeGroupMembersModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-secondary);">×</button>
             </div>
             <div id="group-members-list" style="max-height: 400px; overflow-y: auto; padding: 10px;">
                 <!-- 群聊成员列表将通过JavaScript动态加载 -->
-                <p style="text-align: center; color: #666;">加载中...</p>
+                <p style="text-align: center; color: var(--text-secondary);">加载中...</p>
             </div>
         </div>
     </div>
@@ -2835,7 +2984,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                     <input type="text" id="search-user-input" placeholder="输入用户名或邮箱搜索" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
                 </div>
                 <div style="margin-bottom: 15px;">
-                    <button id="search-user-button" style="width: 100%; padding: 10px; background: #12b7f5; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; transition: background-color 0.2s;">搜索</button>
+                    <button id="search-user-button" onclick="searchUser()" style="width: 100%; padding: 10px; background: #12b7f5; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; transition: background-color 0.2s;">搜索</button>
                 </div>
                 <div id="search-results" style="max-height: 300px; overflow-y: auto;">
                     <p style="text-align: center; color: #666; padding: 20px;">请输入用户名或邮箱进行搜索</p>
@@ -2894,7 +3043,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             </div>
             
             <!-- 搜索结果区域 -->
-            <div id="search-results" style="display: none; padding: 15px; background: white; border-bottom: 1px solid #eaeaea; max-height: 300px; overflow-y: auto; position: absolute; width: 100%; z-index: 1000;">
+            <div id="main-search-results" style="display: none; padding: 15px; background: white; border-bottom: 1px solid #eaeaea; max-height: 300px; overflow-y: auto; position: absolute; width: 100%; z-index: 1000;">
                 <p style="color: #666; font-size: 14px; margin-bottom: 10px;">输入用户名或群聊名称进行搜索</p>
             </div>
             
@@ -2915,8 +3064,8 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                             <?php 
                                 $is_default_avatar = !empty($friend_item['avatar']) && (strpos($friend_item['avatar'], 'default_avatar.png') !== false || $friend_item['avatar'] === 'default_avatar.png');
                             ?>
-                            <?php if (!empty($friend_item['avatar']) && !$is_default_avatar): ?>
-                                <img src="<?php echo $friend_item['avatar']; ?>" alt="<?php echo $friend_item['username']; ?>" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
+                            <?php if (!empty($friend_item['avatar']) && !$is_default_avatar && $friend_item['avatar'] !== 'deleted_user'): ?>
+                                <img src="<?php echo $friend_item['avatar']; ?>" alt="<?php echo $friend_item['username']; ?>" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=<?php echo urlencode($friend_item['username']); ?>&background=random';">
                             <?php else: ?>
                                 <?php echo substr($friend_item['username'], 0, 2); ?>
                             <?php endif; ?>
@@ -2935,8 +3084,8 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                                 ⋮
                             </button>
                             <!-- 好友菜单 -->
-                            <div class="friend-menu" id="friend-menu-<?php echo $friend_id; ?>" style="display: none; position: absolute; top: 100%; right: 0; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); z-index: 1000; min-width: 120px; margin-top: 5px;">
-                                <button class="friend-menu-item" onclick="deleteFriend(<?php echo $friend_id; ?>, '<?php echo htmlspecialchars($friend_item['username'], ENT_QUOTES); ?>')">删除好友</button>
+                            <div class="friend-menu" id="friend-menu-<?php echo $friend_id; ?>" style="display: none; position: absolute; top: 100%; right: 0; background: var(--modal-bg); border-radius: 8px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3); z-index: 99999; min-width: 120px; margin-top: 5px; border: 1px solid var(--border-color);">
+                                <button class="friend-menu-item" onclick="deleteFriend(<?php echo $friend_id; ?>, '<?php echo htmlspecialchars($friend_item['username'], ENT_QUOTES); ?>')" style="color: #ff4757;">删除好友</button>
                             </div>
                         </div>
                     </div>
@@ -2987,9 +3136,9 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                                 ⋮
                             </button>
                             <!-- 群聊菜单 -->
-                            <div class="friend-menu" id="group-menu-<?php echo $group_item['id']; ?>" style="display: none; position: absolute; top: 100%; right: 0; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); z-index: 1000; min-width: 150px; margin-top: 5px;">
-                                <button class="friend-menu-item" onclick="showGroupMembers(<?php echo $group_item['id']; ?>)">查看成员</button>
-                                <button class="friend-menu-item" onclick="inviteFriendsToGroup(<?php echo $group_item['id']; ?>)">邀请好友</button>
+                            <div class="friend-menu" id="group-menu-<?php echo $group_item['id']; ?>" style="display: none; position: absolute; top: 100%; right: 0; background: var(--modal-bg); border-radius: 8px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3); z-index: 99999; min-width: 150px; margin-top: 5px; border: 1px solid var(--border-color);">
+                                <button class="friend-menu-item" onclick="showGroupMembers(<?php echo $group_item['id']; ?>)" style="color: var(--text-color);">查看成员</button>
+                                <button class="friend-menu-item" onclick="inviteFriendsToGroup(<?php echo $group_item['id']; ?>)" style="color: var(--text-color);">邀请好友</button>
                                 <?php 
                                     // 检查用户是否是群主或管理员
                                     $is_admin = false;
@@ -4090,15 +4239,55 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         function toggleFriendMenu(event, friendId, friendName) {
             event.stopPropagation();
             
-            // 关闭所有其他菜单
+            // 关闭所有其他菜单，并重置所有chat-item的z-index
             document.querySelectorAll('.friend-menu').forEach(menu => {
                 menu.style.display = 'none';
+            });
+            document.querySelectorAll('.chat-item').forEach(item => {
+                item.style.zIndex = '';
             });
             
             // 切换当前菜单
             const menu = document.getElementById(`friend-menu-${friendId}`);
             if (menu) {
-                menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+                const isOpening = menu.style.display !== 'block';
+                menu.style.display = isOpening ? 'block' : 'none';
+                
+                // 如果是打开菜单，提高当前项的z-index
+                if (isOpening) {
+                    const chatItem = menu.closest('.chat-item');
+                    if (chatItem) {
+                        chatItem.style.zIndex = '1000';
+                    }
+                }
+            }
+        }
+        
+        // 群聊菜单功能
+        function toggleGroupMenu(event, groupId, groupName) {
+            event.stopPropagation();
+            
+            // 关闭所有其他菜单，并重置所有chat-item的z-index
+            document.querySelectorAll('.friend-menu').forEach(menu => {
+                menu.style.display = 'none';
+            });
+            document.querySelectorAll('.chat-item').forEach(item => {
+                item.style.zIndex = '';
+            });
+            
+            // 切换当前菜单
+            const menu = document.getElementById(`group-menu-${groupId}`);
+            if (menu) {
+                const isOpening = menu.style.display !== 'block';
+                menu.style.display = isOpening ? 'block' : 'none';
+                
+                // 如果是打开菜单，提高当前项的z-index
+                if (isOpening) {
+                    const chatItem = menu.closest('.chat-item');
+                    if (chatItem) {
+                        chatItem.style.zIndex = '1000';
+                    }
+                }
             }
         }
         
@@ -4122,19 +4311,20 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             
             const modalContent = document.createElement('div');
             modalContent.style.cssText = `
-                background: white;
+                background: var(--modal-bg);
+                color: var(--text-color);
                 border-radius: 8px;
                 padding: 25px;
                 width: 90%;
                 max-width: 400px;
-                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+                box-shadow: 0 4px 20px var(--shadow-color);
             `;
             
             // 标题
             const title = document.createElement('h3');
             title.style.cssText = `
                 margin-bottom: 20px;
-                color: #333;
+                color: var(--text-color);
                 font-size: 18px;
                 font-weight: 600;
                 text-align: center;
@@ -4145,14 +4335,14 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             const content = document.createElement('div');
             content.style.cssText = `
                 margin-bottom: 25px;
-                color: #666;
+                color: var(--text-secondary);
                 font-size: 14px;
                 text-align: center;
                 line-height: 1.6;
             `;
             content.innerHTML = `
                 <p>确定要删除好友 <strong>${friendName}</strong> 吗？</p>
-                <p style="margin-top: 15px; color: #999; font-size: 12px;">删除后将无法恢复，请谨慎操作</p>
+                <p style="margin-top: 15px; color: var(--text-desc); font-size: 12px;">删除后将无法恢复，请谨慎操作</p>
             `;
             
             // 按钮容器
@@ -4168,9 +4358,9 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             cancelBtn.style.cssText = `
                 flex: 1;
                 padding: 12px;
-                background: #f5f5f5;
-                color: #333;
-                border: 1px solid #ddd;
+                background: var(--bg-color);
+                color: var(--text-color);
+                border: 1px solid var(--border-color);
                 border-radius: 6px;
                 cursor: pointer;
                 font-size: 14px;
@@ -6603,11 +6793,8 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                     }
                 }
                 
-                // 对于服务器文件，自动添加.upload后缀
+                // 对于服务器文件，直接使用原始路径
                 let downloadUrl = task.filePath;
-                if (downloadUrl && !downloadUrl.endsWith('.upload')) {
-                    downloadUrl = downloadUrl + '.upload';
-                }
                 
                 // 创建AbortController用于取消请求
                 task.abortController = new AbortController();
@@ -6864,26 +7051,55 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             fetch(`search_users.php?q=${encodeURIComponent(searchTerm)}`, {
                 credentials: 'include'
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('网络请求失败');
+                }
+                return response.json();
+            })
             .then(data => {
                 let html = '';
-                if (data.success && data.users.length > 0) {
-                    data.users.forEach(user => {
-                        // 检查头像是否为默认头像或不存在，避免404错误
-                        const isDefaultAvatar = user.avatar && (user.avatar === 'default_avatar.png' || user.avatar.includes('default_avatar.png'));
-                        const avatar = user.avatar && !isDefaultAvatar ? `<img src="${user.avatar}" alt="${user.username}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">` : `<div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 14px;">${user.username.substring(0, 2)}</div>`;
-                        
-                        html += `<div style="display: flex; align-items: center; padding: 12px; border-bottom: 1px solid #f0f0f0;">
-                            <div style="margin-right: 12px;">${avatar}</div>
-                            <div style="flex: 1;">
-                                <div style="font-weight: 600; margin-bottom: 2px;">${user.username}</div>
-                                <div style="font-size: 12px; color: #666;">${user.email}</div>
-                            </div>
-                            <button onclick="sendFriendRequest(${user.id}, '${user.username}')" style="padding: 6px 12px; background: #4CAF50; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px;">发送请求</button>
-                        </div>`;
-                    });
-                } else {
-                    html = '<p style="text-align: center; color: #666; padding: 20px;">未找到匹配的用户</p>';
+                
+                try {
+                    // 处理用户列表
+                    let users = [];
+                    if (data && data.success) {
+                        if (data.users) {
+                            if (Array.isArray(data.users)) {
+                                users = data.users;
+                            } else if (typeof data.users === 'object') {
+                                users = Object.values(data.users);
+                            }
+                        }
+                    }
+
+                    if (users.length > 0) {
+                        users.forEach(user => {
+                            // 安全获取属性
+                            const userId = user.id || 0;
+                            const userName = user.username || '未知用户';
+                            const userEmail = user.email || '';
+                            const safeUserName = userName.replace(/'/g, "\\'");
+                            
+                            html += `<div style="display: flex; align-items: center; padding: 12px; border-bottom: 1px solid #f0f0f0;">
+                                <div style="flex: 1;">
+                                    <div style="font-weight: 600; margin-bottom: 2px;">${userName}</div>
+                                    <div style="font-size: 12px; color: #666;">${userEmail}</div>
+                                </div>
+                                <div style="position: relative;" class="search-user-action">
+                                    <button onclick="toggleSearchUserMenu(event, ${userId})" style="background: none; border: none; cursor: pointer; color: #666; font-size: 20px; padding: 0 10px;">⋮</button>
+                                    <div id="search-user-menu-${userId}" class="search-user-menu" style="display: none; position: absolute; right: 0; top: 100%; background: white; border: 1px solid #eee; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); z-index: 10; min-width: 100px;">
+                                        <button onclick="sendFriendRequest(${userId}, '${safeUserName}')" style="display: block; width: 100%; text-align: left; padding: 8px 12px; background: none; border: none; cursor: pointer; color: #333; font-size: 13px;">添加好友</button>
+                                    </div>
+                                </div>
+                            </div>`;
+                        });
+                    } else {
+                        html = '<p style="text-align: center; color: #666; padding: 20px;">未找到匹配的用户</p>';
+                    }
+                } catch (e) {
+                    console.error('Mobile search render error:', e);
+                    html = '<p style="text-align: center; color: #ff4d4f; padding: 20px;">渲染错误</p>';
                 }
                 
                 resultsDiv.innerHTML = html;
@@ -6894,108 +7110,67 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             });
         }
         
+        // 确保 searchUser 在全局作用域可访问
+        window.searchUser = searchUser;
+        
+        // 切换搜索用户菜单显示
+        window.toggleSearchUserMenu = function toggleSearchUserMenu(event, userId) {
+            event.stopPropagation();
+            
+            // 关闭所有其他菜单
+            document.querySelectorAll('.search-user-menu').forEach(menu => {
+                menu.style.display = 'none';
+            });
+            
+            // 切换当前菜单
+            const menu = document.getElementById(`search-user-menu-${userId}`);
+            if (menu) {
+                menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+            }
+        }
+        
+        // 点击其他地方关闭搜索用户菜单
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.search-user-action')) {
+                document.querySelectorAll('.search-user-menu').forEach(menu => {
+                    menu.style.display = 'none';
+                });
+            }
+        });
+
         // 主界面搜索好友和群聊功能
         document.addEventListener('DOMContentLoaded', function() {
             const searchInput = document.getElementById('search-input');
             if (searchInput) {
-                searchInput.addEventListener('input', async (e) => {
-                    const searchTerm = e.target.value.trim();
-                    const searchResults = document.getElementById('search-results');
+                searchInput.addEventListener('input', function(e) {
+                    const searchTerm = e.target.value.trim().toLowerCase();
+                    const searchResults = document.getElementById('main-search-results');
+                    const chatList = document.getElementById('combined-chat-list');
+                    
+                    // 重置所有聊天项显示
+                    const allChatItems = document.querySelectorAll('.chat-item');
                     
                     if (searchTerm.length < 1) {
                         searchResults.style.display = 'none';
+                        allChatItems.forEach(item => item.style.display = 'flex');
                         return;
                     }
                     
-                    try {
-                        // 发送搜索请求
-                        const response = await fetch(`search_users.php?q=${encodeURIComponent(searchTerm)}`, {
-                            credentials: 'include'
-                        });
-                        const data = await response.json();
+                    // 本地搜索：过滤聊天列表
+                    allChatItems.forEach(item => {
+                        const nameElement = item.querySelector('.chat-name');
+                        const name = nameElement ? nameElement.textContent.trim().toLowerCase() : '';
                         
-                        if (data.success) {
-                            let resultsHTML = '<h4 style="margin-bottom: 10px; font-size: 14px; color: #333;">搜索结果</h4>';
-                            
-                            // 显示好友搜索结果
-                            if (data.users && data.users.length > 0) {
-                                resultsHTML += '<div style="margin-bottom: 15px;">';
-                                resultsHTML += '<h5 style="margin-bottom: 8px; font-size: 13px; color: #666;">好友</h5>';
-                                
-                                data.users.forEach(user => {
-                                    // 只显示已经是好友的用户
-                                    if (user.friendship_status === 'accepted') {
-                                        let statusText = user.status === 'online' ? '在线' : '离线';
-                                        let statusColor = user.status === 'online' ? '#4caf50' : '#9e9e9e';
-                                        
-                                        // 检查头像是否为默认头像或不存在，避免404错误
-                                        const isDefaultAvatar = user.avatar && (user.avatar === 'default_avatar.png' || user.avatar.includes('default_avatar.png'));
-                                        resultsHTML += `
-                                            <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f0f0f0; cursor: pointer;" onclick="switchToChat('friend', ${user.id})">
-                                                <div style="display: flex; align-items: center; gap: 10px;">
-                                                    <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 16px;">
-                                                        ${user.avatar && !isDefaultAvatar ? `<img src="${user.avatar}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">` : user.username.substring(0, 2)}
-                                                    </div>
-                                                    <div>
-                                                        <div style="display: flex; align-items: center; gap: 5px;">
-                                                            <span style="font-weight: 500;">${user.username}</span>
-                                                            <span style="width: 8px; height: 8px; border-radius: 50%; background: ${statusColor}; display: inline-block;"></span>
-                                                        </div>
-                                                        <div style="font-size: 12px; color: #666;">${statusText}</div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        `;
-                                    }
-                                });
-                                resultsHTML += '</div>';
-                            }
-                            
-                            // 显示群聊搜索结果（如果有的话）
-                            if (data.groups && data.groups.length > 0) {
-                                resultsHTML += '<div>';
-                                resultsHTML += '<h5 style="margin-bottom: 8px; font-size: 13px; color: #666;">群聊</h5>';
-                                
-                                data.groups.forEach(group => {
-                                    resultsHTML += `
-                                        <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f0f0f0; cursor: pointer;" onclick="switchToChat('group', ${group.id})">
-                                            <div style="display: flex; align-items: center; gap: 10px;">
-                                                <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 16px;">
-                                                    ${group.name.substring(0, 2)}
-                                                </div>
-                                                <div>
-                                                    <div style="font-weight: 500;">${group.name}</div>
-                                                    <div style="font-size: 12px; color: #666;">${group.member_count}人</div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    `;
-                                });
-                                resultsHTML += '</div>';
-                            }
-                            
-                            // 如果没有结果
-                            if (!resultsHTML.includes('<div style="display: flex;')) {
-                                resultsHTML += '<p style="text-align: center; color: #666; padding: 20px;">未找到匹配的好友或群聊</p>';
-                            }
-                            
-                            searchResults.innerHTML = resultsHTML;
-                            searchResults.style.display = 'block';
+                        if (name.includes(searchTerm)) {
+                            item.style.display = 'flex';
                         } else {
-                            searchResults.innerHTML = '<p style="text-align: center; color: #ff4d4f; padding: 20px;">搜索失败，请重试</p>';
-                            searchResults.style.display = 'block';
+                            item.style.display = 'none';
                         }
-                    } catch (error) {
-                        console.error('搜索失败:', error);
-                        searchResults.innerHTML = '<p style="text-align: center; color: #ff4d4f; padding: 20px;">搜索失败，请重试</p>';
-                        searchResults.style.display = 'block';
-                    }
-                });
-                
-                // 点击页面其他地方关闭搜索结果
-                document.addEventListener('click', function(e) {
-                    if (!searchInput.contains(e.target) && !document.getElementById('search-results').contains(e.target)) {
-                        document.getElementById('search-results').style.display = 'none';
+                    });
+                    
+                    // 隐藏原来的下拉搜索结果，因为现在直接在列表中过滤
+                    if (searchResults) {
+                        searchResults.style.display = 'none';
                     }
                 });
             }
@@ -7007,7 +7182,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         }
 
         // 发送好友请求
-        function sendFriendRequest(userId, username) {
+        window.sendFriendRequest = function sendFriendRequest(userId, username) {
             // 发送请求到服务器
             fetch(`send_friend_request.php?friend_id=${userId}`, {
                 method: 'POST',
@@ -7676,11 +7851,8 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 return;
             }
             
-            // 为服务器文件添加.upload后缀
+            // 直接使用原始路径
             let fetchUrl = filePath;
-            if (fetchUrl && !fetchUrl.endsWith('.upload')) {
-                fetchUrl = fetchUrl + '.upload';
-            }
             
             fetch(fetchUrl)
                 .then(response => {
@@ -9157,13 +9329,13 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                     data.members.forEach(member => {
                         // 确定职位和对应样式
                         let position = '成员';
-                        let positionStyle = 'background: #e8f5e9; color: #43a047;'; // 成员样式
+                        let positionStyle = 'background: rgba(67, 160, 71, 0.1); color: #43a047;'; // 成员样式
                         if (member.id === data.group_owner_id) {
                             position = '群主';
-                            positionStyle = 'background: #ffebee; color: #e53935;'; // 群主样式
+                            positionStyle = 'background: rgba(229, 57, 53, 0.1); color: #e53935;'; // 群主样式
                         } else if (member.is_admin) {
                             position = '管理员';
-                            positionStyle = 'background: #fff3e0; color: #fb8c00;'; // 管理员样式
+                            positionStyle = 'background: rgba(251, 140, 0, 0.1); color: #fb8c00;'; // 管理员样式
                         }
                         
                         // 检查是否是当前用户
@@ -9186,7 +9358,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                                     'justify-content: center;' +
                                     'cursor: pointer;' +
                                     'font-size: 18px;' +
-                                    'color: #666;' +
+                                    'color: var(--text-secondary);' +
                                     'transition: all 0.2s;' +
                                     'z-index: 1000;' +
                                 '">' +
@@ -9197,12 +9369,14 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                                     'position: absolute;' +
                                     'right: 0;' +
                                     'top: 40px;' +
-                                    'background: white;' +
+                                    'background: var(--modal-bg);' +
+                                    'border: 1px solid var(--border-color);' +
                                     'border-radius: 8px;' +
-                                    'box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);' +
+                                    'box-shadow: 0 4px 12px var(--shadow-color);' +
                                     'padding: 8px 0;' +
                                     'min-width: 120px;' +
                                     'z-index: 1001;' +
+                                    'backdrop-filter: blur(10px);' +
                                 '">';
                             
                             // 添加好友按钮
@@ -9211,7 +9385,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                                     'padding: 10px 16px;' +
                                     'cursor: pointer;' +
                                     'font-size: 14px;' +
-                                    'color: #333;' +
+                                    'color: var(--text-color);' +
                                     'transition: background-color 0.2s;' +
                                 '">添加好友</div>';
                             }
@@ -9222,7 +9396,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                                     'padding: 10px 16px;' +
                                     'cursor: pointer;' +
                                     'font-size: 14px;' +
-                                    'color: #ff4d4f;' +
+                                    'color: var(--danger-color);' +
                                     'transition: background-color 0.2s;' +
                                 '">踢出</div>';
                             }
@@ -9262,17 +9436,17 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                         }
                         
                         // 生成成员项HTML
-                        membersHtml += '<div style="display: flex; align-items: center; justify-content: space-between; padding: 16px; background: #f8f9fa; border-radius: 10px; gap: 16px;">' +
+                        membersHtml += '<div style="display: flex; align-items: center; justify-content: space-between; padding: 16px; background: var(--hover-bg); border-radius: 10px; gap: 16px;">' +
                             '<div style="display: flex; align-items: center; gap: 16px; flex: 1;">' +
                                 '<div style="width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 22px;">' +
                                     avatarHtml +
                                 '</div>' +
                                 '<div style="flex: 1;">' +
                                     '<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">' +
-                                        '<span style="font-size: 16px; font-weight: 600; color: #333;">' + member.username + '</span>' +
+                                        '<span style="font-size: 16px; font-weight: 600; color: var(--text-color);">' + member.username + '</span>' +
                                         '<span style="padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: 500; ' + positionStyle + '">' + position + '</span>' +
                                     '</div>' +
-                                    '<div style="font-size: 14px; color: #666; font-weight: 500;">' + (member.email || member.status || '离线') + '</div>' +
+                                    '<div style="font-size: 14px; color: var(--text-secondary); font-weight: 500;">' + (member.email || member.status || '离线') + '</div>' +
                                 '</div>' +
                             '</div>' +
                             actionsMenu +
@@ -9283,7 +9457,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                     membersHtml += '<style>' +
                         '/* 成员操作菜单样式 */' +
                         '.member-action-item:hover {' +
-                            'background-color: #f5f5f5;' +
+                            'background-color: var(--hover-bg) !important;' +
                         '}' +
                         '' +
                         '/* 确保删除好友UI优先显示 */' +
@@ -9559,10 +9733,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                     }
                 }
             }
-            // 对于服务器文件，自动添加.upload后缀
-            if (filePath && !filePath.endsWith('.upload')) {
-                return filePath + '.upload';
-            }
+            // 直接返回原始路径
             return filePath;
                 }
                 
@@ -9663,28 +9834,31 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 const now = new Date();
                 const diffInMinutes = (now - messageTime) / (1000 * 60);
                 
-                // 生成撤回按钮HTML，只有2分钟内的消息才显示
-                const recallButtonHtml = diffInMinutes <= 2 ? `
+                // 只有2分钟内的消息才显示三个点按钮和撤回选项
+                if (diffInMinutes <= 2) {
+                    const recallButtonHtml = `
                     <button class='message-action-item' onclick="event.stopPropagation(); recallMessage(this, '${msg.id}', '${chatType}', '${chatId}')" 
                             style='display: block; width: 100%; padding: 8px 16px; text-align: left; border: none; 
-                                   background: none; cursor: pointer; font-size: 14px; color: #333; transition: background-color 0.2s ease;'>撤回</button>
-                ` : '';
+                                   background: none; cursor: pointer; font-size: 14px; color: var(--text-color); transition: background-color 0.2s ease;'>撤回</button>
+                    `;
                 
-                // 始终显示三个点按钮，只有2分钟内的消息才显示撤回选项
-                messageActionsHtml = `
+                    messageActionsHtml = `
                     <div class='message-actions' style='position: absolute; top: 50%; right: -10px; transform: translateY(-50%); display: flex; align-items: center; gap: 5px; z-index: 4000;'>
                         <div style='position: relative; z-index: 4000;'>
                             <button class='message-action-btn' onclick="toggleMessageActions(this)" 
                                     style='width: 28px; height: 28px; font-size: 18px; background: rgba(0,0,0,0.2); border: none; border-radius: 50%; 
-                                           color: #333; cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: 1; 
+                                           color: var(--text-color); cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: 1; 
                                            transition: all 0.2s ease; position: relative; z-index: 4000;'>⋮</button>
                                 <div class='message-actions-menu' style='display: none; position: absolute; top: 35px; right: 0; 
-                                                                 background: white; border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,0.15); 
-                                                                 padding: 8px 0; z-index: 5000; min-width: 80px;'>
+                                                                 background: var(--modal-bg); border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,0.3); 
+                                                                 padding: 8px 0; z-index: 5000; min-width: 80px; border: 1px solid var(--border-color);'>
                                     ${recallButtonHtml}
                                 </div>
                             </div>
                         </div>`;
+                } else {
+                    messageActionsHtml = '';
+                }
             }
             
             // 为发送者的消息添加右键和长按事件
@@ -9861,9 +10035,51 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 console.log('查看图片:', imageName, imageUrl);
             }
         });
+
+        // 深色模式切换
+        function toggleTheme(isDark) {
+            const html = document.documentElement;
+            if (isDark) {
+                html.setAttribute('data-theme', 'dark');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                html.removeAttribute('data-theme');
+                localStorage.setItem('theme', 'light');
+            }
+        }
+
+        // 初始化深色模式
+        (function initTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            const darkModeToggle = document.getElementById('dark-mode-toggle');
+            
+            if (savedTheme === 'dark') {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                if (darkModeToggle) darkModeToggle.checked = true;
+            } else if (!savedTheme && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                // 如果没有保存的偏好，但系统是深色模式，也自动切换
+                document.documentElement.setAttribute('data-theme', 'dark');
+                if (darkModeToggle) darkModeToggle.checked = true;
+            }
+
+            // 监听系统主题变化
+            if (window.matchMedia) {
+                window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+                    if (!localStorage.getItem('theme')) {
+                        if (e.matches) {
+                            document.documentElement.setAttribute('data-theme', 'dark');
+                            if (darkModeToggle) darkModeToggle.checked = true;
+                        } else {
+                            document.documentElement.removeAttribute('data-theme');
+                            if (darkModeToggle) darkModeToggle.checked = false;
+                        }
+                    }
+                });
+            }
+        })();
     </script>
     <!-- 音乐播放器 -->
-    <?php if (getConfig('Random_song', false)): ?>
+    <?php if (false): // 手机端禁用音乐播放器 ?>
     <style>
         /* 音乐播放器样式 */
         #music-player {
@@ -9871,14 +10087,15 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             bottom: 20px;
             right: 20px;
             width: 300px;
-            background: rgba(255, 255, 255, 0.95);
+            background: var(--panel-bg);
             border-radius: 20px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
             backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid var(--border-color);
             z-index: 9999;
             overflow: hidden;
             transition: all 0.3s ease;
+            color: var(--text-color);
         }
         
         /* 拖拽时禁止文字选择 */
@@ -9903,18 +10120,19 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             position: absolute;
             right: -15px;
             top: -110px;
-            background: white;
-            border: 1px solid #e0e0e0;
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
             border-radius: 8px;
             padding: 10px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
             z-index: 1001;
         }
         
         #volume-slider {
             width: 80px;
             height: 5px;
-            background: #e0e0e0;
+            background: var(--border-color);
             border-radius: 3px;
             cursor: pointer;
             overflow: hidden;
@@ -9933,8 +10151,8 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             width: 24px;
             height: 24px;
             border: none;
-            background: #f0f0f0;
-            color: #333;
+            background: var(--input-bg);
+            color: var(--text-color);
             border-radius: 50%;
             cursor: pointer;
             font-size: 12px;
@@ -10067,7 +10285,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         #song-title {
             font-size: 16px;
             font-weight: 600;
-            color: #333;
+            color: var(--text-color);
             margin: 0 0 5px;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -10081,7 +10299,8 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         
         #artist-name {
             font-size: 14px;
-            color: #666;
+            color: var(--text-color);
+            opacity: 0.8;
             margin: 0;
         }
         
@@ -10207,7 +10426,8 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         /* 确保进度条上边的歌曲信息能正确显示 */
         #progress-song-info {
             font-size: 12px;
-            color: #666;
+            color: var(--text-color);
+            opacity: 0.8;
             margin-bottom: 5px;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -10227,12 +10447,12 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             bottom: 100%;
             right: 0;
             margin-bottom: 10px;
-            background: rgba(255, 255, 255, 0.95);
+            background: var(--panel-bg);
             padding: 10px;
             border-radius: 8px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
             backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid var(--border-color);
         }
         
         /* 小窗模式下音量控制UI的特殊定位 - 显示在容器外 */
@@ -10245,12 +10465,12 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             bottom: 80px !important;
             z-index: 9999 !important;
             margin-bottom: 0 !important;
-            background: rgba(255, 255, 255, 0.95) !important;
+            background: var(--panel-bg) !important;
             padding: 10px !important;
             border-radius: 8px !important;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
             backdrop-filter: blur(10px) !important;
-            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            border: 1px solid var(--border-color) !important;
         }
         
         /* 确保音量按钮能正确触发事件 */
@@ -10474,6 +10694,167 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         let hoyoUsedPages = []; // 已使用的随机页码列表
         let hoyoCurrentPage = 0; // 当前页码
         
+        // 自定义歌单相关变量
+        let customPlaylistName = '';
+        let customPlaylistData = [];
+        let customPlaylistIndex = 0;
+        
+        // 获取自定义歌单列表
+        async function fetchPlaylists() {
+            try {
+                const response = await fetch('get_playlist_config.php');
+                const data = await response.json();
+                
+                // 检查是否已存在选择器
+                let select = document.getElementById('playlist-select');
+                if (!select) {
+                    // 动态创建选择器UI
+                    const songInfo = document.getElementById('song-info');
+                    if (songInfo) {
+                        const container = document.createElement('div');
+                        container.style.padding = '0 10px 10px 10px';
+                        
+                        select = document.createElement('select');
+                        select.id = 'playlist-select';
+                        select.onchange = function() { changePlaylist(this.value); };
+                        select.style.width = '100%';
+                        select.style.padding = '4px';
+                        select.style.borderRadius = '4px';
+                        select.style.border = '1px solid #ddd';
+                        select.style.fontSize = '12px';
+                        select.style.background = 'rgba(255,255,255,0.9)';
+                        select.style.outline = 'none';
+                        
+                        // 默认选项
+                        const defaultOpt = document.createElement('option');
+                        defaultOpt.value = 'random';
+                        defaultOpt.textContent = '随机热歌 (默认)';
+                        select.appendChild(defaultOpt);
+                        
+                        const springOpt = document.createElement('option');
+                        springOpt.value = 'spring_festival';
+                        springOpt.textContent = '春节特别歌单';
+                        select.appendChild(springOpt);
+                        
+                        const hoyoOpt = document.createElement('option');
+                        hoyoOpt.value = 'hoyo';
+                        hoyoOpt.textContent = 'HOYO-MiX';
+                        select.appendChild(hoyoOpt);
+                        
+                        container.appendChild(select);
+                        songInfo.parentNode.insertBefore(container, songInfo.nextSibling);
+                    }
+                }
+                
+                if (data && data.playlists && select) {
+                    // 清除旧的自定义选项
+                    Array.from(select.options).forEach(opt => {
+                        if (opt.value.startsWith('custom_')) select.removeChild(opt);
+                    });
+                    
+                    data.playlists.forEach(playlist => {
+                        const option = document.createElement('option');
+                        option.value = 'custom_' + playlist.name;
+                        option.textContent = playlist.name;
+                        select.appendChild(option);
+                    });
+                    
+                    // 恢复保存的选择
+                    const savedMode = localStorage.getItem('music_mode');
+                    if (savedMode && select.querySelector(`option[value="${savedMode}"]`)) {
+                        select.value = savedMode;
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to fetch playlists:', error);
+            }
+        }
+        
+        // 切换歌单
+        async function changePlaylist(mode) {
+            if (mode.startsWith('custom_')) {
+                const name = mode.substring(7);
+                customPlaylistName = name;
+                currentMusicMode = 'custom';
+                // 重置
+                customPlaylistData = [];
+                customPlaylistIndex = 0;
+            } else {
+                currentMusicMode = mode;
+            }
+            
+            // 保存偏好
+            localStorage.setItem('music_mode', mode);
+            
+            // 立即加载新歌
+            loadNewSong();
+        }
+
+        // 加载自定义歌单歌曲
+        async function loadCustomPlaylistSong() {
+            if (customPlaylistData.length === 0) {
+                const status = document.getElementById('player-status');
+                if(status) status.textContent = '加载歌单中...';
+                try {
+                    const response = await fetch(`get_playlist_music.php?name=${encodeURIComponent(customPlaylistName)}`);
+                    const songs = await response.json();
+                    
+                    if (songs && songs.length > 0) {
+                        customPlaylistData = songs;
+                        // 随机打乱
+                        customPlaylistData.sort(() => Math.random() - 0.5);
+                    } else {
+                        if(status) status.textContent = '歌单为空';
+                        return;
+                    }
+                } catch (error) {
+                    if(status) status.textContent = '歌单加载失败';
+                    return;
+                }
+            }
+            
+            if (customPlaylistIndex >= customPlaylistData.length) {
+                // 重新打乱
+                customPlaylistData.sort(() => Math.random() - 0.5);
+                customPlaylistIndex = 0;
+            }
+            
+            const song = customPlaylistData[customPlaylistIndex++];
+            
+            currentSong = {
+                name: song.title,
+                artistsname: song.artist,
+                url: song.url,
+                picurl: song.cover
+            };
+            
+            // 更新UI
+            document.getElementById('song-title').textContent = `${song.name} - ${song.artistsname}`;
+            document.getElementById('artist-name').textContent = song.artistsname;
+            const progressInfo = document.getElementById('progress-song-info');
+            if(progressInfo) progressInfo.textContent = `${song.name} - ${song.artistsname}`;
+            
+            const albumImage = document.getElementById('album-image');
+            if (song.picurl && song.picurl !== 'assets/default_music_cover.png') {
+                 albumImage.src = song.picurl;
+            } else {
+                // 默认图
+                albumImage.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiB2aWV3Qm94PSIwIDAgMTAwIDEwMCI+PHJlY3Qgd2lkdGg9IjEwMCIgaGVpZ2h0PSIxMDAiIGZpbGw9IiNkZGQiLz48dGV4dCB4PSI1MCIgeT0iNTAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiIGZpbGw9IiM4ODgiPuVjb3ZlcjwvdGV4dD48L3N2Zz4=';
+            }
+            albumImage.style.display = 'block';
+            
+            // 播放
+            const audioPlayer = document.getElementById('audio-player');
+            audioPlayer.src = currentSong.url;
+            audioPlayer.play().then(() => {
+                isPlaying = true;
+                const playBtn = document.getElementById('play-btn');
+                if(playBtn) playBtn.textContent = '⏸';
+                const status = document.getElementById('player-status');
+                if(status) status.textContent = '正在播放';
+            }).catch(e => console.error(e));
+        }
+        
         // 格式化时间显示（秒 -> mm:ss）
         function formatTime(seconds) {
             if (isNaN(seconds)) return '0:00';
@@ -10501,7 +10882,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             }
             
             // 只有当设置开启时才初始化播放器
-            if (musicPlayerSetting) {
+            if (false) { // 手机端禁用音乐播放器
                 console.log('初始化音乐播放器...');
                 initMusicPlayer();
                 initDrag();
@@ -10807,6 +11188,9 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         // 初始化音乐播放器
         async function initMusicPlayer() {
             try {
+                // 加载自定义歌单列表
+                await fetchPlaylists();
+
                 // 先显示播放器
                 const player = document.getElementById('music-player');
                 player.style.display = 'block';
@@ -10834,6 +11218,28 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             document.getElementById('player-status').textContent = '正在加载音乐...';
             
             try {
+                // 检查是否是首次加载且有保存的模式
+                if (currentMusicMode === 'random' && localStorage.getItem('music_mode')) {
+                    const savedMode = localStorage.getItem('music_mode');
+                    const select = document.getElementById('playlist-select');
+                    
+                    if (savedMode && savedMode.startsWith('custom_')) {
+                         // 自定义歌单逻辑
+                         const name = savedMode.substring(7);
+                         customPlaylistName = name;
+                         currentMusicMode = 'custom';
+                         if (select) select.value = savedMode;
+                    } else if (savedMode && savedMode !== 'random') {
+                        currentMusicMode = savedMode;
+                        if (select) select.value = savedMode;
+                    }
+                }
+
+                if (currentMusicMode === 'custom') {
+                    await loadCustomPlaylistSong();
+                    return;
+                }
+                
                 // 获取当前音乐模式
                 currentMusicMode = await getCurrentMusicMode();
                 
@@ -12069,5 +12475,228 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
     </script>
 <!-- GitHub角标 -->
     <a href="https://github.com/LzdqesjG/modern-chat" class="github-corner" aria-label="View source on GitHub"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#151513; color:#fff; position: absolute; top: 0; border: 0; right: 0;" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"/><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"/><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"/></svg></a><style>.github-corner:hover .octo-arm{animation:octocat-wave 560ms ease-in-out}@keyframes octocat-wave{0%,100%{transform:rotate(0)}20%,60%{transform:rotate(-25deg)}40%,80%{transform:rotate(10deg)}}@media (max-width:500px){.github-corner:hover .octo-arm{animation:none}.github-corner .octo-arm{animation:octocat-wave 560ms ease-in-out}}</style>
-    </body>
+        <script>
+        // 手机号绑定相关
+        let bindGeetestCaptcha = null;
+        let bindSmsCountdownTimer = null;
+        const BIND_SMS_COOLDOWN_KEY = 'bind_sms_cooldown_end_time';
+        
+        // 确保这些函数在全局作用域可访问
+        window.showPhoneBindModal = showPhoneBindModal;
+        window.closePhoneBindModal = closePhoneBindModal;
+        window.submitPhoneBind = submitPhoneBind;
+        
+        // 绑定获取验证码按钮事件
+        document.addEventListener('DOMContentLoaded', function() {
+            const getBindCodeBtn = document.getElementById('get-bind-code-btn');
+            if (getBindCodeBtn) {
+                getBindCodeBtn.addEventListener('click', function() {
+                    if (this.disabled) return;
+                    
+                    const phone = document.getElementById('bind-phone-input').value;
+                    if (!/^1[3-9]\d{9}$/.test(phone)) {
+                        alert('请输入有效的11位手机号');
+                        return;
+                    }
+                    
+                    if (!bindGeetestCaptcha) {
+                         alert('验证码组件初始化失败');
+                         return;
+                    }
+
+                    const validate = bindGeetestCaptcha.getValidate();
+                    if (!validate) {
+                        alert('请先完成验证码验证');
+                        return;
+                    }
+                    
+                    const formData = new FormData();
+                    formData.append('phone', phone);
+                    formData.append('geetest_challenge', validate.lot_number);
+                    formData.append('geetest_validate', validate.captcha_output);
+                    formData.append('geetest_seccode', validate.pass_token);
+                    formData.append('gen_time', validate.gen_time);
+                    formData.append('captcha_id', '55574dfff9c40f2efeb5a26d6d188245');
+                    
+                    this.disabled = true;
+                    
+                    fetch('send_sms.php', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('验证码已发送');
+                            startBindSmsCountdown(60);
+                        } else {
+                            alert(data.message || '发送失败');
+                            if (!data.message.includes('秒后')) {
+                                 resetBindSmsButton();
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('发送失败，请重试');
+                        resetBindSmsButton();
+                    });
+                });
+            }
+        });
+
+        function showPhoneBindModal() {
+            document.getElementById('phone-bind-modal').style.display = 'flex';
+            
+            // 设置标题
+            const currentPhone = '<?php echo $current_user['phone'] ?? ''; ?>';
+            document.getElementById('phone-bind-title').textContent = currentPhone ? '修改绑定手机号' : '绑定手机号';
+            
+            // 默认禁用按钮
+            const btn = document.getElementById('get-bind-code-btn');
+            if (!localStorage.getItem(BIND_SMS_COOLDOWN_KEY)) {
+                btn.disabled = true;
+                btn.style.background = '#ccc';
+                btn.style.cursor = 'not-allowed';
+            }
+
+            // 初始化极验
+            if (!bindGeetestCaptcha && typeof initGeetest4 === 'function') {
+                initGeetest4({
+                    captchaId: '55574dfff9c40f2efeb5a26d6d188245'
+                }, function (captcha) {
+                    bindGeetestCaptcha = captcha;
+                    captcha.appendTo("#bind-phone-captcha");
+                    
+                    captcha.onSuccess(function() {
+                        const btn = document.getElementById('get-bind-code-btn');
+                        if (!localStorage.getItem(BIND_SMS_COOLDOWN_KEY)) {
+                            btn.disabled = false;
+                            btn.style.background = '#667eea'; // 使用移动端主题色
+                            btn.style.cursor = 'pointer';
+                        }
+                    });
+                });
+            } else if (bindGeetestCaptcha) {
+                bindGeetestCaptcha.reset();
+            } else if (!bindGeetestCaptcha) {
+                 console.error('initGeetest4 未定义，请检查极验JS库是否加载');
+                 // 尝试动态加载JS
+                 const script = document.createElement('script');
+                 script.src = 'https://static.geetest.com/v4/gt4.js';
+                 script.onload = function() {
+                     showPhoneBindModal(); // 重新调用
+                 };
+                 script.onerror = function() {
+                     alert('安全组件加载失败，请刷新页面重试');
+                 };
+                 document.body.appendChild(script);
+                 return;
+            }
+            
+            // 检查倒计时
+            checkBindSmsCooldown();
+        }
+        
+        function closePhoneBindModal() {
+            document.getElementById('phone-bind-modal').style.display = 'none';
+        }
+        
+        function checkBindSmsCooldown() {
+            const endTime = localStorage.getItem(BIND_SMS_COOLDOWN_KEY);
+            if (endTime) {
+                const now = Date.now();
+                const remaining = Math.ceil((parseInt(endTime) - now) / 1000);
+                
+                if (remaining > 0) {
+                    startBindSmsCountdown(remaining);
+                } else {
+                    localStorage.removeItem(BIND_SMS_COOLDOWN_KEY);
+                    resetBindSmsButton();
+                }
+            }
+        }
+        
+        function startBindSmsCountdown(seconds) {
+            const btn = document.getElementById('get-bind-code-btn');
+            
+            if (!localStorage.getItem(BIND_SMS_COOLDOWN_KEY)) {
+                const endTime = Date.now() + (seconds * 1000);
+                localStorage.setItem(BIND_SMS_COOLDOWN_KEY, endTime);
+            }
+            
+            btn.disabled = true;
+            btn.style.background = '#ccc';
+            btn.style.cursor = 'not-allowed';
+            
+            clearInterval(bindSmsCountdownTimer);
+            
+            function updateBtn() {
+                btn.textContent = `${seconds}s`;
+                if (seconds <= 0) {
+                    clearInterval(bindSmsCountdownTimer);
+                    localStorage.removeItem(BIND_SMS_COOLDOWN_KEY);
+                    resetBindSmsButton();
+                }
+                seconds--;
+            }
+            
+            updateBtn();
+            bindSmsCountdownTimer = setInterval(updateBtn, 1000);
+        }
+        
+        function resetBindSmsButton() {
+            const btn = document.getElementById('get-bind-code-btn');
+            if (bindGeetestCaptcha && bindGeetestCaptcha.getValidate()) {
+                btn.disabled = false;
+                btn.style.background = '#667eea'; // 使用移动端主题色
+                btn.style.cursor = 'pointer';
+            } else {
+                btn.disabled = true;
+                btn.style.background = '#ccc';
+                btn.style.cursor = 'not-allowed';
+            }
+            btn.textContent = '获取验证码';
+        }
+        
+        // 提交绑定
+        function submitPhoneBind() {
+            const phone = document.getElementById('bind-phone-input').value;
+            const code = document.getElementById('bind-sms-code').value;
+            
+            if (!/^1[3-9]\d{9}$/.test(phone)) {
+                alert('请输入有效的11位手机号');
+                return;
+            }
+            if (!code || code.length !== 6) {
+                alert('请输入6位验证码');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('action', 'bind_phone');
+            formData.append('phone', phone);
+            formData.append('sms_code', code);
+            
+            fetch('update_profile.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('绑定成功');
+                    closePhoneBindModal();
+                    location.reload(); // 刷新页面更新状态
+                } else {
+                    alert(data.message || '绑定失败');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('请求失败，请重试');
+            });
+        }
+    </script>
+</body>
 </html>

@@ -1,4 +1,5 @@
 <?php
+require_once 'security_check.php';
 // 设置响应类型为JSON
 header('Content-Type: application/json');
 
@@ -6,7 +7,7 @@ header('Content-Type: application/json');
 require_once 'config.php';
 require_once 'db.php';
 
-// 检查请求方法
+// 检查请求方�?
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode(['success' => false, 'message' => '无效的请求方法']);
     exit;
@@ -21,7 +22,7 @@ if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
     exit;
 }
 
-// 检查是否启用邮箱验证
+// 检查是否启用邮箱验�?
 $email_verify = getConfig('email_verify', false);
 
 if (!$email_verify) {
@@ -55,9 +56,7 @@ $ch = curl_init();
 // 设置cURL选项
 curl_setopt($ch, CURLOPT_URL, $api_url);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // 禁用SSL验证，根据实际情况调整
-curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false); // 禁用SSL主机验证，根据实际情况调整
-
+curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // 禁用SSL验证，根据实际情况调�?curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false); // 禁用SSL主机验证，根据实际情况调�?
 if ($request_method === 'POST') {
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($request_data));
@@ -67,17 +66,18 @@ if ($request_method === 'POST') {
     curl_setopt($ch, CURLOPT_URL, $api_url);
 }
 
-// 设置请求头
+// 设置请求�?
 curl_setopt($ch, CURLOPT_HTTPHEADER, [
     'Content-Type: application/x-www-form-urlencoded',
     'Accept: application/json'
 ]);
 
-// 执行请求并获取响应
+// 执行请求并获取响�?
 $response = curl_exec($ch);
 $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
-// cURL 资源会在不再被引用时自动关闭，无需显式调用 curl_close()
+// cURL 资源会在不再被引用时自动关闭，无需显式调用 
+curl_close($ch);
 
 if ($http_code === 200) {
     // 解析响应
@@ -119,13 +119,13 @@ if ($http_code === 200) {
             $result_value = $temp_data;
         }
         
-        // 检查验证结果
-        $lower_result = $result_value ? strtolower($result_value) : '';
+        // 检查验证结�?        
+$lower_result = $result_value ? strtolower($result_value) : '';
         if ($lower_result === 'true' || $lower_result === 'ok') {
             echo json_encode(['success' => true, 'message' => '邮箱存在，允许继续操作']);
             exit;
         } else {
-            echo json_encode(['success' => false, 'message' => '邮箱不存在，请重新填写']);
+            echo json_encode(['success' => false, 'message' => '邮箱不存在，请重新填写']);  
             exit;
         }
     } else {

@@ -1,3 +1,37 @@
+<?php
+if (isset($_GET['action']) && $_GET['action'] === 'get_agreement') {
+    $type = $_GET['type'] ?? '';
+    $file = '';
+    
+    // 定义协议文件路径
+    $baseDir = __DIR__ . '/Agreement/';
+    // 如果目录不存在，尝试使用用户提供的绝对路径作为备选
+    $absDir = '/Agreement/';
+    
+    if ($type === 'tos') {
+        $filename = 'terms_of_service.md';
+    } elseif ($type === 'privacy') {
+        $filename = 'privacy_policy.md';
+    }
+    
+    if (isset($filename)) {
+        if (file_exists($baseDir . $filename)) {
+            $file = $baseDir . $filename;
+        } elseif (file_exists($absDir . $filename)) {
+            $file = $absDir . $filename;
+        }
+    }
+
+    if ($file && file_exists($file)) {
+        header('Content-Type: text/plain; charset=utf-8');
+        echo file_get_contents($file);
+    } else {
+        header('HTTP/1.1 404 Not Found');
+        echo "协议文件不存在。\n尝试路径:\n" . $baseDir . ($filename ?? '') . "\n" . $absDir . ($filename ?? '');
+    }
+    exit;
+}
+?>
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -660,6 +694,10 @@
                 </div>
                 <div class="step-item" data-step="4">
                     <div class="step-number">4</div>
+                    <div class="step-label">短信配置</div>
+                </div>
+                <div class="step-item" data-step="5">
+                    <div class="step-number">5</div>
                     <div class="step-label">完成</div>
                 </div>
             </div>
@@ -679,6 +717,12 @@
                         <li>自动导入数据库表结构</li>
                         <li>完成系统初始化</li>
                     </ul>
+                    <div style="margin: 20px 0; text-align: left;">
+                        <label class="custom-checkbox" style="display: flex; align-items: center; cursor: pointer; color: #666; font-size: 14px;">
+                            <input type="checkbox" id="agree-terms" style="margin-right: 8px;">
+                            <span>我已阅读并同意 <a href="javascript:void(0)" onclick="showAgreement('tos')" style="color: #12b7f5; text-decoration: none;">《用户协议》</a> 和 <a href="javascript:void(0)" onclick="showAgreement('privacy')" style="color: #12b7f5; text-decoration: none;">《隐私协议》</a></span>
+                        </label>
+                    </div>
                     <div class="version-info" id="version-info">
                         <p>正在加载版本信息...</p>
                     </div>
@@ -738,7 +782,7 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label for="db-pass" style="display: flex; align-items: center; gap: 8px;">
-                                数据库root密码 
+                                数据库密码 
                                 <a href="help/index.php" target="_blank" style="text-decoration: none; color: #12b7f5; font-size: 18px;" title="点击查看帮助">ℹ</a>
                             </label>
                             <input type="password" id="db-pass" name="password" placeholder="请输入密码">
@@ -759,8 +803,58 @@
                 </div>
             </div>
 
-            <!-- 步骤4: 完成安装 -->
+            <!-- 步骤4: 短信配置 -->
             <div class="step-content" id="step-4">
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <h2 style="color: #333; font-size: 24px;">阿里云短信配置</h2>
+                    <p style="color: #666;">配置短信服务以开启手机号注册验证功能</p>
+                </div>
+                
+                <div class="alert alert-info show">
+                    如需跳过此步骤，点击下方的“跳过”按钮。跳过将无法使用手机号注册功能。
+                </div>
+
+                <form id="sms-config-form">
+                    <div class="form-group">
+                        <label for="access-key-id" style="display: flex; align-items: center; gap: 8px;">
+                            AccessKey ID
+                            <a href="help/index.php" target="_blank" style="text-decoration: none; color: #12b7f5; font-size: 18px;" title="如何获取？">ℹ</a>
+                        </label>
+                        <input type="text" id="access-key-id" name="access_key_id" placeholder="请输入阿里云 AccessKey ID">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="access-key-secret" style="display: flex; align-items: center; gap: 8px;">
+                            AccessKey Secret
+                            <a href="help/index.php" target="_blank" style="text-decoration: none; color: #12b7f5; font-size: 18px;" title="如何获取？">ℹ</a>
+                        </label>
+                        <input type="password" id="access-key-secret" name="access_key_secret" placeholder="请输入阿里云 AccessKey Secret">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="test-phone">测试手机号</label>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="tel" id="test-phone" name="test_phone" placeholder="用于接收测试短信的手机号">
+                            <button type="button" class="btn btn-secondary" id="send-test-sms-btn" style="white-space: nowrap;">
+                                发送测试短信
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="verify-code">验证码</label>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="verify-code" name="verify_code" placeholder="请输入收到的6位验证码">
+                            <button type="button" class="btn btn-primary" id="verify-sms-btn" style="white-space: nowrap;" disabled>
+                                验证并保存
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- 步骤5: 完成安装 -->
+            <div class="step-content" id="step-5">
                 <div class="complete-content">
                     <div class="complete-icon">✓</div>
                     <h2>🎉 安装完成！</h2>
@@ -790,14 +884,85 @@
         </div>
     </div>
 
+    <!-- 协议模态框 -->
+    <div id="agreement-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; opacity: 0; transition: opacity 0.3s;">
+        <div style="background: white; width: 80%; max-width: 800px; height: 80%; border-radius: 12px; display: flex; flex-direction: column; box-shadow: 0 10px 25px rgba(0,0,0,0.2); transform: scale(0.9); transition: transform 0.3s;">
+            <div style="padding: 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
+                <h3 id="agreement-title" style="margin: 0; font-size: 18px; color: #333;">协议条款</h3>
+                <button onclick="closeAgreement()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #999; padding: 0 10px;">&times;</button>
+            </div>
+            <div style="flex: 1; overflow-y: auto; padding: 30px; background: #f9f9f9;">
+                <div id="agreement-content" style="white-space: pre-wrap; font-family: inherit; color: #444; line-height: 1.8; font-size: 15px;"></div>
+            </div>
+            <div style="padding: 20px; border-top: 1px solid #eee; text-align: right; background: white; border-radius: 0 0 12px 12px;">
+                <button onclick="closeAgreement()" class="btn btn-primary">我已阅读并关闭</button>
+            </div>
+        </div>
+    </div>
+
     <script>
+        // 协议相关函数
+        function showAgreement(type) {
+            const modal = document.getElementById('agreement-modal');
+            const title = document.getElementById('agreement-title');
+            const content = document.getElementById('agreement-content');
+            const modalContent = modal.querySelector('div');
+            
+            title.textContent = type === 'tos' ? '用户协议' : '隐私协议';
+            content.innerHTML = '<div class="loading" style="border-color: rgba(0,0,0,0.1); border-top-color: #12b7f5;"></div> 正在加载协议内容...';
+            content.style.textAlign = 'center';
+            content.style.paddingTop = '50px';
+            
+            modal.style.display = 'flex';
+            // 强制重绘
+            modal.offsetHeight;
+            modal.style.opacity = '1';
+            modalContent.style.transform = 'scale(1)';
+            
+            fetch('install.php?action=get_agreement&type=' + type)
+                .then(res => {
+                    if (!res.ok) throw new Error('文件未找到');
+                    return res.text();
+                })
+                .then(text => {
+                    content.style.textAlign = 'left';
+                    content.style.paddingTop = '0';
+                    // 简单的 Markdown 处理 (将 # 转换为标题样式，其他保持文本)
+                    // 这里为了保持格式，我们直接显示文本，但做一些简单的样式美化
+                    content.textContent = text;
+                })
+                .catch(err => {
+                    content.innerHTML = `<div style="color: #ff4d4f; text-align: center;">加载失败: ${err.message}</div>`;
+                });
+        }
+
+        function closeAgreement() {
+            const modal = document.getElementById('agreement-modal');
+            const modalContent = modal.querySelector('div');
+            
+            modal.style.opacity = '0';
+            modalContent.style.transform = 'scale(0.9)';
+            
+            setTimeout(() => {
+                modal.style.display = 'none';
+            }, 300);
+        }
+
+        // 点击模态框背景关闭
+        document.getElementById('agreement-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeAgreement();
+            }
+        });
+
         // 当前步骤
         let currentStep = 1;
-        const totalSteps = 4;
+        const totalSteps = 5;
 
         // 环境检测结果
         let envCheckPassed = false;
         let dbConfig = {};
+        let smsVerified = false;
         
         // 进度条控制
         let progressTimer = null;
@@ -880,7 +1045,11 @@
                     window.location.href = 'login.php';
                 };
             } else if (step === 3) {
-                nextBtn.textContent = '开始安装 →';
+                nextBtn.textContent = '下一步 →';
+            } else if (step === 4) {
+                nextBtn.textContent = '跳过 →';
+                nextBtn.onclick = handleSkipSms;
+                nextBtn.disabled = false; // 确保跳过按钮可用
             } else {
                 nextBtn.textContent = '下一步 →';
                 nextBtn.onclick = handleNext;
@@ -893,6 +1062,12 @@
 
             switch (currentStep) {
                 case 1:
+                    // 检查是否同意用户协议
+                    const agreeTerms = document.getElementById('agree-terms');
+                    if (!agreeTerms.checked) {
+                        showAlert('error', '请先阅读并同意用户协议');
+                        return;
+                    }
                     showStep(2);
                     checkEnvironment();
                     break;
@@ -905,6 +1080,15 @@
                     break;
                 case 3:
                     saveDatabaseConfig();
+                    break;
+                case 4:
+                    // 检查是否验证通过
+                    if (smsVerified) {
+                        showStep(5);
+                        completeInstall();
+                    } else {
+                        showAlert('error', '请先验证短信配置或点击跳过');
+                    }
                     break;
             }
         }
@@ -1087,10 +1271,13 @@
                             email: data.data.admin_email,
                             password: data.data.admin_password
                         };
+                    } else if (data.data && data.data.admin_creation_error) {
+                         // 捕获管理员创建失败的错误
+                         window.adminCreationError = data.data.admin_creation_error;
                     }
                     
-                    updateProgress(95, '数据库导入成功，正在完成安装...');
-                    completeInstall();
+                    updateProgress(95, '数据库导入成功，准备配置短信...');
+                    showStep(4);
                 } else {
                     // 检查是否是数据冲突
                     if (data.data && data.data.conflict) {
@@ -1134,10 +1321,12 @@
                             email: data.data.admin_email,
                             password: data.data.admin_password
                         };
+                    } else if (data.data && data.data.admin_creation_error) {
+                        window.adminCreationError = data.data.admin_creation_error;
                     }
                     
-                    updateProgress(95, '数据库导入成功，正在完成安装...');
-                    completeInstall();
+                    updateProgress(95, '数据库导入成功，准备配置短信...');
+                    showStep(4);
                 } else if (data && !data.success && !data.data) {
                      // 这里的逻辑有点绕，主要是处理第二次fetch的结果
                      // 如果第二次fetch失败（比如覆盖导入也失败），已经在上面或者下面的catch里处理了？
@@ -1157,6 +1346,129 @@
                 nextBtn.disabled = false;
                 nextBtn.textContent = '开始安装 →';
             });
+        }
+
+        // 短信配置相关
+        const sendTestSmsBtn = document.getElementById('send-test-sms-btn');
+        const verifySmsBtn = document.getElementById('verify-sms-btn');
+        
+        sendTestSmsBtn.onclick = function() {
+            const accessKeyId = document.getElementById('access-key-id').value.trim();
+            const accessKeySecret = document.getElementById('access-key-secret').value.trim();
+            const testPhone = document.getElementById('test-phone').value.trim();
+            
+            if (!accessKeyId || !accessKeySecret || !testPhone) {
+                showAlert('error', '请填写AccessKey ID、Secret和测试手机号');
+                return;
+            }
+            
+            sendTestSmsBtn.disabled = true;
+            sendTestSmsBtn.textContent = '发送中...';
+            
+            const formData = new FormData();
+            formData.append('access_key_id', accessKeyId);
+            formData.append('access_key_secret', accessKeySecret);
+            formData.append('test_phone', testPhone);
+            
+            fetch('install/install_api.php?action=send_test_sms', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('success', '测试短信已发送，请查收验证码');
+                    verifySmsBtn.disabled = false;
+                    // 倒计时
+                    let countdown = 60;
+                    const timer = setInterval(() => {
+                        sendTestSmsBtn.textContent = `${countdown}秒后重试`;
+                        countdown--;
+                        if (countdown < 0) {
+                            clearInterval(timer);
+                            sendTestSmsBtn.disabled = false;
+                            sendTestSmsBtn.textContent = '发送测试短信';
+                        }
+                    }, 1000);
+                } else {
+                    showAlert('error', data.message);
+                    sendTestSmsBtn.disabled = false;
+                    sendTestSmsBtn.textContent = '发送测试短信';
+                }
+            })
+            .catch(err => {
+                showAlert('error', '请求失败: ' + err.message);
+                sendTestSmsBtn.disabled = false;
+                sendTestSmsBtn.textContent = '发送测试短信';
+            });
+        };
+        
+        verifySmsBtn.onclick = function() {
+            const verifyCode = document.getElementById('verify-code').value.trim();
+            if (!verifyCode) {
+                showAlert('error', '请输入验证码');
+                return;
+            }
+            
+            verifySmsBtn.disabled = true;
+            verifySmsBtn.textContent = '验证中...';
+            
+            const formData = new FormData();
+            formData.append('verify_code', verifyCode);
+            
+            fetch('install/install_api.php?action=verify_test_sms', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('success', '验证成功！');
+                    smsVerified = true;
+                    verifySmsBtn.textContent = '已验证';
+                    nextBtn.textContent = '完成安装 →';
+                    nextBtn.onclick = function() {
+                        showStep(5);
+                        completeInstall();
+                    };
+                } else {
+                    showAlert('error', data.message);
+                    verifySmsBtn.disabled = false;
+                    verifySmsBtn.textContent = '验证并保存';
+                }
+            })
+            .catch(err => {
+                showAlert('error', '请求失败: ' + err.message);
+                verifySmsBtn.disabled = false;
+                verifySmsBtn.textContent = '验证并保存';
+            });
+        };
+        
+        function handleSkipSms() {
+            if (confirm('确定要跳过短信配置吗？跳过将无法使用手机号注册功能，且会覆盖现有的注册文件。')) {
+                nextBtn.disabled = true;
+                nextBtn.textContent = '正在配置...';
+                
+                fetch('install/install_api.php?action=skip_sms_config', {
+                    method: 'POST'
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        showStep(5);
+                        completeInstall();
+                    } else {
+                        showAlert('error', data.message);
+                        nextBtn.disabled = false;
+                        nextBtn.textContent = '跳过 →';
+                    }
+                })
+                .catch(err => {
+                    showAlert('error', '请求失败: ' + err.message);
+                    nextBtn.disabled = false;
+                    nextBtn.textContent = '跳过 →';
+                });
+            }
         }
 
         // 完成安装
@@ -1195,6 +1507,10 @@
                             </div>`;
                         } else {
                             // 如果因为某种原因没有获取到密码，显示默认提示
+                            const errorMsg = window.adminCreationError ? 
+                                `<br><span style="color: #ff4d4f; font-size: 13px;">具体错误：${window.adminCreationError}</span>` : 
+                                '但由于网络或状态原因未能获取到随机密码。';
+                            
                              adminInfoHtml = `
                             <div style="background: #fffbe6; border: 1px solid #ffe58f; padding: 20px; border-radius: 10px; margin: 25px 0; text-align: left;">
                                 <h3 style="color: #faad14; margin-bottom: 15px; font-size: 16px;">
@@ -1204,7 +1520,7 @@
                                     系统尝试为您创建了管理员账号：<strong>admin@admin.com.cn</strong>
                                 </p>
                                 <p style="color: #666; font-size: 14px; margin-top: 5px;">
-                                    但由于网络或状态原因未能获取到随机密码。
+                                    ${errorMsg}
                                 </p>
                                 <p style="color: #666; font-size: 14px; margin-top: 5px;">
                                     请检查数据库 <code>users</code> 表，或使用注册功能注册新账号（第一个注册的用户通常会自动获得管理员权限）。
