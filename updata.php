@@ -4,13 +4,13 @@ require_once 'config.php';
 require_once 'db.php';
 require_once 'User.php';
 
-// 检查用户是否登�?
+// 检查用户是否登录
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
     exit;
 }
 
-// 检查用户是否为管理�?
+// 检查用户是否为管理员
 if (!isset($_SESSION['is_admin']) || !$_SESSION['is_admin']) {
     // 非管理员，跳转到聊天页面
     header('Location: chat.php');
@@ -19,8 +19,8 @@ if (!isset($_SESSION['is_admin']) || !$_SESSION['is_admin']) {
 
 // 处理AJAX更新请求
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax']) && $_POST['ajax'] === 'true') {
-    // 设置无缓冲输�?    @
-ini_set('zlib.output_compression', 0);
+    // 设置无缓冲输出
+    @ini_set('zlib.output_compression', 0);
     @ini_set('implicit_flush', 1);
     ob_implicit_flush(1);
     
@@ -34,11 +34,11 @@ ini_set('zlib.output_compression', 0);
     header('Connection: keep-alive');
     header('X-Accel-Buffering: no'); // Nginx
     
-    // 辅助函数：发送数据并刷新缓冲�?    
+    // 辅助函数：发送数据并刷新缓冲区
     function sendMsg($data) {
         echo "data: " . json_encode($data) . "\n\n";
-        // 添加填充数据以强制刷新缓冲区 (针对某些服务器配�?
-        echo str_repeat(' ', 4096);
+        // 添加填充数据以强制刷新缓冲区 (针对某些服务器配置)，作为注释发送避免干扰解析
+        echo ": " . str_repeat(' ', 4096) . "\n\n";
         flush();
     }
     
@@ -56,8 +56,8 @@ ini_set('zlib.output_compression', 0);
                 $dirIterator = new RecursiveDirectoryIterator('old', RecursiveDirectoryIterator::SKIP_DOTS);
                 $iterator = new RecursiveIteratorIterator($dirIterator, RecursiveIteratorIterator::SELF_FIRST);
                 
-                // 先统计文件数�?                
-$filesToRestore = [];
+                // 先统计文件数量
+                $filesToRestore = [];
                 foreach ($iterator as $item) {
                     if ($item->isFile()) {
                         // 手动计算相对路径
@@ -88,7 +88,7 @@ $filesToRestore = [];
                     $oldFilePath = $fileInfo['path'];
                     $newFilePath = $fileInfo['subPath'];
                     
-                    // 发送进度更�?                    
+                    // 发送进度更新
                     sendMsg(["status" => "progress", "progress" => $progress, "message" => "恢复文件: {$newFilePath}"]);
                     usleep(50000);
                     
@@ -98,8 +98,8 @@ $filesToRestore = [];
                         @mkdir($destDir, 0777, true);
                     }
                     
-                    // 恢复旧文�?                    
-if (copy($oldFilePath, $newFilePath)) {
+                    // 恢复旧文件
+                    if (copy($oldFilePath, $newFilePath)) {
                         $rollbackCount++;
                     } else {
                         $rollbackFailed++;
@@ -164,15 +164,22 @@ if (copy($oldFilePath, $newFilePath)) {
         $requiredSpace = 0;
         
         // 获取待更新文件的实际大小
+        $checkedCount = 0;
         foreach ($updateInfo['updatafiles'] as $file) {
+            $checkedCount++;
+            // 细化进度：10% - 20%
+            $checkProgress = 10 + round(($checkedCount / $totalFiles) * 10);
+            sendMsg(["status" => "progress", "progress" => $checkProgress, "message" => "检查文件: {$file}"]);
+            
             $fileUrl = 'https://updata.hyacine.com.cn/' . $file;
             $fileSize = 0;
             
             // 使用curl获取远程文件大小
             $ch = curl_init($fileUrl);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_NOBODY, true); // 只获取头部信�?            curl_setopt($ch, CURLOPT_HEADER, true);
-            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true); // 跟随重定�?            
+            curl_setopt($ch, CURLOPT_NOBODY, true); // 只获取头部信息
+            curl_setopt($ch, CURLOPT_HEADER, true);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true); // 跟随重定向
             $headers = curl_exec($ch);
             if ($headers !== false) {
                 $contentLength = curl_getinfo($ch, CURLINFO_CONTENT_LENGTH_DOWNLOAD);
@@ -188,10 +195,11 @@ if (copy($oldFilePath, $newFilePath)) {
             $requiredSpace += $fileSize;
         }
         
-        // 增加备份所需的空�?        $requiredSpace *= 2;
+        // 增加备份所需的空间
+        $requiredSpace *= 2;
         
-        // 获取服务器剩余空�?        
-$freeSpace = disk_free_space('.');
+        // 获取服务器剩余空间
+        $freeSpace = disk_free_space('.');
         
         if ($freeSpace < $requiredSpace) {
             $requiredMB = round($requiredSpace / (1024 * 1024), 2);
@@ -210,13 +218,14 @@ $freeSpace = disk_free_space('.');
             $currentFile++;
             $progress = 20 + round(($currentFile / $totalFiles) * 30);
             
-            // 发送进度更�?            sendMsg(["status" => "progress", "progress" => $progress, "message" => "备份文件: {$file}"]);
+            // 发送进度更新
+            sendMsg(["status" => "progress", "progress" => $progress, "message" => "备份文件: {$file}"]);
             usleep(50000);
             
             // 只备份存在的文件
             if (file_exists($file)) {
-                // 确保old目录中对应的子目录存�?                
-$destPath = 'old/' . $file;
+                // 确保old目录中对应的子目录存在
+                $destPath = 'old/' . $file;
                 $destDir = dirname($destPath);
                 if (!is_dir($destDir)) {
                     if (!mkdir($destDir, 0777, true)) {
@@ -235,7 +244,8 @@ $destPath = 'old/' . $file;
             }
         }
         
-        // 下载并替换文�?        sendMsg(["status" => "progress", "progress" => 50, "message" => "开始下载更新文�?.."]);
+        // 下载并替换文件
+        sendMsg(["status" => "progress", "progress" => 50, "message" => "开始下载更新文件..."]);
         usleep(50000);
         
         $successCount = 0;
@@ -246,7 +256,8 @@ $destPath = 'old/' . $file;
             $currentFile++;
             $progress = 50 + round(($currentFile / $totalFiles) * 50);
             
-            // 发送进度更�?            sendMsg(["status" => "progress", "progress" => $progress, "message" => "更新文件: {$file}"]);
+            // 发送进度更新
+            sendMsg(["status" => "progress", "progress" => $progress, "message" => "更新文件: {$file}"]);
             usleep(50000);
             
             $fileUrl = 'https://updata.hyacine.com.cn/' . $file;
@@ -256,7 +267,9 @@ $destPath = 'old/' . $file;
                 // 确保目标目录存在
                 $destDir = dirname($file);
                 if ($destDir !== '.' && !is_dir($destDir)) {
+                    // 如果目录不存在，创建它（包含父目录）
                     if (!mkdir($destDir, 0777, true)) {
+                        sendMsg(["status" => "progress", "progress" => $progress, "message" => "无法创建目录: {$destDir}"]);
                         $failedCount++;
                         continue; // 无法创建目录，跳过此文件
                     }
@@ -304,7 +317,7 @@ elseif (file_exists('version.txt')) {
     $currentVersion = trim(file_get_contents('version.txt'));
 }
 
-// 获取最新版本信�?
+// 获取最新版本信息
 $isLatestVersion = false;
 $updateUrl = 'https://updata.hyacine.com.cn/updata.json';
 $updateJson = file_get_contents($updateUrl);
@@ -320,8 +333,8 @@ if ($updateJson === false) {
     if ($updateInfo === null) {
         $error = '更新信息格式错误';
     } else {
-        // 检查是否为最新版�?        
-if (isset($updateInfo['version']) && $updateInfo['version'] === $currentVersion) {
+        // 检查是否为最新版本
+        if (isset($updateInfo['version']) && $updateInfo['version'] === $currentVersion) {
             $isLatestVersion = true;
         }
     }
@@ -376,7 +389,7 @@ if (isset($updateInfo['version']) && $updateInfo['version'] === $currentVersion)
             padding: 30px;
         }
         
-        /* 最新版本样�?*/
+        /* 最新版本样式 */
         .latest-version {
             text-align: center;
             padding: 30px 0;
@@ -581,7 +594,30 @@ if (isset($updateInfo['version']) && $updateInfo['version'] === $currentVersion)
             border: 1px solid #91d5ff;
         }
         
-        /* 进度条样�?*/
+        .info-message {
+            border: 1px solid #ff4d4f;
+            background-color: #fff2f0;
+            color: #ff4d4f;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            font-weight: bold;
+        }
+        
+        .info-message h3 {
+            color: #ff4d4f;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        
+        .info-message p {
+            color: #ff4d4f;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        
+        /* 进度条样式 */
         .progress-container {
             margin: 20px 0;
             display: none;
@@ -656,7 +692,7 @@ if (isset($updateInfo['version']) && $updateInfo['version'] === $currentVersion)
             color: #666;
         }
         
-        /* 更新状态容�?*/
+        /* 更新状态容器 */
         .update-status {
             margin: 20px 0;
             padding: 15px;
@@ -734,81 +770,95 @@ if (isset($updateInfo['version']) && $updateInfo['version'] === $currentVersion)
     </style>
 </head>
 <body>
-    <div class="update-container">
-        <div class="update-header">
-            <h2>系统更新</h2>
-            <p>Modern Chat 更新系统</p>
+    <div class="container">
+        <div class="header">
+            <h1>系统更新</h1>
+            <p style="font-size: 12px; color: #666; margin-top: 5px;">Modern Chat 更新系统</p>
         </div>
         
-        <!-- 进度条区�?-->
-        <div class="progress-container" id="progress-container" style="display: none;">
-            <div class="progress-bar">
-                <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+        <div class="content">
+            <!-- 进度条区域 -->
+            <div class="progress-container" id="progress-container" style="display: none;">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+                </div>
+                <div class="progress-text">
+                    <span id="progress-percent">0%</span>
+                    <span id="progress-message">准备开始...</span>
+                </div>
             </div>
-            <div class="progress-text">
-                <span id="progress-percent">0%</span>
-                <span id="progress-message">准备开�?..</span>
-            </div>
-        </div>
-        
-        <!-- 状态日志区�?-->
-        <div class="update-status" id="update-status" style="display: none;"></div>
-        
-        <!-- 错误/成功提示区域 -->
-        <div class="message-area" id="message-area"></div>
-        
-        <div id="main-content">
-                <?php if ($isLatestVersion): ?>
-                    <!-- 已是最新版�?-->
-                    <div class="latest-version">
-                        <div class="latest-version-icon">�?/div>
-                        <div class="latest-version-text">已是最新版本无需更新</div>
-                    </div>
-                <?php else: ?>
-                    <!-- 有新版本 -->
-                    <div class="version-info">
-                        <div class="version-item">
-                            <div class="version-label">当前版本</div>
-                            <div class="version-value current"><?php echo $currentVersion; ?></div>
-                        </div>
-                        <div class="version-item">
-                            <div class="version-label">最新版�?/div>
-                            <div class="version-value latest"><?php echo $updateInfo['version']; ?></div>
-                        </div>
-                    </div>
-                    
-                    <div class="update-message">
-                        <h3>更新内容</h3>
-                        <p><?php echo $updateInfo['updatamessage']; ?></p>
-                    </div>
-                    
-                    <div class="update-files">
-                        <h3>更新文件 <span style="font-size: 12px; font-weight: normal; color: #666; margin-left: 5px;">(�?<?php echo count($updateInfo['updatafiles']); ?> 个文�?</span></h3>
-                        <div class="files-list">
-                            <?php foreach ($updateInfo['updatafiles'] as $file): ?>
-                                <div class="file-item">
-                                    <span class="file-name"><?php echo $file; ?></span>
-                                    <span class="file-status" data-file="<?php echo $file; ?>">待更�?/span>
-                                </div>
-                            <?php endforeach; ?>
-                        </div>
-                    </div>
-            <?php endif; ?>
             
-            <!-- 操作按钮区域 -->
-            <div class="actions" id="actions-area">
-                <?php if (!$isLatestVersion): ?>
-                    <button type="button" class="btn btn-primary" id="update-btn" onclick="startUpdate()">立即更新</button>
+            <!-- 加载动画 -->
+            <div class="loading-container" id="loading-container">
+                <div class="loading-spinner"></div>
+                <div class="loading-text" id="loading-text">正在加载...</div>
+            </div>
+            
+            <!-- 状态日志区域 -->
+            <div class="update-status" id="update-status" style="display: none;"></div>
+            
+            <!-- 错误/成功提示区域 -->
+            <div class="message-area" id="message-area"></div>
+            
+            <div id="main-content">
+                    <?php if ($isLatestVersion): ?>
+                        <!-- 已是最新版本 -->
+                        <div class="latest-version">
+                            <div class="latest-version-icon">✨</div>
+                            <div class="latest-version-text">已是最新版本无需更新</div>
+                        </div>
+                    <?php else: ?>
+                        <!-- 有新版本 -->
+                        <div class="version-info">
+                            <div class="version-item">
+                                <div class="version-label">当前版本</div>
+                                <div class="version-value current"><?php echo $currentVersion; ?></div>
+                            </div>
+                            <div class="version-item">
+                                <div class="version-label">最新版本</div>
+                                <div class="version-value latest"><?php echo $updateInfo['version']; ?></div>
+                            </div>
+                        </div>
+                        
+                        <?php if (isset($updateInfo['infomessage']) && !empty($updateInfo['infomessage'])): ?>
+                            <div class="info-message">
+                                <h3>重要提示</h3>
+                                <p><?php echo $updateInfo['infomessage']; ?></p>
+                            </div>
+                        <?php endif; ?>
+                        
+                        <div class="update-message">
+                            <h3>更新内容</h3>
+                            <p><?php echo $updateInfo['updatamessage']; ?></p>
+                        </div>
+                        
+                        <div class="update-files">
+                            <h3>更新文件 <span style="font-size: 12px; font-weight: normal; color: #666; margin-left: 5px;">(共 <?php echo count($updateInfo['updatafiles']); ?> 个文件)</span></h3>
+                            <div class="files-list">
+                                <?php foreach ($updateInfo['updatafiles'] as $file): ?>
+                                    <div class="file-item">
+                                        <span class="file-name"><?php echo $file; ?></span>
+                                        <span class="file-status" data-file="<?php echo $file; ?>">待更新</span>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
                 <?php endif; ?>
                 
-                <!-- 撤销更新按钮 -->
-                <button type="button" class="btn btn-secondary" id="rollback-btn" onclick="confirmRollback()" style="<?php echo (is_dir('old') && count(array_diff(scandir('old'), array('.', '..'))) > 0) ? '' : 'display:none;'; ?>">撤销更新</button>
-                
-                <!-- 返回按钮 -->
-                <a href="chat.php" class="btn btn-secondary">返回聊天</a>
+                <!-- 操作按钮区域 -->
+                <div class="actions" id="actions-area">
+                    <?php if (!$isLatestVersion): ?>
+                        <button type="button" class="btn btn-primary" id="update-btn" onclick="startUpdate()">立即更新</button>
+                    <?php endif; ?>
+                    
+                    <!-- 撤销更新按钮 -->
+                    <button type="button" class="btn btn-secondary" id="rollback-btn" onclick="confirmRollback()" style="<?php echo (is_dir('old') && count(array_diff(scandir('old'), array('.', '..'))) > 0) ? '' : 'display:none;'; ?>">撤销更新</button>
+                    
+                    <!-- 返回按钮 -->
+                    <a href="chat.php" class="btn btn-secondary">返回聊天</a>
+                </div>
             </div>
         </div>
-    </div>
     </div>
     
     <script>
@@ -828,7 +878,8 @@ if (isset($updateInfo['version']) && $updateInfo['version'] === $currentVersion)
             }, 5000);
         }
         
-        // 显示进度�?        function showProgress() {
+        // 显示进度条
+        function showProgress() {
             document.getElementById('progress-container').style.display = 'block';
             document.getElementById('update-status').style.display = 'block';
         }
@@ -836,7 +887,10 @@ if (isset($updateInfo['version']) && $updateInfo['version'] === $currentVersion)
         // 更新进度
         function updateProgress(percent, message) {
             document.getElementById('progress-fill').style.width = percent + '%';
-            document.getElementById('progress-text').textContent = message;
+            // document.getElementById('progress-text').textContent = message; 
+            // 修正：这里progress-text是容器，里面有两个span
+            document.getElementById('progress-percent').textContent = percent + '%';
+            document.getElementById('progress-message').textContent = message;
         }
         
         // 显示加载动画
@@ -866,7 +920,8 @@ if (isset($updateInfo['version']) && $updateInfo['version'] === $currentVersion)
             });
         }
         
-        // 添加更新状态日�?        function addStatusLog(message) {
+        // 添加更新状态日志
+        function addStatusLog(message) {
             const statusContainer = document.getElementById('update-status');
             statusContainer.style.display = 'block';
             
@@ -875,10 +930,12 @@ if (isset($updateInfo['version']) && $updateInfo['version'] === $currentVersion)
             statusItem.textContent = `${new Date().toLocaleTimeString()}: ${message}`;
             statusContainer.appendChild(statusItem);
             
-            // 滚动到底�?            statusContainer.scrollTop = statusContainer.scrollHeight;
+            // 滚动到底部
+            statusContainer.scrollTop = statusContainer.scrollHeight;
         }
         
-        // 更新文件状�?        function updateFileStatus(file, status) {
+        // 更新文件状态
+        function updateFileStatus(file, status) {
             const statusElements = document.querySelectorAll(`[data-file="${file}"]`);
             statusElements.forEach(element => {
                 element.textContent = status;
@@ -892,17 +949,22 @@ if (isset($updateInfo['version']) && $updateInfo['version'] === $currentVersion)
             });
         }
         
-        // 开始更�?        function startUpdate() {
-            // 隐藏主内�?            document.getElementById('main-content').classList.add('hidden-during-update');
+        // 开始更新
+        function startUpdate() {
+            // 隐藏主内容
+            document.getElementById('main-content').classList.add('hidden-during-update');
             
             // 显示进度条和加载动画
             showProgress();
             showLoading('正在准备更新...');
-            // disableButtons(); // 按钮区域已隐藏，不需要禁�?            
-            // 清空之前的状�?            document.getElementById('update-status').innerHTML = '';
+            // 禁用按钮区域            
+            disableButtons(); // 按钮区域已隐藏，不需要禁用
+            // 清空之前的状态
+            document.getElementById('update-status').innerHTML = '';
             document.getElementById('message-area').innerHTML = '';
             
-            // 使用XMLHttpRequest进行长轮�?            const xhr = new XMLHttpRequest();
+            // 使用XMLHttpRequest进行长轮询
+            const xhr = new XMLHttpRequest();
             xhr.open('POST', window.location.href, true);
             xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
             
@@ -919,8 +981,9 @@ if (isset($updateInfo['version']) && $updateInfo['version'] === $currentVersion)
                 const newLines = newContent.split('\n\n');
                 
                 for (const line of newLines) {
-                    if (line.startsWith('data:')) {
-                        const dataStr = line.replace('data: ', '');
+                    const trimmedLine = line.trim();
+                    if (trimmedLine.startsWith('data:')) {
+                        const dataStr = trimmedLine.replace('data: ', '');
                         if (!dataStr.trim()) continue;
                         
                         try {
@@ -935,12 +998,13 @@ if (isset($updateInfo['version']) && $updateInfo['version'] === $currentVersion)
                                     updateProgress(data.progress, data.message);
                                     addStatusLog(data.message);
                                     
-                                    // 更新文件状�?                                    
-if (data.message.includes('更新文件: ')) {
+                                    // 更新文件状态
+                                    if (data.message.includes('更新文件: ')) {
                                         const file = data.message.replace('更新文件: ', '');
                                         updateFileStatus(file, '正在更新');
                                     } else if (data.message.includes('备份文件: ')) {
-                                         // 也可以显示备份状�?                                    }
+                                         // 也可以显示备份状态
+                                         }
                                     break;
                                 case 'complete':
                                     hideLoading();
@@ -950,7 +1014,8 @@ if (data.message.includes('更新文件: ')) {
                                         showMessage(data.message, 'success');
                                         updateProgress(100, '更新完成');
                                         
-                                        // 更新所有文件状态为已更�?                                        const fileElements = document.querySelectorAll('[data-file]');
+                                        // 更新所有文件状态为已更新
+                                        const fileElements = document.querySelectorAll('[data-file]');
                                         fileElements.forEach(element => {
                                             updateFileStatus(element.dataset.file, '已更新');
                                         });
@@ -974,7 +1039,8 @@ if (data.message.includes('更新文件: ')) {
                                         }
                                     } else {
                                         showMessage(data.message, 'error');
-                                        // 出错时也显示回内�?                                        document.getElementById('main-content').classList.remove('hidden-during-update');
+                                        // 出错时也显示回内容
+                                        document.getElementById('main-content').classList.remove('hidden-during-update');
                                     }
                                     return;
                             }
@@ -1002,7 +1068,8 @@ if (data.message.includes('更新文件: ')) {
                 showMessage('更新连接中断', 'error');
             };
             
-            // 发送请�?            xhr.send('ajax=true&action=update');
+            // 发送请求
+            xhr.send('ajax=true&action=update');
         }
         
         // 确认撤销更新
@@ -1014,17 +1081,20 @@ if (data.message.includes('更新文件: ')) {
         
         // 撤销更新
         function rollbackUpdate() {
-            // 隐藏主内�?            document.getElementById('main-content').classList.add('hidden-during-update');
+            // 隐藏主内容
+            document.getElementById('main-content').classList.add('hidden-during-update');
             
             // 显示进度条和加载动画
             showProgress();
             showLoading('正在撤销更新...');
             // disableButtons();
             
-            // 清空之前的状�?            document.getElementById('update-status').innerHTML = '';
+            // 清空之前的状态
+            document.getElementById('update-status').innerHTML = '';
             document.getElementById('message-area').innerHTML = '';
             
-            // 使用XMLHttpRequest进行长轮�?            const xhr = new XMLHttpRequest();
+            // 使用XMLHttpRequest进行长轮询
+            const xhr = new XMLHttpRequest();
             xhr.open('POST', window.location.href, true);
             xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
             
@@ -1034,8 +1104,9 @@ if (data.message.includes('更新文件: ')) {
                     const lines = responseText.split('\n\n');
                     
                     for (const line of lines) {
-                        if (line.startsWith('data:')) {
-                            const dataStr = line.replace('data: ', '');
+                        const trimmedLine = line.trim();
+                        if (trimmedLine.startsWith('data:')) {
+                            const dataStr = trimmedLine.replace('data: ', '');
                             try {
                                 const data = JSON.parse(dataStr);
                                 
@@ -1056,9 +1127,12 @@ if (data.message.includes('更新文件: ')) {
                                             showMessage(data.message, 'success');
                                             updateProgress(100, '撤销完成');
                                             
-                                            // 重新显示主内�?                                            document.getElementById('main-content').classList.remove('hidden-during-update');
+                                            // 重新显示主内容
+                                            document.getElementById('main-content').classList.remove('hidden-during-update');
                                             
-                                            // 撤销后可能需要显示更新按钮，隐藏撤销按钮（如果没有备份了�?                                            // 简单起见，刷新页面最稳妥，或者手动重置按钮状�?                                            // 这里我们手动重置状态：显示更新按钮，隐藏撤销按钮(如果目录空了，但这里很难判断，所以简单刷新页�?
+                                            // 撤销后可能需要显示更新按钮，隐藏撤销按钮（如果没有备份了）
+                                            // 简单起见，刷新页面最稳妥，或者手动重置按钮状态
+                                            // 这里我们手动重置状态：显示更新按钮，隐藏撤销按钮(如果目录空了，但这里很难判断，所以简单刷新页面)
                                             setTimeout(() => {
                                                 location.reload();
                                             }, 1500);
@@ -1090,7 +1164,8 @@ if (data.message.includes('更新文件: ')) {
                 showMessage('撤销连接中断', 'error');
             };
             
-            // 发送请�?            xhr.send('ajax=true&action=rollback');
+            // 发送请求
+            xhr.send('ajax=true&action=rollback');
         }
         
 
