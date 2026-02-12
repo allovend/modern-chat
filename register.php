@@ -773,6 +773,7 @@
             privacy: 10
         };
         const REQUIRED_READ_TIME = 10; // 必须倒计时10秒
+        let lastScrollTop = 0; // 全局变量，用于阻止手动滚动
 
         // 自动滚动函数
         function autoScrollToBottom() {
@@ -793,9 +794,12 @@
                     const scrollPercent = Math.min(100, Math.round((bodyEl.scrollTop / maxScroll) * 100));
                     progressFill.style.width = scrollPercent + '%';
                     progressText.textContent = scrollPercent + '%';
+                    
+                    // 更新lastScrollTop，确保自动滚动不受阻止
+                    lastScrollTop = bodyEl.scrollTop;
                 } else {
-                    // 滚动到底部后，允许用户手动滚动
-                    enableManualScroll();
+                    // 滚动到底部后，仍然不允许用户手动滚动
+                    // 保持阻止滚动的状态
                 }
             }
         }
@@ -956,10 +960,14 @@
             const agreeBtn = document.getElementById('agreeBtn');
             const readProgress = document.getElementById('readProgress');
 
-            bodyEl.onscroll = function() {
+            bodyEl.onscroll = function(e) {
                 const scrollTop = bodyEl.scrollTop;
                 const scrollHeight = bodyEl.scrollHeight;
                 const clientHeight = bodyEl.clientHeight;
+
+                // 阻止用户手动滚动，只允许自动滚动
+                bodyEl.scrollTop = lastScrollTop;
+                return;
 
                 // 计算滚动百分比
                 const scrollPercent = Math.min(100, Math.round((scrollTop / (scrollHeight - clientHeight)) * 100));

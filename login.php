@@ -1025,6 +1025,7 @@ require_once 'db.php';
         };
         let readTimer = null;
         let readStartTime = null;
+        let lastScrollTop = 0; // 全局变量，用于阻止手动滚动
 
         // 自动滚动函数
         function autoScrollToBottom(bodyEl, progressFill, progressText, type) {
@@ -1038,6 +1039,9 @@ require_once 'db.php';
 
             if (currentScroll < maxScroll) {
                 bodyEl.scrollTop = Math.min(currentScroll + scrollStep, maxScroll);
+                
+                // 更新lastScrollTop，确保自动滚动不受阻止
+                lastScrollTop = bodyEl.scrollTop;
             }
 
             // 更新进度条
@@ -1207,22 +1211,14 @@ require_once 'db.php';
                 }, 1000);
             }
 
-            // 记录上次滚动位置，用于阻止手动滚动
-            let lastScrollTop = 0;
-            
             bodyEl.onscroll = function(e) {
                 const scrollTop = bodyEl.scrollTop;
                 const scrollHeight = bodyEl.scrollHeight;
                 const clientHeight = bodyEl.clientHeight;
 
-                // 如果尚未滚动到底部，阻止手动滚动
-                if (!readStatus[type].scrolledToBottom && readStatus[type].readTime < MIN_READ_TIME) {
-                    bodyEl.scrollTop = lastScrollTop;
-                    return;
-                }
-
-                // 记录当前滚动位置
-                lastScrollTop = scrollTop;
+                // 始终阻止用户手动滚动，只允许自动滚动
+                bodyEl.scrollTop = lastScrollTop;
+                return;
 
                 // 计算滚动百分比
                 const scrollPercent = Math.min(100, Math.round((scrollTop / (scrollHeight - clientHeight)) * 100));

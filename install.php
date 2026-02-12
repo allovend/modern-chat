@@ -938,6 +938,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_agreement') {
             privacy: 10
         };
         const REQUIRED_READ_TIME = 10; // 必须倒计时10秒
+        let lastScrollTop = 0; // 全局变量，用于阻止手动滚动
 
         // 自动滚动函数
         function autoScrollToBottom() {
@@ -956,6 +957,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_agreement') {
 
                 if (currentScroll < maxScroll) {
                     contentEl.scrollTop = Math.min(currentScroll + scrollStep, maxScroll);
+                    
+                    // 更新lastScrollTop，确保自动滚动不受阻止
+                    lastScrollTop = contentEl.scrollTop;
                 }
 
                 // 更新进度条
@@ -1130,22 +1134,14 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_agreement') {
             const progressText = document.getElementById('progress-text');
             const readProgress = document.getElementById('read-progress');
 
-            // 记录上次滚动位置，用于阻止手动滚动
-            let lastScrollTop = 0;
-            
             contentEl.onscroll = function(e) {
                 const scrollTop = contentEl.scrollTop;
                 const scrollHeight = contentEl.scrollHeight;
                 const clientHeight = contentEl.clientHeight;
 
-                // 如果尚未滚动到底部，阻止手动滚动
-                if (!hasReadToBottom[type] && !hasReadForTenSeconds[type]) {
-                    contentEl.scrollTop = lastScrollTop;
-                    return;
-                }
-
-                // 记录当前滚动位置
-                lastScrollTop = scrollTop;
+                // 始终阻止用户手动滚动，只允许自动滚动
+                contentEl.scrollTop = lastScrollTop;
+                return;
 
                 // 计算滚动百分比
                 const scrollPercent = Math.min(100, Math.round((scrollTop / (scrollHeight - clientHeight)) * 100));
