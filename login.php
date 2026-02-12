@@ -1059,15 +1059,12 @@ require_once 'db.php';
             }
         };
 
-        const MIN_READ_TIME = 10; // 最小阅读时间（秒）
-
         let currentAgreement = null;
         let readStatus = {
-            terms: { scrolledToBottom: false, readTime: 0, completed: false },
-            privacy: { scrolledToBottom: false, readTime: 0, completed: false }
+            terms: { scrolledToBottom: false, completed: false },
+            privacy: { scrolledToBottom: false, completed: false }
         };
         let readTimer = null;
-        let readStartTime = null;
         let lastScrollTop = 0; // 全局变量，用于阻止手动滚动
 
         // 自动滚动函数
@@ -1078,8 +1075,8 @@ require_once 'db.php';
             const clientHeight = contentEl.clientHeight;
             const maxScroll = scrollHeight - clientHeight;
 
-            // 每次滚动一小段距离
-            const scrollStep = maxScroll / (MIN_READ_TIME * 90); // 10秒内均匀滚动（约60fps），减慢滚动速度
+            // 每次滚动一小段距离，实现匀速滚动
+            const scrollStep = maxScroll / 150; // 分150次滚动完成，实现匀速滚动
             const currentScroll = contentEl.scrollTop;
 
             if (currentScroll < maxScroll) {
@@ -1114,7 +1111,7 @@ require_once 'db.php';
             progressFill.style.width = '0%';
             progressText.textContent = '0%';
             readProgress.classList.remove('completed');
-            timeRemaining.textContent = '还需阅读 ' + MIN_READ_TIME + ' 秒';
+            timeRemaining.textContent = '滚动中...';
 
             // 清除之前的计时器
             if (readTimer) {
@@ -1156,37 +1153,37 @@ require_once 'db.php';
                             const contentContainer = bodyEl.querySelector('.modal-body-content') || bodyEl;
                             contentContainer.innerHTML = renderMarkdown(content);
 
-                            // 启动倒计时和自动滚动
+                            // 启动自动滚动
                             if (!readStatus[type].completed) {
-                                readStartTime = Date.now();
-                                readStatus[type].readTime = 0;
                                 readStatus[type].scrolledToBottom = false;
 
-                                // 更频繁地执行滚动，使滚动更连续
+                                // 使用更频繁的间隔来实现平滑滚动
                                 let scrollInterval = setInterval(() => {
                                     // 自动滚动
                                     autoScrollToBottom(bodyEl, progressFill, progressText, type);
-                                }, 16); // 约60fps，使滚动更平滑
 
-                                // 单独的计时器用于跟踪阅读时间
-                                readTimer = setInterval(() => {
-                                    readStatus[type].readTime++;
+                                    // 检查是否滚动到底部
+                                    const contentEl = bodyEl.querySelector('.modal-body-content') || bodyEl;
+                                    if (contentEl) {
+                                        const scrollHeight = contentEl.scrollHeight;
+                                        const clientHeight = contentEl.clientHeight;
+                                        const maxScroll = scrollHeight - clientHeight;
+                                        
+                                        if (contentEl.scrollTop >= maxScroll - 1) {
+                                            clearInterval(scrollInterval);
+                                            readTimer = null;
+                                            readStatus[type].completed = true;
+                                            readStatus[type].scrolledToBottom = true;
 
-                                    if (readStatus[type].readTime >= MIN_READ_TIME) {
-                                        clearInterval(readTimer);
-                                        clearInterval(scrollInterval);
-                                        readTimer = null;
-                                        scrollInterval = null;
-                                        readStatus[type].completed = true;
-                                        readStatus[type].scrolledToBottom = true;
-
-                                        timeRemaining.textContent = '已完成阅读';
-                                        timeRemaining.className = 'timer-text completed';
-                                        readProgress.classList.add('completed');
-                                        agreeBtn.disabled = false;
-                                        agreeBtn.textContent = '已阅读并同意';
+                                            timeRemaining.textContent = '已完成阅读';
+                                            timeRemaining.className = 'timer-text completed';
+                                            readProgress.classList.add('completed');
+                                            agreeBtn.disabled = false;
+                                            agreeBtn.textContent = '已阅读并同意';
+                                        }
                                     }
-                                }, 1000);
+                                }, 30); // 约33fps，实现平滑滚动
+                                readTimer = scrollInterval;
                             } else {
                                 timeRemaining.textContent = '已完成阅读';
                                 timeRemaining.className = 'timer-text completed';
@@ -1246,20 +1243,9 @@ require_once 'db.php';
             // 获取内容容器
             const contentEl = document.querySelector('#modalBody .modal-body-content') || bodyEl;
 
-            // 如果该协议尚未完成，开始计时
+            // 无需计时，只需要滚动到底部
             if (!readStatus[type].completed) {
-                readStartTime = Date.now();
-                readTimer = setInterval(() => {
-                    const elapsed = Math.floor((Date.now() - readStartTime) / 1000);
-                    const remaining = Math.max(0, MIN_READ_TIME - elapsed);
-
-                    if (remaining > 0) {
-                        timeRemaining.textContent = '还需阅读 ' + remaining + ' 秒';
-                    } else {
-                        timeRemaining.textContent = '阅读时间已达要求';
-                        checkCanAgree(type);
-                    }
-                }, 1000);
+                timeRemaining.textContent = '滚动中...';
             }
 
             // 阻止鼠标滚轮事件
@@ -1315,13 +1301,10 @@ require_once 'db.php';
             const readProgress = document.getElementById('readProgress');
             const timeRemaining = document.getElementById('timeRemaining');
 
-            const elapsed = Math.floor((Date.now() - readStartTime) / 1000);
-            const timeMet = elapsed >= MIN_READ_TIME;
             const scrolled = readStatus[type].scrolledToBottom;
 
-            if (scrolled && timeMet) {
+            if (scrolled) {
                 readStatus[type].completed = true;
-                readStatus[type].readTime = elapsed;
 
                 agreeBtn.disabled = false;
                 agreeBtn.textContent = '已阅读并同意';

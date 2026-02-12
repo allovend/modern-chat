@@ -803,19 +803,10 @@
             terms: false,
             privacy: false
         };
-        let hasReadForTenSeconds = {
-            terms: false,
-            privacy: false
-        };
         let countdownTimers = {
             terms: null,
             privacy: null
         };
-        let countdownSeconds = {
-            terms: 10,
-            privacy: 10
-        };
-        const REQUIRED_READ_TIME = 10; // 必须倒计时10秒
         let lastScrollTop = 0; // 全局变量，用于阻止手动滚动
 
         // 自动滚动函数
@@ -886,8 +877,7 @@
             // 重置进度
             progressFill.style.width = '0%';
             progressText.textContent = '0%';
-            countdownSeconds[type] = REQUIRED_READ_TIME;
-            timerText.textContent = countdownSeconds[type] + '秒';
+            timerText.textContent = '滚动中...';
             timerText.className = 'timer-text counting';
             readProgress.classList.remove('completed');
 
@@ -898,10 +888,9 @@
             }
 
             // 检查是否已经阅读完成
-            const bothRead = hasReadToBottom.terms && hasReadForTenSeconds.terms &&
-                           hasReadToBottom.privacy && hasReadForTenSeconds.privacy;
+            const bothRead = hasReadToBottom.terms && hasReadToBottom.privacy;
 
-            if (hasReadToBottom[type] && hasReadForTenSeconds[type]) {
+            if (hasReadToBottom[type]) {
                 agreeBtn.disabled = false;
                 agreeBtn.textContent = '已阅读并同意';
                 timerText.textContent = '完成';
@@ -933,28 +922,33 @@
                             contentContainer.innerHTML = renderMarkdown(content);
 
                             // 启动自动滚动
-                            if (!hasReadForTenSeconds[type]) {
-                                countdownSeconds[type] = REQUIRED_READ_TIME;
-                                countdownTimers[type] = setInterval(() => {
-                                    countdownSeconds[type]--;
-                                    timerText.textContent = countdownSeconds[type] + '秒';
-
+                            if (!hasReadToBottom[type]) {
+                                // 使用更频繁的间隔来实现平滑滚动
+                                let scrollInterval = setInterval(() => {
                                     // 自动滚动到底部
                                     autoScrollToBottom();
 
-                                    if (countdownSeconds[type] <= 0) {
-                                        hasReadToTenSeconds[type] = true;
-                                        hasReadToBottom[type] = true;
-                                        clearInterval(countdownTimers[type]);
-                                        countdownTimers[type] = null;
-                                        timerText.textContent = '完成';
-                                        timerText.className = 'timer-text completed';
-                                        progressFill.style.width = '100%';
-                                        progressText.textContent = '100%';
-                                        readProgress.classList.add('completed');
-                                        checkAgreementStatus(type);
+                                    // 检查是否滚动到底部
+                                    const contentEl = document.querySelector('#modalBody .modal-body-content') || document.getElementById('modalBody');
+                                    if (contentEl) {
+                                        const scrollHeight = contentEl.scrollHeight;
+                                        const clientHeight = contentEl.clientHeight;
+                                        const maxScroll = scrollHeight - clientHeight;
+                                        
+                                        if (contentEl.scrollTop >= maxScroll - 1) {
+                                            hasReadToBottom[type] = true;
+                                            clearInterval(scrollInterval);
+                                            countdownTimers[type] = null;
+                                            timerText.textContent = '完成';
+                                            timerText.className = 'timer-text completed';
+                                            progressFill.style.width = '100%';
+                                            progressText.textContent = '100%';
+                                            readProgress.classList.add('completed');
+                                            checkAgreementStatus(type);
+                                        }
                                     }
-                                }, 1000);
+                                }, 30); // 约33fps，实现平滑滚动
+                                countdownTimers[type] = scrollInterval;
                             } else {
                                 timerText.textContent = '完成';
                                 timerText.className = 'timer-text completed';
@@ -1065,14 +1059,14 @@
         function checkAgreementStatus(type) {
             const agreeBtn = document.getElementById('agreeBtn');
 
-            // 检查当前协议是否阅读完成（只需等待时间）
-            if (hasReadForTenSeconds[type]) {
+            // 检查当前协议是否阅读完成（只需滚动到底部）
+            if (hasReadToBottom[type]) {
                 agreeBtn.disabled = false;
                 agreeBtn.textContent = '已阅读并同意';
             }
 
             // 检查是否两个协议都阅读完成
-            const bothRead = hasReadForTenSeconds.terms && hasReadForTenSeconds.privacy;
+            const bothRead = hasReadToBottom.terms && hasReadToBottom.privacy;
 
             const agreementStatus = document.getElementById('agreementStatus');
             const registerBtn = document.getElementById('registerBtn');
@@ -1084,10 +1078,10 @@
                 registerBtn.textContent = '注册';
             } else {
                 let remaining = [];
-                if (!hasReadForTenSeconds.terms) {
+                if (!hasReadToBottom.terms) {
                     remaining.push('用户协议');
                 }
-                if (!hasReadForTenSeconds.privacy) {
+                if (!hasReadToBottom.privacy) {
                     remaining.push('隐私协议');
                 }
                 agreementStatus.textContent = `（还需阅读：${remaining.join('、')}）`;

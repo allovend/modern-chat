@@ -927,19 +927,10 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_agreement') {
             tos: false,
             privacy: false
         };
-        let hasReadForTenSeconds = {
-            tos: false,
-            privacy: false
-        };
         let countdownTimers = {
             tos: null,
             privacy: null
         };
-        let countdownSeconds = {
-            tos: 10,
-            privacy: 10
-        };
-        const REQUIRED_READ_TIME = 10; // 必须倒计时10秒
         let lastScrollTop = 0; // 全局变量，用于阻止手动滚动
 
         // 完整的 Markdown 渲染
@@ -1001,8 +992,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_agreement') {
                 const clientHeight = contentEl.clientHeight;
                 const maxScroll = scrollHeight - clientHeight;
 
-                // 每次滚动一小段距离
-                const scrollStep = maxScroll / (REQUIRED_READ_TIME * 90); // 10秒内均匀滚动（约60fps），减慢滚动速度
+                // 每次滚动一小段距离，实现匀速滚动
+                const scrollStep = maxScroll / 150; // 分150次滚动完成，实现匀速滚动
                 const currentScroll = contentEl.scrollTop;
 
                 if (currentScroll < maxScroll) {
@@ -1039,8 +1030,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_agreement') {
             // 重置进度
             progressFill.style.width = '0%';
             progressText.textContent = '0%';
-            countdownSeconds[type] = REQUIRED_READ_TIME;
-            timerText.textContent = countdownSeconds[type] + '秒';
+            timerText.textContent = '滚动中...';
             timerText.className = 'timer-text counting';
             readProgress.classList.remove('completed');
 
@@ -1051,10 +1041,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_agreement') {
             }
 
             // 检查是否已经阅读完成
-            const bothRead = hasReadToBottom.tos && hasReadForTenSeconds.tos &&
-                           hasReadToBottom.privacy && hasReadForTenSeconds.privacy;
+            const bothRead = hasReadToBottom.tos && hasReadToBottom.privacy;
 
-            if (hasReadToBottom[type] && hasReadForTenSeconds[type]) {
+            if (hasReadToBottom[type]) {
                 agreeBtn.disabled = false;
                 agreeBtn.style.opacity = '1';
                 agreeBtn.style.cursor = 'pointer';
@@ -1100,39 +1089,39 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_agreement') {
                         contentContainer.innerHTML = renderMarkdown(text);
 
                         // 启动自动滚动
-                        if (!hasReadForTenSeconds[type]) {
-                            countdownSeconds[type] = REQUIRED_READ_TIME;
+                        if (!hasReadToBottom[type]) {
                             const timerText = document.getElementById('timer-text');
                             const progressFill = document.getElementById('progress-fill');
                             const progressText = document.getElementById('progress-text');
 
-                            // 更频繁地执行滚动，使滚动更连续
+                            // 使用更频繁的间隔来实现平滑滚动
                             let scrollInterval = setInterval(() => {
                                 // 自动滚动到底部
                                 autoScrollToBottom();
-                            }, 16); // 约60fps，使滚动更平滑
 
-                            // 单独的计时器用于跟踪阅读时间
-                            countdownTimers[type] = setInterval(() => {
-                                countdownSeconds[type]--;
-                                timerText.textContent = countdownSeconds[type] + '秒';
-
-                                if (countdownSeconds[type] <= 0) {
-                                    hasReadForTenSeconds[type] = true;
-                                    hasReadToBottom[type] = true;
-                                    clearInterval(countdownTimers[type]);
-                                    clearInterval(scrollInterval);
-                                    countdownTimers[type] = null;
-                                    scrollInterval = null;
-                                    timerText.textContent = '完成';
-                                    timerText.className = 'timer-text completed';
-                                    timerText.style.color = '#52c41a';
-                                    progressFill.style.width = '100%';
-                                    progressText.textContent = '100%';
-                                    readProgress.classList.add('completed');
-                                    checkAgreementStatus(type);
+                                // 检查是否滚动到底部
+                                const contentEl = document.getElementById('agreement-content');
+                                const innerEl = contentEl.querySelector('.agreement-content-inner') || contentEl;
+                                if (innerEl) {
+                                    const scrollHeight = innerEl.scrollHeight;
+                                    const clientHeight = innerEl.clientHeight;
+                                    const maxScroll = scrollHeight - clientHeight;
+                                    
+                                    if (innerEl.scrollTop >= maxScroll - 1) {
+                                        clearInterval(scrollInterval);
+                                        countdownTimers[type] = null;
+                                        hasReadToBottom[type] = true;
+                                        timerText.textContent = '完成';
+                                        timerText.className = 'timer-text completed';
+                                        timerText.style.color = '#52c41a';
+                                        progressFill.style.width = '100%';
+                                        progressText.textContent = '100%';
+                                        readProgress.classList.add('completed');
+                                        checkAgreementStatus(type);
+                                    }
                                 }
-                            }, 1000);
+                            }, 30); // 约33fps，实现平滑滚动
+                            countdownTimers[type] = scrollInterval;
                         } else {
                             const timerText = document.getElementById('timer-text');
                             timerText.textContent = '完成';
@@ -1243,8 +1232,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_agreement') {
         function checkAgreementStatus(type) {
             const agreeBtn = document.getElementById('agree-btn');
 
-            // 检查当前协议是否阅读完成（只需等待时间）
-            if (hasReadForTenSeconds[type]) {
+            // 检查当前协议是否阅读完成（只需滚动到底部）
+            if (hasReadToBottom[type]) {
                 agreeBtn.disabled = false;
                 agreeBtn.style.opacity = '1';
                 agreeBtn.style.cursor = 'pointer';
@@ -1252,7 +1241,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_agreement') {
             }
 
             // 检查是否两个协议都阅读完成
-            const bothRead = hasReadForTenSeconds.tos && hasReadForTenSeconds.privacy;
+            const bothRead = hasReadToBottom.tos && hasReadToBottom.privacy;
 
             const agreementStatus = document.getElementById('agreement-status');
 
@@ -1261,10 +1250,10 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_agreement') {
                 agreementStatus.style.color = '#52c41a';
             } else {
                 let remaining = [];
-                if (!hasReadForTenSeconds.tos) {
+                if (!hasReadToBottom.tos) {
                     remaining.push('用户协议');
                 }
-                if (!hasReadForTenSeconds.privacy) {
+                if (!hasReadToBottom.privacy) {
                     remaining.push('隐私协议');
                 }
                 agreementStatus.textContent = `（还需阅读：${remaining.join('、')}）`;
