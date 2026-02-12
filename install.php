@@ -977,7 +977,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_agreement') {
                 const maxScroll = scrollHeight - clientHeight;
 
                 // 每次滚动一小段距离
-                const scrollStep = maxScroll / (REQUIRED_READ_TIME * 60); // 10秒内均匀滚动（约60fps）
+                const scrollStep = maxScroll / (REQUIRED_READ_TIME * 90); // 10秒内均匀滚动（约60fps），减慢滚动速度
                 const currentScroll = contentEl.scrollTop;
 
                 if (currentScroll < maxScroll) {

@@ -830,8 +830,8 @@
                 const clientHeight = contentEl.clientHeight;
                 const maxScroll = scrollHeight - clientHeight;
 
-                // 更快、更连续的滚动
-                const scrollStep = maxScroll / 50; // 分50次滚动完成
+                // 更慢、更连续的滚动
+                const scrollStep = maxScroll / 150; // 分150次滚动完成，减慢滚动速度
                 const currentScroll = contentEl.scrollTop;
 
                 if (currentScroll < maxScroll) {
