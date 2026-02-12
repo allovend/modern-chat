@@ -625,10 +625,33 @@
             privacy: null
         };
         let countdownSeconds = {
-            terms: 10,
-            privacy: 10
+            terms: 15,
+            privacy: 15
         };
-        const REQUIRED_READ_TIME = 10; // 必须倒计时10秒
+        const REQUIRED_READ_TIME = 15; // 必须倒计时15秒
+
+        // 自动滚动函数
+        function autoScrollToBottom() {
+            const bodyEl = document.getElementById('modalBody');
+            if (bodyEl) {
+                const scrollHeight = bodyEl.scrollHeight;
+                const clientHeight = bodyEl.clientHeight;
+                const maxScroll = scrollHeight - clientHeight;
+
+                // 每次滚动一小段距离
+                const scrollStep = maxScroll / (REQUIRED_READ_TIME * 10); // 15秒内均匀滚动
+                const currentScroll = bodyEl.scrollTop;
+
+                if (currentScroll < maxScroll) {
+                    bodyEl.scrollTop = Math.min(currentScroll + scrollStep, maxScroll);
+                }
+
+                // 更新进度条
+                const scrollPercent = Math.min(100, Math.round((bodyEl.scrollTop / maxScroll) * 100));
+                progressFill.style.width = scrollPercent + '%';
+                progressText.textContent = scrollPercent + '%';
+            }
+        }
 
         // 显示协议弹窗
         async function showModal(type) {
@@ -691,19 +714,26 @@
                             const content = await response.text();
                             bodyEl.innerHTML = renderMarkdown(content);
 
-                            // 如果还没有阅读完成，启动倒计时
+                            // 启动自动滚动
                             if (!hasReadForTenSeconds[type]) {
                                 countdownSeconds[type] = REQUIRED_READ_TIME;
                                 countdownTimers[type] = setInterval(() => {
                                     countdownSeconds[type]--;
                                     timerText.textContent = countdownSeconds[type] + '秒';
 
+                                    // 自动滚动到底部
+                                    autoScrollToBottom();
+
                                     if (countdownSeconds[type] <= 0) {
                                         hasReadForTenSeconds[type] = true;
+                                        hasReadToBottom[type] = true;
                                         clearInterval(countdownTimers[type]);
                                         countdownTimers[type] = null;
                                         timerText.textContent = '完成';
                                         timerText.className = 'timer-text completed';
+                                        progressFill.style.width = '100%';
+                                        progressText.textContent = '100%';
+                                        readProgress.classList.add('completed');
                                         checkAgreementStatus(type);
                                     }
                                 }, 1000);
@@ -711,11 +741,6 @@
                                 timerText.textContent = '完成';
                                 timerText.className = 'timer-text completed';
                             }
-
-                            // 添加滚动监听
-                            setTimeout(() => {
-                                setupScrollListener(type);
-                            }, 100);
                             
                             return; // 成功加载，退出函数
                         } else {
@@ -791,15 +816,14 @@
         function checkAgreementStatus(type) {
             const agreeBtn = document.getElementById('agreeBtn');
 
-            // 检查当前协议是否阅读完成
-            if (hasReadToBottom[type] && hasReadForTenSeconds[type]) {
+            // 检查当前协议是否阅读完成（只需等待时间）
+            if (hasReadForTenSeconds[type]) {
                 agreeBtn.disabled = false;
                 agreeBtn.textContent = '已阅读并同意';
             }
 
             // 检查是否两个协议都阅读完成
-            const bothRead = hasReadToBottom.terms && hasReadForTenSeconds.terms &&
-                           hasReadToBottom.privacy && hasReadForTenSeconds.privacy;
+            const bothRead = hasReadForTenSeconds.terms && hasReadForTenSeconds.privacy;
 
             const agreementStatus = document.getElementById('agreementStatus');
             const registerBtn = document.getElementById('registerBtn');
@@ -811,10 +835,10 @@
                 registerBtn.textContent = '注册';
             } else {
                 let remaining = [];
-                if (!hasReadToBottom.terms || !hasReadForTenSeconds.terms) {
+                if (!hasReadForTenSeconds.terms) {
                     remaining.push('用户协议');
                 }
-                if (!hasReadToBottom.privacy || !hasReadForTenSeconds.privacy) {
+                if (!hasReadForTenSeconds.privacy) {
                     remaining.push('隐私协议');
                 }
                 agreementStatus.textContent = `（还需阅读：${remaining.join('、')}）`;

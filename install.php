@@ -937,7 +937,33 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_agreement') {
             tos: 10,
             privacy: 10
         };
-        const REQUIRED_READ_TIME = 10; // 必须倒计时10秒
+        const REQUIRED_READ_TIME = 15; // 必须倒计时15秒
+
+        // 自动滚动函数
+        function autoScrollToBottom() {
+            const contentEl = document.getElementById('agreement-content');
+            const progressFill = document.getElementById('progress-fill');
+            const progressText = document.getElementById('progress-text');
+            
+            if (contentEl) {
+                const scrollHeight = contentEl.scrollHeight;
+                const clientHeight = contentEl.clientHeight;
+                const maxScroll = scrollHeight - clientHeight;
+
+                // 每次滚动一小段距离
+                const scrollStep = maxScroll / (REQUIRED_READ_TIME * 10); // 15秒内均匀滚动
+                const currentScroll = contentEl.scrollTop;
+
+                if (currentScroll < maxScroll) {
+                    contentEl.scrollTop = Math.min(currentScroll + scrollStep, maxScroll);
+                }
+
+                // 更新进度条
+                const scrollPercent = Math.min(100, Math.round((contentEl.scrollTop / maxScroll) * 100));
+                progressFill.style.width = scrollPercent + '%';
+                progressText.textContent = scrollPercent + '%';
+            }
+        }
 
         // 协议相关函数
         async function showAgreement(type) {
@@ -1014,21 +1040,31 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_agreement') {
                         contentEl.style.textAlign = 'left';
                         contentEl.textContent = text;
 
-                        // 如果还没有阅读完成，启动倒计时
+                        // 启动自动滚动
                         if (!hasReadForTenSeconds[type]) {
                             countdownSeconds[type] = REQUIRED_READ_TIME;
                             const timerText = document.getElementById('timer-text');
+                            const progressFill = document.getElementById('progress-fill');
+                            const progressText = document.getElementById('progress-text');
+
                             countdownTimers[type] = setInterval(() => {
                                 countdownSeconds[type]--;
                                 timerText.textContent = countdownSeconds[type] + '秒';
 
+                                // 自动滚动到底部
+                                autoScrollToBottom();
+
                                 if (countdownSeconds[type] <= 0) {
                                     hasReadForTenSeconds[type] = true;
+                                    hasReadToBottom[type] = true;
                                     clearInterval(countdownTimers[type]);
                                     countdownTimers[type] = null;
                                     timerText.textContent = '完成';
                                     timerText.className = 'timer-text completed';
                                     timerText.style.color = '#52c41a';
+                                    progressFill.style.width = '100%';
+                                    progressText.textContent = '100%';
+                                    readProgress.classList.add('completed');
                                     checkAgreementStatus(type);
                                 }
                             }, 1000);
@@ -1038,11 +1074,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_agreement') {
                             timerText.className = 'timer-text completed';
                             timerText.style.color = '#52c41a';
                         }
-
-                        // 添加滚动监听
-                        setTimeout(() => {
-                            setupScrollListener(type);
-                        }, 100);
                         
                         return; // 成功加载，退出函数
                     } else {
@@ -1118,8 +1149,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_agreement') {
         function checkAgreementStatus(type) {
             const agreeBtn = document.getElementById('agree-btn');
 
-            // 检查当前协议是否阅读完成
-            if (hasReadToBottom[type] && hasReadForTenSeconds[type]) {
+            // 检查当前协议是否阅读完成（只需等待时间）
+            if (hasReadForTenSeconds[type]) {
                 agreeBtn.disabled = false;
                 agreeBtn.style.opacity = '1';
                 agreeBtn.style.cursor = 'pointer';
@@ -1127,8 +1158,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_agreement') {
             }
 
             // 检查是否两个协议都阅读完成
-            const bothRead = hasReadToBottom.tos && hasReadForTenSeconds.tos &&
-                           hasReadToBottom.privacy && hasReadForTenSeconds.privacy;
+            const bothRead = hasReadForTenSeconds.tos && hasReadForTenSeconds.privacy;
 
             const agreementStatus = document.getElementById('agreement-status');
 
@@ -1137,10 +1167,10 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_agreement') {
                 agreementStatus.style.color = '#52c41a';
             } else {
                 let remaining = [];
-                if (!hasReadToBottom.tos || !hasReadForTenSeconds.tos) {
+                if (!hasReadForTenSeconds.tos) {
                     remaining.push('用户协议');
                 }
-                if (!hasReadToBottom.privacy || !hasReadForTenSeconds.privacy) {
+                if (!hasReadForTenSeconds.privacy) {
                     remaining.push('隐私协议');
                 }
                 agreementStatus.textContent = `（还需阅读：${remaining.join('、')}）`;
@@ -1290,9 +1320,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_agreement') {
 
             switch (currentStep) {
                 case 1:
-                    // 检查是否完整阅读了两个协议
-                    const bothRead = hasReadToBottom.tos && hasReadForTenSeconds.tos &&
-                                   hasReadToBottom.privacy && hasReadForTenSeconds.privacy;
+                    // 检查是否完整阅读了两个协议（只需等待时间）
+                    const bothRead = hasReadForTenSeconds.tos && hasReadForTenSeconds.privacy;
                     if (!bothRead) {
                         showAlert('error', '请先完整阅读《用户协议》和《隐私协议》后再继续');
                         return;

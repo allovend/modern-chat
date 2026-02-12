@@ -1016,7 +1016,7 @@ require_once 'db.php';
             }
         };
 
-        const MIN_READ_TIME = 10; // 最小阅读时间（秒）
+        const MIN_READ_TIME = 15; // 最小阅读时间（秒）
 
         let currentAgreement = null;
         let readStatus = {
@@ -1025,6 +1025,26 @@ require_once 'db.php';
         };
         let readTimer = null;
         let readStartTime = null;
+
+        // 自动滚动函数
+        function autoScrollToBottom(bodyEl, progressFill, progressText, type) {
+            const scrollHeight = bodyEl.scrollHeight;
+            const clientHeight = bodyEl.clientHeight;
+            const maxScroll = scrollHeight - clientHeight;
+
+            // 每次滚动一小段距离
+            const scrollStep = maxScroll / (MIN_READ_TIME * 10); // 15秒内均匀滚动
+            const currentScroll = bodyEl.scrollTop;
+
+            if (currentScroll < maxScroll) {
+                bodyEl.scrollTop = Math.min(currentScroll + scrollStep, maxScroll);
+            }
+
+            // 更新进度条
+            const scrollPercent = Math.min(100, Math.round((bodyEl.scrollTop / maxScroll) * 100));
+            progressFill.style.width = scrollPercent + '%';
+            progressText.textContent = scrollPercent + '%';
+        }
 
         // 显示协议弹窗
         async function showModal(type) {
@@ -1084,11 +1104,36 @@ require_once 'db.php';
                             const content = await response.text();
                             bodyEl.innerHTML = renderMarkdown(content);
 
-                            // 添加滚动监听
-                            setTimeout(() => {
-                                setupScrollListener(type);
-                            }, 100);
-                            
+                            // 启动倒计时和自动滚动
+                            if (!readStatus[type].completed) {
+                                readStartTime = Date.now();
+                                readStatus[type].readTime = 0;
+                                readStatus[type].scrolledToBottom = false;
+
+                                readTimer = setInterval(() => {
+                                    readStatus[type].readTime++;
+
+                                    // 自动滚动
+                                    autoScrollToBottom(bodyEl, progressFill, progressText, type);
+
+                                    if (readStatus[type].readTime >= MIN_READ_TIME) {
+                                        clearInterval(readTimer);
+                                        readTimer = null;
+                                        readStatus[type].completed = true;
+                                        readStatus[type].scrolledToBottom = true;
+
+                                        timeRemaining.textContent = '已完成阅读';
+                                        timeRemaining.className = 'timer-text completed';
+                                        readProgress.classList.add('completed');
+                                        agreeBtn.disabled = false;
+                                        agreeBtn.textContent = '已阅读并同意';
+                                    }
+                                }, 1000);
+                            } else {
+                                timeRemaining.textContent = '已完成阅读';
+                                timeRemaining.className = 'timer-text completed';
+                                readProgress.classList.add('completed');
+                            }
                             return; // 成功加载，退出函数
                         } else {
                             lastError = `HTTP错误: ${response.status}`;
