@@ -1361,26 +1361,51 @@ require_once 'db.php';
             return readStatus.terms.completed && readStatus.privacy.completed;
         }
 
-        // 简单的 Markdown 渲染
+        // 完整的 Markdown 渲染
         function renderMarkdown(text) {
             return text
                 // 标题
+                .replace(/^###### (.+)$/gm, '<h6>$1</h6>')
+                .replace(/^##### (.+)$/gm, '<h5>$1</h5>')
+                .replace(/^#### (.+)$/gm, '<h4>$1</h4>')
                 .replace(/^### (.+)$/gm, '<h3>$1</h3>')
                 .replace(/^## (.+)$/gm, '<h2>$1</h2>')
                 .replace(/^# (.+)$/gm, '<h1>$1</h1>')
                 // 分隔线
-                .replace(/^---$/gm, '<hr style="margin: 20px 0; border: none; border-top: 1px solid #e0e0e0;">')
-                // 粗体
+                .replace(/^(?:---|\*\*\*|___)$/gm, '<hr style="margin: 20px 0; border: none; border-top: 1px solid #e0e0e0;">')
+                // 粗体和斜体
+                .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
                 .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-                // 列表
+                .replace(/\*(.+?)\*/g, '<em>$1</em>')
+                .replace(/__(.+?)__/g, '<strong>$1</strong>')
+                .replace(/_(.+?)_/g, '<em>$1</em>')
+                // 删除线
+                .replace(/~~(.+?)~~/g, '<del>$1</del>')
+                // 代码
+                .replace(/`(.+?)`/g, '<code style="background: #f5f5f5; padding: 2px 4px; border-radius: 3px; font-family: monospace;">$1</code>')
+                // 代码块
+                .replace(/```([\s\S]*?)```/g, '<pre style="background: #f5f5f5; padding: 16px; border-radius: 6px; overflow-x: auto; font-family: monospace; font-size: 13px; line-height: 1.5;"><code>$1</code></pre>')
+                // 引用
+                .replace(/^> (.+)$/gm, '<blockquote style="border-left: 4px solid #12b7f5; padding: 10px 15px; margin: 10px 0; background: #f8f9fa;">$1</blockquote>')
+                // 无序列表
                 .replace(/^- (.+)$/gm, '<li>$1</li>')
-                .replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>')
+                .replace(/(<li>.*<\/li>\n?)+/g, '<ul style="margin: 10px 0; padding-left: 25px;">$&</ul>')
+                // 有序列表
+                .replace(/^(\d+)\. (.+)$/gm, '<li>$2</li>')
+                .replace(/(<li>.*<\/li>\n?)+/g, function(match) {
+                    // 检查是否已经在 ul 中，如果不是，则包装为 ol
+                    return match.includes('<ul>') ? match : '<ol style="margin: 10px 0; padding-left: 25px;">' + match + '</ol>';
+                })
+                // 链接
+                .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" style="color: #12b7f5; text-decoration: none;">$1</a>')
+                // 图片
+                .replace(/!\[(.+?)\]\((.+?)\)/g, '<img src="$2" alt="$1" style="max-width: 100%; border-radius: 6px; margin: 10px 0;">')
                 // 段落
                 .replace(/^([^<\n].+)$/gm, '<p>$1</p>')
                 // 清理空段落
                 .replace(/<p><\/p>/g, '')
-                .replace(/<p>(<h[1-6]>)/g, '$1')
-                .replace(/(<\/h[1-6]>)<\/p>/g, '$1');
+                .replace(/<p>(<h[1-6]|<ul|<ol|<blockquote|<pre)/g, '$1')
+                .replace(/(<\/h[1-6]>|<\/ul>|<\/ol>|<\/blockquote>|<\/pre>)<\/p>/g, '$1');
         }
 
         // 点击遮罩层关闭弹窗
