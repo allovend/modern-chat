@@ -911,7 +911,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_agreement') {
                 </div>
             </div>
             
-            <div id="agreement-content" style="flex: 1; overflow-y: auto; padding: 30px; background: #f9f9f9; white-space: pre-wrap; font-family: inherit; color: #444; line-height: 1.8; font-size: 15px;"></div>
+            <div id="agreement-content" style="flex: 1; overflow: hidden; background: #f9f9f9; position: relative;">
+                <div class="agreement-content-inner" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; padding: 30px; white-space: pre-wrap; font-family: inherit; color: #444; line-height: 1.8; font-size: 15px; overflow: hidden;"></div>
+            </div>
             <div style="padding: 20px; border-top: 1px solid #eee; text-align: right; background: white; border-radius: 0 0 12px 12px;">
                 <button id="agree-btn" class="btn btn-primary" disabled onclick="agreeAndClose()" style="opacity: 0.5; cursor: not-allowed;">请先完整阅读协议</button>
             </div>
@@ -942,11 +944,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_agreement') {
 
         // 自动滚动函数
         function autoScrollToBottom() {
-            const contentEl = document.getElementById('agreement-content');
+            const outerEl = document.getElementById('agreement-content');
+            const contentEl = document.querySelector('#agreement-content .agreement-content-inner') || outerEl;
             const progressFill = document.getElementById('progress-fill');
             const progressText = document.getElementById('progress-text');
             
-            if (contentEl) {
+            if (contentEl && progressFill && progressText) {
                 const scrollHeight = contentEl.scrollHeight;
                 const clientHeight = contentEl.clientHeight;
                 const maxScroll = scrollHeight - clientHeight;
@@ -1036,13 +1039,17 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_agreement') {
 
             while (retryCount <= maxRetries) {
                 try {
-                    contentEl.innerHTML = '<div style="text-align: center; padding: 40px;">加载中...</div>';
+                    // 获取内容容器
+                    const contentContainer = contentEl.querySelector('.agreement-content-inner') || contentEl;
+                    contentContainer.innerHTML = '<div style="text-align: center; padding: 40px;">加载中...</div>';
                     
                     const response = await fetch('install.php?action=get_agreement&type=' + type);
                     if (response.ok) {
                         const text = await response.text();
-                        contentEl.style.textAlign = 'left';
-                        contentEl.textContent = text;
+                        // 确保使用内容容器
+                        const contentContainer = contentEl.querySelector('.agreement-content-inner') || contentEl;
+                        contentContainer.style.textAlign = 'left';
+                        contentContainer.textContent = text;
 
                         // 启动自动滚动
                         if (!hasReadForTenSeconds[type]) {
@@ -1129,10 +1136,35 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_agreement') {
 
         // 设置滚动监听
         function setupScrollListener(type) {
-            const contentEl = document.getElementById('agreement-content');
+            const outerEl = document.getElementById('agreement-content');
+            const contentEl = document.querySelector('#agreement-content .agreement-content-inner') || outerEl;
             const progressFill = document.getElementById('progress-fill');
             const progressText = document.getElementById('progress-text');
             const readProgress = document.getElementById('read-progress');
+
+            // 阻止鼠标滚轮事件
+            contentEl.addEventListener('wheel', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }, { passive: false });
+
+            // 阻止触摸滑动事件
+            contentEl.addEventListener('touchmove', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }, { passive: false });
+
+            // 阻止键盘滚动事件
+            contentEl.addEventListener('keydown', function(e) {
+                // 阻止上下箭头键、Page Up、Page Down、Home、End 键
+                if ([33, 34, 35, 36, 38, 40].includes(e.keyCode)) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return false;
+                }
+            });
 
             contentEl.onscroll = function(e) {
                 const scrollTop = contentEl.scrollTop;

@@ -375,12 +375,24 @@ require_once 'db.php';
         }
 
         .modal-body {
-            padding: 24px;
-            overflow-y: auto;
+            padding: 0;
+            overflow: hidden;
             flex: 1;
             line-height: 1.8;
             color: #555;
             font-size: 14px;
+            position: relative;
+        }
+
+        /* 内部内容容器，用于自动滚动 */
+        .modal-body-content {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            padding: 24px;
+            overflow: hidden;
         }
 
         .modal-body h1, .modal-body h2, .modal-body h3 {
@@ -1029,23 +1041,25 @@ require_once 'db.php';
 
         // 自动滚动函数
         function autoScrollToBottom(bodyEl, progressFill, progressText, type) {
-            const scrollHeight = bodyEl.scrollHeight;
-            const clientHeight = bodyEl.clientHeight;
+            // 获取内容容器
+            const contentEl = bodyEl.querySelector('.modal-body-content') || bodyEl;
+            const scrollHeight = contentEl.scrollHeight;
+            const clientHeight = contentEl.clientHeight;
             const maxScroll = scrollHeight - clientHeight;
 
             // 每次滚动一小段距离
             const scrollStep = maxScroll / (MIN_READ_TIME * 60); // 10秒内均匀滚动（约60fps）
-            const currentScroll = bodyEl.scrollTop;
+            const currentScroll = contentEl.scrollTop;
 
             if (currentScroll < maxScroll) {
-                bodyEl.scrollTop = Math.min(currentScroll + scrollStep, maxScroll);
+                contentEl.scrollTop = Math.min(currentScroll + scrollStep, maxScroll);
                 
                 // 更新lastScrollTop，确保自动滚动不受阻止
-                lastScrollTop = bodyEl.scrollTop;
+                lastScrollTop = contentEl.scrollTop;
             }
 
             // 更新进度条
-            const scrollPercent = Math.min(100, Math.round((bodyEl.scrollTop / maxScroll) * 100));
+            const scrollPercent = Math.min(100, Math.round((contentEl.scrollTop / maxScroll) * 100));
             progressFill.style.width = scrollPercent + '%';
             progressText.textContent = scrollPercent + '%';
         }
@@ -1101,12 +1115,15 @@ require_once 'db.php';
 
                 while (retryCount <= maxRetries) {
                     try {
-                        bodyEl.innerHTML = '<div style="text-align: center; padding: 40px;">加载中...</div>';
+                        // 创建内容容器结构
+                        bodyEl.innerHTML = '<div class="modal-body-content"><div style="text-align: center; padding: 40px;">加载中...</div></div>';
                         
                         const response = await fetch(agreements[type].url);
                         if (response.ok) {
                             const content = await response.text();
-                            bodyEl.innerHTML = renderMarkdown(content);
+                            // 确保使用内容容器
+                            const contentContainer = bodyEl.querySelector('.modal-body-content') || bodyEl;
+                            contentContainer.innerHTML = renderMarkdown(content);
 
                             // 启动倒计时和自动滚动
                             if (!readStatus[type].completed) {
@@ -1195,6 +1212,9 @@ require_once 'db.php';
             const readProgress = document.getElementById('readProgress');
             const timeRemaining = document.getElementById('timeRemaining');
 
+            // 获取内容容器
+            const contentEl = document.querySelector('#modalBody .modal-body-content') || bodyEl;
+
             // 如果该协议尚未完成，开始计时
             if (!readStatus[type].completed) {
                 readStartTime = Date.now();
@@ -1211,13 +1231,37 @@ require_once 'db.php';
                 }, 1000);
             }
 
-            bodyEl.onscroll = function(e) {
-                const scrollTop = bodyEl.scrollTop;
-                const scrollHeight = bodyEl.scrollHeight;
-                const clientHeight = bodyEl.clientHeight;
+            // 阻止鼠标滚轮事件
+            contentEl.addEventListener('wheel', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }, { passive: false });
+
+            // 阻止触摸滑动事件
+            contentEl.addEventListener('touchmove', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }, { passive: false });
+
+            // 阻止键盘滚动事件
+            contentEl.addEventListener('keydown', function(e) {
+                // 阻止上下箭头键、Page Up、Page Down、Home、End 键
+                if ([33, 34, 35, 36, 38, 40].includes(e.keyCode)) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return false;
+                }
+            });
+
+            contentEl.onscroll = function(e) {
+                const scrollTop = contentEl.scrollTop;
+                const scrollHeight = contentEl.scrollHeight;
+                const clientHeight = contentEl.clientHeight;
 
                 // 始终阻止用户手动滚动，只允许自动滚动
-                bodyEl.scrollTop = lastScrollTop;
+                contentEl.scrollTop = lastScrollTop;
                 return;
 
                 // 计算滚动百分比
