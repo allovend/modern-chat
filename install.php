@@ -942,6 +942,28 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_agreement') {
         const REQUIRED_READ_TIME = 10; // 必须倒计时10秒
         let lastScrollTop = 0; // 全局变量，用于阻止手动滚动
 
+        // 简单的 Markdown 渲染
+        function renderMarkdown(text) {
+            return text
+                // 标题
+                .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+                .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+                .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+                // 分隔线
+                .replace(/^---$/gm, '<hr style="margin: 20px 0; border: none; border-top: 1px solid #e0e0e0;">')
+                // 粗体
+                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                // 列表
+                .replace(/^- (.+)$/gm, '<li>$1</li>')
+                .replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>')
+                // 段落
+                .replace(/^([^<\n].+)$/gm, '<p>$1</p>')
+                // 清理空段落
+                .replace(/<p><\/p>/g, '')
+                .replace(/<p>(<h[1-6]>)/g, '$1')
+                .replace(/(<\/h[1-6]>)<\/p>/g, '$1');
+        }
+
         // 自动滚动函数
         function autoScrollToBottom() {
             const outerEl = document.getElementById('agreement-content');
@@ -1049,7 +1071,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_agreement') {
                         // 确保使用内容容器
                         const contentContainer = contentEl.querySelector('.agreement-content-inner') || contentEl;
                         contentContainer.style.textAlign = 'left';
-                        contentContainer.textContent = text;
+                        // 使用 Markdown 渲染保留原始格式
+                        contentContainer.innerHTML = renderMarkdown(text);
 
                         // 启动自动滚动
                         if (!hasReadForTenSeconds[type]) {
