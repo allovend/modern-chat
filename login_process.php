@@ -480,7 +480,23 @@ try {
 else if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // 获取表单数据
     $email = trim($_POST['email']);
-    $password = $_POST['password'];
+    
+    // 处理 RSA 加密密码
+    $password = '';
+    if (isset($_POST['encrypted_password']) && !empty($_POST['encrypted_password'])) {
+        // 使用 RSA 解密密码
+        require_once 'RSAUtil.php';
+        $rsaUtil = new RSAUtil();
+        $decryptedPassword = $rsaUtil->decrypt($_POST['encrypted_password']);
+        if ($decryptedPassword !== false) {
+            $password = $decryptedPassword;
+        } else {
+            $errors[] = '密码解密失败，请重试';
+        }
+    } elseif (isset($_POST['password']) && !empty($_POST['password'])) {
+        // 兼容未加密的情况（用于测试或降级）
+        $password = $_POST['password'];
+    }
     
     // 获取极验4.0验证码验证结�?    
     $lot_number = isset($_POST['geetest_challenge']) ? $_POST['geetest_challenge'] : '';

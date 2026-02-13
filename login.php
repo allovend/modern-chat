@@ -571,6 +571,18 @@ require_once 'db.php';
     </style>
     <!-- 极验验证码JS库 -->
     <script src="https://static.geetest.com/v4/gt4.js"></script>
+    <!-- JSEncrypt RSA加密库 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsencrypt/3.3.2/jsencrypt.min.js"></script>
+    <?php
+    // 获取 RSA 公钥
+    require_once 'RSAUtil.php';
+    $rsaUtil = new RSAUtil();
+    $publicKey = $rsaUtil->getPublicKeyForJS();
+    ?>
+    <script>
+        // RSA 公钥，用于前端加密
+        const RSA_PUBLIC_KEY = `<?php echo $publicKey; ?>`;
+    </script>
 </head>
 <body>
     <div class="container">
@@ -989,6 +1001,13 @@ require_once 'db.php';
             captcha.appendTo("#captcha");// 调用appendTo将验证码插入到页的某一个元素中
         });
         
+        // RSA 加密函数
+        function rsaEncrypt(data) {
+            const encrypt = new JSEncrypt();
+            encrypt.setPublicKey(RSA_PUBLIC_KEY);
+            return encrypt.encrypt(data);
+        }
+
         // 表单提交处理，生成浏览器指纹
         async function handleLoginSubmit(form) {
             // 检查是否同意协议
@@ -1032,6 +1051,34 @@ require_once 'db.php';
                 const fingerprint = await generateBrowserFingerprint();
                 fingerprintInput.value = fingerprint;
             }
+            
+            // RSA 加密密码
+            const passwordInput = document.getElementById('password');
+            const originalPassword = passwordInput.value;
+            if (originalPassword) {
+                const encryptedPassword = rsaEncrypt(originalPassword);
+                if (encryptedPassword) {
+                    // 创建隐藏字段存储加密后的密码
+                    let encryptedInput = document.getElementById('encrypted_password');
+                    if (!encryptedInput) {
+                        encryptedInput = document.createElement('input');
+                        encryptedInput.type = 'hidden';
+                        encryptedInput.id = 'encrypted_password';
+                        encryptedInput.name = 'encrypted_password';
+                        form.appendChild(encryptedInput);
+                    }
+                    encryptedInput.value = encryptedPassword;
+                    
+                    // 清空原始密码字段，防止明文传输
+                    passwordInput.value = '';
+                    // 移除 name 属性，确保原始密码不会被提交
+                    passwordInput.removeAttribute('name');
+                } else {
+                    alert('密码加密失败，请重试');
+                    return false;
+                }
+            }
+            
             return true;
         }
         
