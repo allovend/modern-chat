@@ -389,6 +389,8 @@ require_once 'db.php';
             padding: 24px;
             min-height: 100%;
             box-sizing: border-box;
+            overflow: auto;
+            max-height: 60vh;
         }
 
         /* 确保内容容器能够正确显示各种元素 */
@@ -766,7 +768,7 @@ require_once 'db.php';
         </div>
     </div>
     
-    <script src="./js/qrcode.min.js"></script>
+    <script src="./js/qrcode.min.js" onerror="console.error('QRCode库加载失败，请检查文件路径')"></script>
     <script>
         // 浏览器指纹生成功能
         function generateBrowserFingerprint() {
@@ -830,7 +832,20 @@ require_once 'db.php';
         let countdownInterval;
         let currentQid;
         
+        // 检查 QRCode 库是否加载
+        function isQRCodeLoaded() {
+            return typeof QRCode !== 'undefined' && QRCode.toCanvas;
+        }
+        
         async function initScanLogin() {
+            // 检查 QRCode 库是否加载
+            if (!isQRCodeLoaded()) {
+                console.error('QRCode 库未加载，请检查 js/qrcode.min.js 文件是否存在');
+                document.getElementById('status-message').textContent = '二维码生成库加载失败，请刷新页面重试';
+                document.getElementById('status-message').className = 'status-message status-error';
+                return;
+            }
+            
             // 清除之前的定时器
             if (checkInterval) clearInterval(checkInterval);
             if (countdownInterval) clearInterval(countdownInterval);
@@ -955,7 +970,7 @@ require_once 'db.php';
                         } else if (data.status === 'scanned') {
                             // 已扫描，等待手机确认
                             statusMsg.textContent = '手机已扫描，等待确认登录...';
-                            statusMsg.className = 'status-message status-scanned';
+                            statusMsg.className = 'status-message status-scanning';
                         } else if (data.status === 'rejected') {
                             // 手机端拒绝登录
                             clearInterval(checkInterval);
@@ -1120,7 +1135,8 @@ require_once 'db.php';
         
         // 页面加载完成后，如果扫码登录是默认选项，初始化二维码
         document.addEventListener('DOMContentLoaded', () => {
-            if (document.getElementById('scan-login').classList.contains('active')) {
+            const scanLoginEl = document.getElementById('scan-login');
+            if (scanLoginEl && scanLoginEl.classList.contains('active')) {
                 initScanLogin();
             }
         });
@@ -1172,8 +1188,7 @@ require_once 'db.php';
             resetProgress(el) {
                 el.progressFill.style.width = '0%';
                 el.progressText.textContent = '0%';
-                el.timerText.textContent = '滚动中...';
-                el.timerText.className = 'timer-text counting';
+                el.timerText.textContent = '还需阅读 20 秒';
                 el.readProgress.classList.remove('completed');
             },
 
@@ -1181,7 +1196,6 @@ require_once 'db.php';
                 el.progressFill.style.width = '100%';
                 el.progressText.textContent = '100%';
                 el.timerText.textContent = '已完成阅读';
-                el.timerText.className = 'timer-text completed';
                 el.readProgress.classList.add('completed');
                 el.agreeBtn.disabled = false;
                 el.agreeBtn.textContent = '已阅读并同意';
@@ -1217,12 +1231,21 @@ require_once 'db.php';
             },
 
             startScroll(container, el, type) {
-                const maxScroll = container.scrollHeight - container.clientHeight;
-                if (maxScroll <= 0) {
-                    this.complete(type, el);
-                    return;
-                }
+                // 确保容器可以滚动
+                container.style.overflow = 'auto';
+                
+                // 使用 setTimeout 确保 DOM 已渲染
+                setTimeout(() => {
+                    const maxScroll = container.scrollHeight - container.clientHeight;
+                    if (maxScroll <= 0) {
+                        this.complete(type, el);
+                        return;
+                    }
+                    this.animateScroll(container, el, type, maxScroll);
+                }, 100);
+            },
 
+            animateScroll(container, el, type, maxScroll) {
                 const startTime = performance.now();
                 const animate = (now) => {
                     const progress = Math.min((now - startTime) / this.duration, 1);
@@ -1234,7 +1257,7 @@ require_once 'db.php';
                     el.progressText.textContent = percent + '%';
                     
                     const remaining = Math.ceil((this.duration - (now - startTime)) / 1000);
-                    if (remaining > 0) el.timerText.textContent = remaining + '秒';
+                    if (remaining > 0) el.timerText.textContent = '还需阅读 ' + remaining + ' 秒';
 
                     if (progress < 1) {
                         this.animationId = requestAnimationFrame(animate);
