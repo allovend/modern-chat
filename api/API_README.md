@@ -1,4 +1,4 @@
-# Modern Chat API 文档 (v2.1)
+# Modern Chat API 文档 (v2.2)
 
 ## 概述
 
@@ -103,6 +103,19 @@ Modern Chat API 是一套基于 HTTP 的 RESTful 风格接口，旨在为开发�
 - **参数**:
   - `q` (string, required): 搜索关键词 (用户名/邮箱)
 - **响应**: 用户列表数组
+
+#### 2.4 修改密码
+- **Action**: `update_password`
+- **参数**:
+  - `old_password` (string, required): 原密码
+  - `new_password` (string, required): 新密码
+- **说明**: 新密码需包含至少2种字符类型（大小写字母、数字、特殊符号）
+
+#### 2.5 注销账号
+- **Action**: `delete_account`
+- **参数**:
+  - `password` (string, required): 当前密码确认
+- **说明**: 注销后账号数据将无法恢复
 
 ---
 
@@ -254,6 +267,26 @@ Modern Chat API 是一套基于 HTTP 的 RESTful 风格接口，旨在为开发�
 - **参数**:
   - `group_id` (int, required)
 
+#### 5.14 修改群名称
+- **Action**: `update_name`
+- **参数**:
+  - `group_id` (int, required): 群组ID
+  - `name` (string, required): 新群名称
+- **说明**: 仅群主可用
+
+#### 5.15 解散群聊
+- **Action**: `delete`
+- **参数**:
+  - `group_id` (int, required): 群组ID
+- **说明**: 仅群主可用，解散后群聊数据将删除
+
+#### 5.16 邀请好友加入群聊
+- **Action**: `invite`
+- **参数**:
+  - `group_id` (int, required): 群组ID
+  - `friend_id` (int, required): 好友ID
+- **说明**: 群成员可邀请好友加入
+
 ---
 
 ### 6. 文件上传模块 (Upload)
@@ -308,6 +341,63 @@ Modern Chat API 是一套基于 HTTP 的 RESTful 风格接口，旨在为开发�
 - **Action**: `clear_unread`
 - **参数**:
   - `session_id` (int, required): 会话ID
+
+---
+
+### 9. 系统公告模块 (Announcements)
+
+资源名称: `announcements`
+
+#### 9.1 获取最新公告
+- **Action**: `get`
+- **参数**: 无
+- **说明**: 无需登录，但已读状态需要登录
+- **响应**:
+  ```json
+  {
+      "has_new_announcement": true,
+      "announcement": {
+          "id": 1,
+          "title": "系统公告标题",
+          "content": "公告内容",
+          "created_at": "2024-01-01 12:00:00",
+          "admin_name": "管理员"
+      },
+      "has_read": false
+  }
+  ```
+
+#### 9.2 标记公告已读
+- **Action**: `mark_read`
+- **参数**:
+  - `announcement_id` (int, required): 公告ID
+- **说明**: 需要登录
+
+---
+
+### 10. 音乐模块 (Music)
+
+资源名称: `music`
+
+#### 10.1 获取音乐列表
+- **Action**: `list`
+- **参数**: 无
+- **说明**: 无需登录
+- **响应**:
+  ```json
+  {
+      "code": 200,
+      "data": [
+          {
+              "id": 1,
+              "name": "歌曲名称",
+              "filename": "song.mp3",
+              "artistsname": "歌手名",
+              "sort_order": 0
+          }
+      ]
+  }
+  ```
 
 ---
 
@@ -421,3 +511,72 @@ async function uploadAvatar(fileInput) {
     return await response.json();
 }
 ```
+
+### 修改密码示例
+
+```javascript
+async function changePassword(oldPassword, newPassword) {
+    const response = await fetch(apiBase, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            resource: 'user',
+            action: 'update_password',
+            old_password: oldPassword,
+            new_password: newPassword
+        })
+    });
+    
+    return await response.json();
+}
+```
+
+### 获取系统公告示例
+
+```javascript
+async function getAnnouncement() {
+    const response = await fetch(apiBase, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            resource: 'announcements',
+            action: 'get'
+        })
+    });
+    
+    return await response.json();
+}
+```
+
+### 获取音乐列表示例
+
+```javascript
+async function getMusicList() {
+    const response = await fetch(apiBase, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            resource: 'music',
+            action: 'list'
+        })
+    });
+    
+    return await response.json();
+}
+```
+
+---
+
+## 更新日志
+
+### v2.2 (2024-01-15)
+- 新增用户模块 `update_password` 修改密码接口
+- 新增用户模块 `delete_account` 注销账号接口
+- 新增群组模块 `update_name` 修改群名称接口
+- 新增群组模块 `delete` 解散群聊接口
+- 新增群组模块 `invite` 邀请好友加入群聊接口
+- 新增系统公告模块 `announcements`
+- 新增音乐模块 `music`
+
+### v2.1
+- 初始版本
