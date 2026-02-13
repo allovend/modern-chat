@@ -376,7 +376,7 @@ require_once 'db.php';
 
         .modal-body {
             padding: 0;
-            overflow: hidden;
+            overflow: auto;
             flex: 1;
             line-height: 1.8;
             color: #555;
@@ -386,13 +386,8 @@ require_once 'db.php';
 
         /* 内部内容容器，用于自动滚动 */
         .modal-body-content {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
             padding: 24px;
-            overflow: hidden;
+            min-height: 100%;
             box-sizing: border-box;
         }
 

@@ -257,7 +257,7 @@
 
         .modal-body {
             padding: 0;
-            overflow: hidden;
+            overflow: auto;
             flex: 1;
             line-height: 1.8;
             color: #555;
@@ -267,13 +267,8 @@
 
         /* 内部内容容器，用于自动滚动 */
         .modal-body-content {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
             padding: 24px;
-            overflow: hidden;
+            min-height: 100%;
             box-sizing: border-box;
         }
 
@@ -879,11 +874,11 @@
 
         // 启用用户手动滚动
         function enableUserScroll(contentEl, progressFill, progressText) {
-            contentEl.style.overflow = 'auto'; // 确保可以滚动
             contentEl.onscroll = function() {
                 const scrollHeight = contentEl.scrollHeight;
                 const clientHeight = contentEl.clientHeight;
                 const maxScroll = scrollHeight - clientHeight;
+                if (maxScroll <= 0) return;
                 const scrollTop = contentEl.scrollTop;
                 const scrollPercent = Math.min(100, Math.round((scrollTop / maxScroll) * 100));
                 progressFill.style.width = scrollPercent + '%';
