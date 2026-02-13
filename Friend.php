@@ -109,7 +109,7 @@ class Friend {
     public function getPendingRequests($user_id) {
         try {
             $stmt = $this->conn->prepare(
-                "SELECT u.id, u.username, u.email, u.avatar, f.created_at 
+                "SELECT f.id as request_id, u.id, u.username, u.email, u.avatar, f.created_at 
                  FROM friends f 
                  JOIN users u ON f.user_id = u.id 
                  WHERE f.friend_id = ? AND f.status = 'pending'"
@@ -134,11 +134,6 @@ class Friend {
             error_log("Is Friend Error: " . $e->getMessage());
             return false;
         }
-    }
-    
-    // 检查两个用户是否是好友（别名方法）
-    public function areFriends($user_id, $friend_id) {
-        return $this->isFriend($user_id, $friend_id);
     }
     
     // 删除好友

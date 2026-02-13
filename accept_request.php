@@ -13,7 +13,13 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 $user_id = $_SESSION['user_id'];
-$request_id = isset($_GET['request_id']) ? intval($_GET['request_id']) : 0;
+$request_id = 0;
+
+if (isset($_POST['request_id'])) {
+    $request_id = intval($_POST['request_id']);
+} else if (isset($_GET['request_id'])) {
+    $request_id = intval($_GET['request_id']);
+}
 
 if (!$request_id) {
     echo json_encode(['success' => false, 'message' => '无效的请求ID']);

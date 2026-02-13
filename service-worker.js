@@ -1,5 +1,5 @@
 // service-worker.js
-const CACHE_NAME = 'chat-app-cache-v1';
+const CACHE_NAME = 'chat-app-cache-v2';
 const CACHE_ASSETS = [
     'js/beacon.min.js',
     'js/jsQR.min.js',
@@ -45,15 +45,19 @@ self.addEventListener('activate', (event) => {
 
 // 拦截网络请求，优先使用缓存，缓存不存在则请求网络
 self.addEventListener('fetch', (event) => {
+    // 忽略非HTTP/HTTPS协议的请求（如chrome-extension://）
+    if (!event.request.url.startsWith('http')) {
+        return;
+    }
+
     // 对于API请求，直接从网络获取，不缓存
-    if (event.request.url.includes('/api.php') || 
-        event.request.url.includes('.php?') || 
+    if (event.request.url.includes('*.php') || 
         event.request.method === 'POST') {
         event.respondWith(
             fetch(event.request)
                 .catch(() => {
                     // 网络请求失败时，可以返回一个自定义的错误响应
-                    return new Response(JSON.stringify({ error: 'Network error' }), {
+                    return new Response(JSON.stringify({ error: '网络错误，请稍后重试' }), {
                         headers: { 'Content-Type': 'application/json' }
                     });
                 })
@@ -75,6 +79,11 @@ self.addEventListener('fetch', (event) => {
                     .then((response) => {
                         // 检查响应是否有效
                         if (!response || response.status !== 200 || response.type !== 'basic') {
+                            return response;
+                        }
+
+                        // 再次检查请求协议，防止非HTTP协议请求进入缓存
+                        if (!event.request.url.startsWith('http')) {
                             return response;
                         }
 
