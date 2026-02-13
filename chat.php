@@ -82,7 +82,7 @@ function createGroupTables() {
     ";
     
     try {
-        if ($conn) {
+        if ($conn instanceof PDO) {
             // @phpstan-ignore-next-line
             $conn->exec($create_tables_sql);
         }
@@ -110,6 +110,11 @@ if (isMobileDevice()) {
     exit;
 }
 
+header('Cache-Control: no-cache, no-store, must-revalidate');
+header('Pragma: no-cache');
+header('Expires: 0');
+
+// 检查是否登录
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
     exit;
@@ -461,11 +466,31 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             font-size: 14px;
             font-weight: 600;
             margin-bottom: 2px;
+            /* 如果不是好友，隐藏名称 */
+            display: <?php 
+                if ($chat_type === 'friend') {
+                    echo ($selected_friend_id && !$friend->isFriend($user_id, $selected_friend_id)) ? 'none' : 'block';
+                } elseif ($chat_type === 'group') {
+                    echo ($selected_id && !$group->isUserInGroup($selected_id, $user_id)) ? 'none' : 'block';
+                } else {
+                    echo 'block';
+                }
+            ?>;
         }
         
         .user-ip {
             font-size: 11px;
             color: #999;
+            /* 如果不是好友，隐藏IP/在线状态 */
+            display: <?php 
+                if ($chat_type === 'friend') {
+                    echo ($selected_friend_id && !$friend->isFriend($user_id, $selected_friend_id)) ? 'none' : 'block';
+                } elseif ($chat_type === 'group') {
+                    echo ($selected_id && !$group->isUserInGroup($selected_id, $user_id)) ? 'none' : 'block';
+                } else {
+                    echo 'block';
+                }
+            ?>;
         }
         
         /* 搜索栏 */
@@ -710,11 +735,31 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             font-size: 16px;
             font-weight: 600;
             margin-bottom: 2px;
+            /* 如果不是好友或未加入群聊，隐藏聊天对象名称 */
+            display: <?php 
+                if ($chat_type === 'friend') {
+                    echo ($selected_friend_id && !$friend->isFriend($user_id, $selected_friend_id)) ? 'none' : 'block';
+                } elseif ($chat_type === 'group') {
+                    echo ($selected_id && !$group->isUserInGroup($selected_id, $user_id)) ? 'none' : 'block';
+                } else {
+                    echo 'block';
+                }
+            ?>;
         }
         
         .chat-header-status {
             font-size: 12px;
             color: var(--text-desc);
+            /* 如果不是好友或未加入群聊，隐藏聊天对象状态 */
+            display: <?php 
+                if ($chat_type === 'friend') {
+                    echo ($selected_friend_id && !$friend->isFriend($user_id, $selected_friend_id)) ? 'none' : 'block';
+                } elseif ($chat_type === 'group') {
+                    echo ($selected_id && !$group->isUserInGroup($selected_id, $user_id)) ? 'none' : 'block';
+                } else {
+                    echo 'block';
+                }
+            ?>;
         }
         
         /* 消息容器 */
@@ -1893,6 +1938,23 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         .media-action-btn:hover {
             background: rgba(0, 0, 0, 0.8);
         }
+        /* Falling Fu Animation */
+        @keyframes fall {
+            0% { transform: translateY(-100px) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }
+        }
+        
+        .falling-fu {
+            position: fixed;
+            top: -50px;
+            font-size: 30px;
+            z-index: 10002;
+            pointer-events: none;
+            user-select: none;
+            font-family: "Microsoft YaHei", sans-serif;
+            color: #ff4d4f;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
     </style>
 </head>
 <body>
@@ -2644,6 +2706,31 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                     </div>
                 </div>
 
+                <!-- 管理员入口 -->
+                <?php if (isset($current_user['role']) && $current_user['role'] === 'admin'): ?>
+                <div style="padding: 20px; background: var(--panel-bg); border-radius: 8px; margin-bottom: 20px; transition: background-color 0.3s;">
+                    <h3 style="color: var(--text-color); font-size: 16px; font-weight: 600; margin-bottom: 15px;">系统管理</h3>
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <div>
+                            <div style="font-size: 14px; font-weight: 500; color: var(--text-color);">管理后台</div>
+                            <div style="font-size: 12px; color: var(--text-secondary);">进入系统管理控制台</div>
+                        </div>
+                        <button onclick="window.open('admin.php', '_blank')" style="
+                            padding: 8px 16px;
+                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                            color: white;
+                            border: none;
+                            border-radius: 6px;
+                            cursor: pointer;
+                            font-size: 13px;
+                            font-weight: 500;
+                            box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
+                            transition: all 0.2s;
+                        ">进入管理页面</button>
+                    </div>
+                </div>
+                <?php endif; ?>
+
                 <!-- 外观设置 -->
                 <div style="padding: 20px; background: var(--panel-bg); border-radius: 8px; margin-bottom: 20px; transition: background-color 0.3s;">
                     <h3 style="color: var(--text-color); font-size: 16px; font-weight: 600; margin-bottom: 15px;">外观设置</h3>
@@ -2705,66 +2792,14 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
     
     <!-- 修改头像弹窗 -->
     <div id="change-avatar-modal" class="modal" style="display: none;">
-        <div class="modal-content" style="width: 600px; background: var(--modal-bg); color: var(--text-color);">
+        <div class="modal-content" style="width: 400px; background: var(--modal-bg); color: var(--text-color);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid var(--border-color);">
                 <h2 style="color: var(--text-color); font-size: 20px; font-weight: 600;">修改头像</h2>
                 <button onclick="closeChangeAvatarModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-secondary);">×</button>
             </div>
             <div class="change-avatar-content" style="padding: 0 20px 20px;">
                 <div style="text-align: center; margin-bottom: 20px;">
-                    <div style="display: flex; justify-content: center; gap: 20px; margin-bottom: 15px;">
-                        <!-- 左侧：选择区域 -->
-                        <div style="flex: 1;">
-                            <div style="margin-bottom: 10px; font-size: 14px; color: var(--text-secondary);">选择头像区域</div>
-                            <div id="avatar-crop-container" style="
-                                width: 256px;
-                                height: 256px;
-                                border: 2px solid var(--border-color);
-                                border-radius: 8px;
-                                overflow: hidden;
-                                position: relative;
-                                margin: 0 auto;
-                                background: var(--panel-bg);
-                            ">
-                                <img id="avatar-crop-image" style="
-                                    width: 100%;
-                                    height: auto;
-                                    cursor: move;
-                                    position: absolute;
-                                " src="" alt="选择的图片" />
-                                <!-- 选择框 -->
-                                <div id="avatar-selection" style="
-                                    position: absolute;
-                                    width: 64px;
-                                    height: 64px;
-                                    border: 2px solid var(--primary-color);
-                                    background: rgba(102, 126, 234, 0.3);
-                                    cursor: move;
-                                    left: 96px;
-                                    top: 96px;
-                                "></div>
-                            </div>
-                        </div>
-                        <!-- 右侧：预览 -->
-                        <div style="flex: 1;">
-                            <div style="margin-bottom: 10px; font-size: 14px; color: var(--text-secondary);">32×32预览</div>
-                            <div style="
-                                width: 120px;
-                                height: 120px;
-                                border: 2px solid var(--border-color);
-                                border-radius: 8px;
-                                overflow: hidden;
-                                margin: 0 auto;
-                                background: var(--panel-bg);
-                            ">
-                                <canvas id="avatar-preview" width="32" height="32" style="
-                                    width: 100%;
-                                    height: 100%;
-                                "></canvas>
-                            </div>
-                        </div>
-                    </div>
-                    <div style="font-size: 12px; color: var(--text-desc); margin-bottom: 15px;">拖动选择框选择32×32区域，支持JPG、PNG格式</div>
+                    <div style="font-size: 14px; color: var(--text-desc); margin-bottom: 15px;">支持JPG、PNG、GIF格式，系统会自动调整为32x32像素</div>
                     
                     <input type="file" id="avatar-file" name="avatar" accept="image/*" style="display: none;">
                     <button type="button" onclick="document.getElementById('avatar-file').click()" style="
@@ -2776,13 +2811,16 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                         cursor: pointer;
                         font-size: 14px;
                         transition: background-color 0.2s;
-                        margin-bottom: 15px;
                     ">选择图片</button>
+                    
+                    <!-- 文件名显示 -->
+                    <div id="selected-file-name" style="margin-top: 10px; font-size: 13px; color: var(--text-color);"></div>
                 </div>
+                
                 <div style="display: flex; justify-content: flex-end; gap: 10px;">
-                    <button onclick="closeChangeAvatarModal()" style="
-                        padding: 10px 20px;
-                        background: var(--hover-bg);
+                    <button type="button" onclick="closeChangeAvatarModal()" style="
+                        padding: 8px 16px;
+                        background: var(--bg-color);
                         color: var(--text-color);
                         border: 1px solid var(--border-color);
                         border-radius: 6px;
@@ -2790,8 +2828,8 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                         font-size: 14px;
                         transition: background-color 0.2s;
                     ">取消</button>
-                    <button onclick="changeAvatar()" style="
-                        padding: 10px 20px;
+                    <button type="button" onclick="changeAvatar()" style="
+                        padding: 8px 16px;
                         background: var(--primary-color);
                         color: white;
                         border: none;
@@ -2799,7 +2837,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                         cursor: pointer;
                         font-size: 14px;
                         transition: background-color 0.2s;
-                    ">确定</button>
+                    ">确定上传</button>
                 </div>
             </div>
         </div>
@@ -7268,6 +7306,45 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         
         // 初始化
         document.addEventListener('DOMContentLoaded', async function() {
+            // 检查URL参数中的ID是否有效
+            const urlParams = new URLSearchParams(window.location.search);
+            const chatType = urlParams.get('chat_type');
+            const id = urlParams.get('id');
+            
+            if (chatType === 'friend' && id) {
+                // 如果是好友聊天，检查是否为好友关系
+                // 这里我们通过检查页面上是否有对应的联系人元素来判断
+                // 因为联系人列表是后端渲染的，只包含已添加的好友
+                const friendElement = document.querySelector(`.contact-item[data-id="${id}"][data-type="friend"]`);
+                
+                if (!friendElement) {
+                    // 如果在联系人列表中找不到该ID，说明不是好友
+                    // 显示提示并跳转回主页
+                    showNotification('发起链接失败：你们还不是好友，无法建立链接', 'error');
+                    
+                    // 延迟跳转，让用户看清提示
+                    setTimeout(() => {
+                        window.location.href = 'chat.php';
+                    }, 3000);
+                    return; // 停止后续初始化
+                }
+            } else if (chatType === 'group' && id) {
+                // 如果是群聊，检查是否已加入该群
+                const groupElement = document.querySelector(`.contact-item[data-id="${id}"][data-type="group"]`);
+                
+                if (!groupElement) {
+                    // 如果在群聊列表中找不到该ID，说明未加入该群
+                    // 显示提示并跳转回主页
+                    showNotification('发起链接失败：您未加入该群聊，无法建立链接', 'error');
+                    
+                    // 延迟跳转，让用户看清提示
+                    setTimeout(() => {
+                        window.location.href = 'chat.php';
+                    }, 3000);
+                    return; // 停止后续初始化
+                }
+            }
+
             // 加载聊天记录
             loadChatHistory();
             
@@ -9028,8 +9105,8 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         let currentVideoSize = 0;
         
         // 初始化音频播放器
-        function initAudioPlayers() {
-            document.querySelectorAll('.custom-audio-player').forEach(player => {
+        function initAudioPlayers(container = document) {
+            container.querySelectorAll('.custom-audio-player').forEach(player => {
                 // 防止重复初始化
                 if (player.dataset.initialized === 'true') return;
 
@@ -9067,7 +9144,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 // 更新进度条和时间
                 audio.addEventListener('timeupdate', function() {
                     // 确保duration有效才计算进度
-                    if (isNaN(audio.duration) || audio.duration <= 0) {
+                    if (!isFinite(audio.duration) || isNaN(audio.duration) || audio.duration <= 0) {
                         return;
                     }
                     const progressPercent = (audio.currentTime / audio.duration) * 100;
@@ -9085,7 +9162,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 // 进度条点击跳转到指定位置
                 progressBar.addEventListener('click', function(e) {
                     // 确保duration有效才允许跳转
-                    if (isNaN(audio.duration) || audio.duration <= 0) {
+                    if (!isFinite(audio.duration) || isNaN(audio.duration) || audio.duration <= 0) {
                         return;
                     }
                     const progressWidth = progressBar.clientWidth;
@@ -9104,7 +9181,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                     if (!isDragging) return;
                     
                     // 确保duration有效才允许拖动
-                    if (isNaN(audio.duration) || audio.duration <= 0) {
+                    if (!isFinite(audio.duration) || isNaN(audio.duration) || audio.duration <= 0) {
                         return;
                     }
                     
@@ -9352,7 +9429,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         let imageStartY = 0;
         let cropImage = null;
         
-        // 监听头像文件选择并设置裁剪区域
+        // 监听头像文件选择并显示文件名
         document.addEventListener('DOMContentLoaded', function() {
             const avatarFileInput = document.getElementById('avatar-file');
             if (avatarFileInput) {
@@ -9375,104 +9452,18 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                         return;
                     }
                     
-                    // 读取文件并设置到裁剪区域
-                    const reader = new FileReader();
-                    reader.onload = function(event) {
-                        const img = document.getElementById('avatar-crop-image');
-                        
-                        if (!img) return; // 检查img是否存在
-                        
-                        img.src = event.target.result;
-                        
-                        // 等待图片加载完成
-                        img.onload = function() {
-                            // 创建临时canvas获取实际图片尺寸
-                            const tempCanvas = document.createElement('canvas');
-                            const tempCtx = tempCanvas.getContext('2d');
-                            tempCanvas.width = img.naturalWidth;
-                            tempCanvas.height = img.naturalHeight;
-                            tempCtx.drawImage(img, 0, 0);
-                            
-                            // 保存裁剪图片对象
-                            cropImage = img;
-                            
-                            // 调整图片位置，居中显示
-                            const container = document.getElementById('avatar-crop-container');
-                            
-                            if (!container) return; // 检查container是否存在
-                            
-                            const containerWidth = container.offsetWidth;
-                            const containerHeight = container.offsetHeight;
-                            
-                            // 计算缩放比例，确保图片至少填满容器
-                            const scale = Math.max(containerWidth / img.naturalWidth, containerHeight / img.naturalHeight);
-                            img.style.width = (img.naturalWidth * scale) + 'px';
-                            img.style.height = (img.naturalHeight * scale) + 'px';
-                            
-                            // 居中显示
-                            img.style.left = ((containerWidth - img.offsetWidth) / 2) + 'px';
-                            img.style.top = ((containerHeight - img.offsetHeight) / 2) + 'px';
-                            
-                            // 更新预览
-                            updateAvatarPreview();
-                        };
-                    };
-                    reader.readAsDataURL(file);
+                    // 显示文件名
+                    const fileNameDiv = document.getElementById('selected-file-name');
+                    if (fileNameDiv) {
+                        fileNameDiv.textContent = '已选择: ' + file.name;
+                    }
                 });
             }
-            
-            // 初始化裁剪相关事件
-            initAvatarCropEvents();
         });
         
-        // 初始化裁剪相关事件
+        // 初始化裁剪相关事件 - 已废弃
         function initAvatarCropEvents() {
-            const container = document.getElementById('avatar-crop-container');
-            const selection = document.getElementById('avatar-selection');
-            const img = document.getElementById('avatar-crop-image');
-            
-            if (!container || !selection || !img) return; // 防止元素不存在时报错
-            
-            // 选择框拖动事件
-            selection.addEventListener('mousedown', function(e) {
-                isDraggingSelection = true;
-                dragStartX = e.clientX;
-                dragStartY = e.clientY;
-                selectionStartX = selection.offsetLeft;
-                selectionStartY = selection.offsetTop;
-                e.preventDefault();
-            });
-            
-            // 图片拖动事件
-            img.addEventListener('mousedown', function(e) {
-                isDraggingImage = true;
-                dragStartX = e.clientX;
-                dragStartY = e.clientY;
-                imageStartX = img.offsetLeft;
-                imageStartY = img.offsetTop;
-                e.preventDefault();
-            });
-            
-            // 鼠标移动事件
-            document.addEventListener('mousemove', function(e) {
-                if (isDraggingSelection) {
-                    dragSelection(e);
-                } else if (isDraggingImage) {
-                    dragImage(e);
-                }
-            });
-            
-            // 鼠标释放事件
-            document.addEventListener('mouseup', function() {
-                isDraggingSelection = false;
-                isDraggingImage = false;
-            });
-            
-            // 鼠标离开事件
-            document.addEventListener('mouseleave', function() {
-                isDraggingSelection = false;
-                isDraggingImage = false;
-            });
+            // 此函数已废弃，保留函数名防止报错
         }
         
         // 拖动选择框
@@ -9573,34 +9564,29 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 return false;
             }
             
-            // 获取裁剪后的图片数据
-            const canvas = document.getElementById('avatar-preview');
+            // 直接上传原文件，由后端处理压缩
+            const formData = new FormData();
+            formData.append('avatar', selectedAvatarFile);
+            formData.append('action', 'change_avatar');
             
-            // 将canvas转换为blob
-            canvas.toBlob(function(blob) {
-                const formData = new FormData();
-                formData.append('avatar', blob, 'avatar.png');
-                formData.append('action', 'change_avatar');
-                
-                fetch('change_avatar.php', {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        alert('头像修改成功');
-                        // 刷新页面以显示新头像
-                        location.reload();
-                    } else {
-                        alert('头像修改失败：' + data.message);
-                    }
-                })
-                .catch(error => {
-                    console.error('头像修改错误：', error);
-                    alert('头像修改失败，请重试');
-                });
-            }, 'image/png');
+            fetch('change_avatar.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('头像修改成功');
+                    // 刷新页面以显示新头像
+                    location.reload();
+                } else {
+                    alert('头像修改失败：' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('头像修改错误：', error);
+                alert('头像修改失败，请重试');
+            });
             
             return false;
         }
@@ -9718,6 +9704,18 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
 
         // 切换每日必应壁纸
         function toggleBingWallpaper(enabled) {
+            // 如果是春节期间，强制关闭并提示
+            if (IS_SPRING_FESTIVAL_PERIOD) {
+                alert('春节期间（小年到元宵节）已启用限定主题，暂时无法开启必应壁纸。');
+                const bingSwitch = document.getElementById('bing-wallpaper-switch');
+                if (bingSwitch) {
+                    bingSwitch.checked = false;
+                    bingSwitch.disabled = true;
+                }
+                localStorage.setItem('bingWallpaperEnabled', 'false');
+                return;
+            }
+            
             localStorage.setItem('bingWallpaperEnabled', enabled);
             refreshBackground();
         }
@@ -9726,6 +9724,20 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         function refreshBackground() {
             // 如果是春节期间，不加载 Bing 壁纸，而是由 PHP 后端渲染的背景生效
             if (IS_SPRING_FESTIVAL_PERIOD) {
+                // 再次确保开关状态正确
+                const bingSwitch = document.getElementById('bing-wallpaper-switch');
+                if (bingSwitch && !bingSwitch.disabled) {
+                    bingSwitch.checked = false;
+                    bingSwitch.disabled = true;
+                    // 更新提示文本
+                    const label = bingSwitch.parentElement.querySelector('span');
+                    if (label) {
+                        label.title = '春节期间（小年到元宵节）不可用';
+                        label.style.opacity = '0.7';
+                        label.style.cursor = 'not-allowed';
+                    }
+                }
+                localStorage.setItem('bingWallpaperEnabled', 'false');
                 return;
             }
 
@@ -9963,8 +9975,28 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
 
         // 新春倒计时功能
         (function() {
-            // 获取PHP注入的配置
-            const lunarConfig = <?php echo json_encode($lunar_config); ?>;
+            // 获取PHP注入的配置，如果失败则使用默认值
+            let lunarConfig = {};
+            try {
+                <?php if (isset($lunar_config)): ?>
+                lunarConfig = <?php echo json_encode($lunar_config); ?>;
+                <?php else: ?>
+                // 默认配置
+                lunarConfig = {
+                    show_countdown: true,
+                    show_festival_text: false,
+                    target_timestamp: 1771516800, // 2026-02-17
+                    festival_name: '2026年马新春',
+                    title_template: '🏮 2026年马新春倒计时 🏮'
+                };
+                <?php endif; ?>
+            } catch (e) {
+                console.error('Failed to parse lunar config:', e);
+                return;
+            }
+            
+            // 暴露给全局，以便其他脚本使用
+            window.LUNAR_CONFIG = lunarConfig;
             
             // 如果不显示倒计时也不显示节日文字，则不创建元素
             if (!lunarConfig.show_countdown && !lunarConfig.show_festival_text) {
@@ -10301,6 +10333,10 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                     if (diff <= 0) {
                         // 倒计时结束，不再刷新页面
                         container.style.display = 'none';
+                        
+                        // Check if we should show the celebration
+                        checkAndShowSpringFestivalCelebration();
+                        
                         return;
                     }
                     
@@ -10343,11 +10379,75 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             
             // 默认展开
             updateDisplayState();
+            
+            function checkAndShowSpringFestivalCelebration() {
+                const now = new Date();
+                const currentYear = now.getFullYear();
+                const storageKey = 'spring_festival_shown_' + currentYear;
+                
+                // Only show if not shown before this year
+                if (!localStorage.getItem(storageKey)) {
+                    const modal = document.getElementById('spring-festival-modal');
+                    const msg = document.getElementById('spring-festival-msg');
+                    const btn = document.getElementById('spring-festival-confirm-btn');
+                    
+                    if (modal && msg && btn) {
+                        // Format time: "今天是2026年02月17日大年初一"
+                        const dateStr = now.toLocaleDateString('zh-CN', {year: 'numeric', month: '2-digit', day: '2-digit'});
+                        msg.textContent = `今天是${dateStr}大年初一`;
+                        
+                        modal.style.display = 'flex';
+                        
+                        btn.onclick = function() {
+                            modal.style.display = 'none';
+                            localStorage.setItem(storageKey, 'true');
+                            startFallingFuAnimation();
+                        };
+                    }
+                }
+            }
+            
+            function startFallingFuAnimation() {
+                const duration = 3000; // 3 seconds
+                const endTime = Date.now() + duration;
+                
+                const interval = setInterval(() => {
+                    if (Date.now() > endTime) {
+                        clearInterval(interval);
+                        return;
+                    }
+                    createFallingFu();
+                }, 100); // Create a new Fu every 100ms
+                
+                // Initial burst
+                for(let i=0; i<10; i++) createFallingFu();
+            }
+            
+            function createFallingFu() {
+                const fu = document.createElement('div');
+                fu.innerText = '福';
+                fu.className = 'falling-fu';
+                fu.style.left = Math.random() * 100 + 'vw';
+                fu.style.animation = `fall ${Math.random() * 2 + 1}s linear`;
+                fu.style.fontSize = (Math.random() * 30 + 20) + 'px';
+                
+                document.body.appendChild(fu);
+                
+                // Remove after animation
+                setTimeout(() => {
+                    fu.remove();
+                }, 3000);
+            }
         })();
 
         // 初始化视频播放器
         function initVideoPlayer() {
             console.log('开始初始化视频播放器...');
+            
+            // 确保 IS_SPRING_FESTIVAL_PERIOD 变量存在
+            if (typeof IS_SPRING_FESTIVAL_PERIOD === 'undefined') {
+                window.IS_SPRING_FESTIVAL_PERIOD = false;
+            }
             
             // 获取视频元素和控件
             let videoElement = document.getElementById('custom-video-element');
@@ -10984,9 +11084,9 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         }
         
         // 为视频元素添加点击事件监听器
-        function initVideoElements() {
+        function initVideoElements(container = document) {
             // 为已有的视频元素添加点击事件
-            document.querySelectorAll('.video-element').forEach(video => {
+            container.querySelectorAll('.video-element').forEach(video => {
                 video.addEventListener('click', function() {
                     const videoUrl = this.src;
                     const videoName = this.getAttribute('data-file-name');
@@ -10997,8 +11097,8 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         }
         
         // 初始化视频元素，将视频URL转换为Blob URL
-        async function initChatVideos() {
-            document.querySelectorAll('.video-element').forEach(async video => {
+        async function initChatVideos(container = document) {
+            container.querySelectorAll('.video-element').forEach(async video => {
                 // 只处理没有src或src为空的视频元素
                 if (!video.src || video.src === '') {
                     const fileUrl = video.getAttribute('data-file-url');
@@ -11579,9 +11679,288 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             });
         }
         
+        // 歌词相关变量
+        let lyricData = { lrc: [], trans: [], yrc: [] };
+        let currentLyricIndex = -1;
+        let hasTranslation = false;
+        let hasYrc = false; // 是否有逐字歌词
+        
+        // 解析 YRC 逐字歌词
+        function parseYrc(yrcText) {
+            if (!yrcText) return [];
+            
+            const lines = yrcText.split('\n');
+            const result = [];
+
+            lines.forEach((line, index) => {
+                // 兼容两种格式：[startTime,duration]text 和 (startTime,duration)text
+                if (!line || (!line.includes('[') && !line.includes('('))) return;
+
+                const lineData = {
+                    startTime: 0, 
+                    endTime: 0,
+                    content: '',
+                    words: []
+                };
+
+                // 正则匹配：支持 [123,456]text 和 (123,456)text 两种格式
+                // 捕获组1: 开始时间, 捕获组2: 持续时间, 捕获组3: 文字
+                const regex = /(?:\[|\()(\d+),(\d+)(?:\]|\))([^\[\(]+)/g;
+                let match;
+                let isFirstWord = true;
+
+                while ((match = regex.exec(line)) !== null) {
+                    const startTime = parseInt(match[1]) / 1000;
+                    const duration = parseInt(match[2]) / 1000;
+                    const text = match[3];
+
+                    if (isFirstWord) {
+                        lineData.startTime = startTime;
+                        isFirstWord = false;
+                    }
+
+                    const wordEndTime = startTime + duration;
+                    if (wordEndTime > lineData.endTime) {
+                        lineData.endTime = wordEndTime;
+                    }
+
+                    lineData.content += text;
+                    lineData.words.push({
+                        time: startTime,
+                        duration: duration,
+                        text: text
+                    });
+                }
+
+                if (lineData.words.length > 0) {
+                    result.push(lineData);
+                }
+            });
+
+            return result;
+        }
+
+        // 解析歌词 (LRC)
+        function parseLyric(lrcText) {
+            const lines = lrcText.split('\n');
+            const result = [];
+            const timeExp = /\[(\d{2}):(\d{2})\.(\d{2,3})\]/;
+            
+            for (let line of lines) {
+                const match = timeExp.exec(line);
+                if (match) {
+                    const minutes = parseInt(match[1]);
+                    const seconds = parseInt(match[2]);
+                    const milliseconds = parseInt(match[3].padEnd(3, '0'));
+                    const time = minutes * 60 + seconds + milliseconds / 1000;
+                    const text = line.replace(timeExp, '').trim();
+                    
+                    if (text) {
+                        result.push({ time, text });
+                    }
+                }
+            }
+            return result;
+        }
+        
+        // 获取歌词
+        async function fetchLyrics(songId) {
+            const lyricContainer = document.getElementById('lyric-container');
+            const lyricContent = document.getElementById('lyric-content');
+            const playerStatus = document.getElementById('player-status');
+            
+            // 只有正在播放且是QQ音乐时才尝试加载歌词
+            if (!songId) return;
+            
+            try {
+                const response = await fetch(`https://api.vkeys.cn/v2/music/tencent/lyric?id=${songId}`);
+                const data = await response.json();
+                
+                if (data.code === 200 && data.data) {
+                    // 解析原歌词
+                    const lrc = data.data.lrc ? parseLyric(data.data.lrc) : [];
+                    // 解析翻译歌词（如果有）
+                    const trans = data.data.trans ? parseLyric(data.data.trans) : [];
+                    // 解析逐字歌词（如果有）
+                    const yrc = data.data.yrc ? parseYrc(data.data.yrc) : [];
+                    
+                    lyricData = { lrc, trans, yrc };
+                    hasTranslation = trans.length > 0;
+                    hasYrc = yrc.length > 0;
+                    currentLyricIndex = -1;
+                    
+                    if (lrc.length > 0 || yrc.length > 0) {
+                        renderLyrics();
+                        // 切换显示模式：隐藏状态，显示歌词
+                        if (isPlaying) {
+                            playerStatus.style.display = 'none';
+                            lyricContainer.style.display = 'block';
+                        }
+                    } else {
+                        // 无歌词
+                        playerStatus.style.display = 'block';
+                        lyricContainer.style.display = 'none';
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to fetch lyrics:', error);
+                playerStatus.style.display = 'block';
+                lyricContainer.style.display = 'none';
+            }
+        }
+        
+        // 渲染歌词DOM
+        function renderLyrics() {
+            const content = document.getElementById('lyric-content');
+            content.innerHTML = '';
+            content.style.transform = 'translateY(0)';
+            
+            // 优先使用 YRC 数据，如果没有则回退到 LRC
+            const lyricsToRender = hasYrc ? lyricData.yrc : lyricData.lrc;
+            
+            lyricsToRender.forEach((item, index) => {
+                const container = document.createElement('div');
+                container.className = 'lyric-item';
+                container.dataset.index = index;
+                container.style.marginBottom = '12px'; // 增加行间距，确保容纳两行文字
+                
+                // 原文（强制显示在第一行）
+                const lrcP = document.createElement('p');
+                lrcP.className = 'lyric-line lrc-text';
+                lrcP.style.display = 'block';
+                lrcP.style.width = '100%';
+                lrcP.style.margin = '0';
+                lrcP.style.lineHeight = '1.4';
+                
+                if (hasYrc && item.words) {
+                    // 逐字渲染
+                    item.words.forEach(word => {
+                        const span = document.createElement('span');
+                        span.textContent = word.text;
+                        span.className = 'yrc-word';
+                        span.dataset.start = word.time;
+                        span.dataset.duration = word.duration;
+                        // 默认浅灰色
+                        span.style.color = '#aaa'; 
+                        span.style.transition = 'all 0.1s linear'; // 使用 all transition，并加快速度
+                        lrcP.appendChild(span);
+                    });
+                } else {
+                    lrcP.textContent = item.text || item.content; // 兼容LRC和YRC的结构差异
+                }
+                
+                container.appendChild(lrcP);
+                
+                // 译文（强制显示在第二行，如果有）
+                if (hasTranslation) {
+                    // 查找对应时间的译文
+                    // YRC 的时间可能是 startTime，LRC 是 time
+                    const itemTime = hasYrc ? item.startTime : item.time;
+                    const transItem = lyricData.trans.find(t => Math.abs(t.time - itemTime) < 0.5);
+                    
+                    if (transItem) {
+                        const transP = document.createElement('p');
+                        transP.className = 'lyric-line trans-text';
+                        transP.textContent = transItem.text;
+                        transP.style.fontSize = '11px';
+                        transP.style.color = '#aaa';
+                        transP.style.display = 'block'; // 块级显示，确保换行
+                        transP.style.width = '100%';
+                        transP.style.margin = '2px 0 0 0'; // 顶部微小间距
+                        transP.style.lineHeight = '1.2';
+                        container.appendChild(transP);
+                    }
+                }
+                
+                content.appendChild(container);
+            });
+        }
+        
+        // 同步歌词
+        function syncLyrics(currentTime) {
+            // 优先使用 YRC 数据
+            const lyricsList = hasYrc ? lyricData.yrc : lyricData.lrc;
+            if (!lyricsList.length) return;
+            
+            // 找到当前播放到的歌词行
+            let activeIndex = -1;
+            for (let i = 0; i < lyricsList.length; i++) {
+                const time = hasYrc ? lyricsList[i].startTime : lyricsList[i].time;
+                if (currentTime >= time) {
+                    activeIndex = i;
+                } else {
+                    break;
+                }
+            }
+            
+            if (activeIndex !== -1) {
+                // 如果行发生了变化，更新容器高亮
+                if (activeIndex !== currentLyricIndex) {
+                    currentLyricIndex = activeIndex;
+                    
+                    // 高亮当前行容器
+                    const items = document.querySelectorAll('.lyric-item');
+                    items.forEach(item => {
+                        // 移除容器的高亮类
+                        item.classList.remove('active-container');
+                        
+                        // 对于普通 LRC，移除行高亮
+                        if (!hasYrc) {
+                            item.querySelectorAll('.lyric-line').forEach(line => line.classList.remove('active'));
+                        }
+                    });
+                    
+                    if (items[currentLyricIndex]) {
+                        items[currentLyricIndex].classList.add('active-container');
+                        
+                        if (!hasYrc) {
+                            items[currentLyricIndex].querySelectorAll('.lyric-line').forEach(line => line.classList.add('active'));
+                        }
+                        
+                        // 居中逻辑 (复用之前的)
+                        const currentEl = items[currentLyricIndex];
+                        const elTop = currentEl.offsetTop;
+                        const elHeight = currentEl.offsetHeight;
+                        let translateY = -(elTop + elHeight / 2);
+                        document.getElementById('lyric-content').style.transform = `translateY(${translateY}px)`;
+                    }
+                }
+                
+                // 逐字高亮逻辑 (仅针对 YRC)
+                if (hasYrc) {
+                    const activeContainer = document.querySelector(`.lyric-item[data-index="${activeIndex}"]`);
+                    if (activeContainer) {
+                        const words = activeContainer.querySelectorAll('.yrc-word');
+                        words.forEach(wordSpan => {
+                            const start = parseFloat(wordSpan.dataset.start);
+                            const duration = parseFloat(wordSpan.dataset.duration);
+                            const end = start + duration;
+                            
+                            if (currentTime >= end) {
+                                // 已经播放完的字 - 默认颜色 (例如白色或当前主题色)
+                                // 用户要求：已播放部分和正在播放部分都使用#1989fa并添加发光效果
+                                // 注意：用户可能指的是“唱过的部分”和“正在唱的部分”都高亮
+                                // 也就是“未播放”是灰色，“已播放+正在播放”是高亮色
+                                wordSpan.style.color = '#1989fa'; 
+                                wordSpan.style.textShadow = '0 0 5px rgba(25, 137, 250, 0.5)';
+                            } else if (currentTime >= start && currentTime < end) {
+                                // 正在播放的字 - 动态效果
+                                wordSpan.style.color = '#1989fa'; // 高亮色
+                                wordSpan.style.textShadow = '0 0 5px rgba(25, 137, 250, 0.5)';
+                            } else {
+                                // 还没播放的字 - 浅灰色
+                                wordSpan.style.color = '#aaa';
+                                wordSpan.style.textShadow = 'none';
+                            }
+                        });
+                    }
+                }
+            }
+        }
+
         // 格式化时间显示（秒 -> mm:ss）
         function formatTime(seconds) {
-            if (isNaN(seconds)) return '0:00';
+            if (isNaN(seconds) || !isFinite(seconds) || seconds < 0) return '0:00';
             
             const mins = Math.floor(seconds / 60);
             const secs = Math.floor(seconds % 60);
@@ -11627,30 +12006,30 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                                 // 创建消息元素
                                 const messageElement = createMessageElement(msg, chatType, chatId);
                                 messagesContainer.appendChild(messageElement);
+                                
+                                // 初始化新添加的音频播放器（局部）
+                                initAudioPlayers(messageElement);
+                                
+                                // 初始化新添加的视频元素（局部）
+                                initVideoElements(messageElement);
+                                
+                                // 初始化新添加的聊天视频，转换为Blob URL（局部）
+                                initChatVideos(messageElement);
+                                
+                                // 处理新消息中的媒体文件（局部）
+                                messageElement.querySelectorAll('.message-file').forEach(fileLink => {
+                                    const filePath = fileLink.getAttribute('data-file-path');
+                                    const fileName = fileLink.getAttribute('data-file-name');
+                                    if (filePath && fileName) {
+                                        const fileType = getFileType(fileName);
+                                        setFileCache(filePath, fileType, 0);
+                                    }
+                                });
                             }
                         });
                         
                         // 滚动到底部
                         messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                        
-                        // 处理新消息中的媒体文件
-                        document.querySelectorAll('.message-file').forEach(fileLink => {
-                            const filePath = fileLink.getAttribute('data-file-path');
-                            const fileName = fileLink.getAttribute('data-file-name');
-                            if (filePath && fileName) {
-                                const fileType = getFileType(fileName);
-                                setFileCache(filePath, fileType, 0);
-                            }
-                        });
-                        
-                        // 初始化新添加的音频播放器
-                        initAudioPlayers();
-                        
-                        // 初始化新添加的视频元素
-                        initVideoElements();
-                        
-                        // 初始化新添加的聊天视频，转换为Blob URL
-                        initChatVideos();
                     }
                 })
                 .catch(error => {
@@ -12919,7 +13298,10 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             gap: 4px;
             margin-left: 10px;
             order: 4; /* 放在最右侧 */
-            position: relative; /* 确保不被遮挡 */
+            position: absolute; /* 确保不被遮挡 */
+            right: 15px; /* 增加右边距，避免贴边 */
+            top: 50%;
+            transform: translateY(-50%);
             z-index: 99999; /* 极大值 */
             opacity: 1 !important;
             visibility: visible !important;
@@ -13045,6 +13427,57 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         #volume-btn {
             position: relative;
             z-index: 1002;
+        }
+        
+        #lyric-container {
+            height: 80px; /* 增加高度以容纳更多行 */
+            overflow: hidden;
+            margin-top: 10px;
+            text-align: center;
+            position: relative;
+            display: none;
+            /* 移除 mask-image 渐变，因为用户要求不显示已播放歌词 */
+            /* mask-image: linear-gradient(to bottom, transparent, black 15%, black 85%, transparent); */
+            /* -webkit-mask-image: linear-gradient(to bottom, transparent, black 15%, black 85%, transparent); */
+        }
+        
+        #lyric-content {
+            transition: transform 0.3s ease-out;
+            position: absolute;
+            width: 100%;
+            top: 50%; /* 初始位置居中 */
+        }
+        
+        .lyric-item {
+            opacity: 0; /* 默认完全隐藏 */
+            transition: all 0.3s;
+            transform: scale(0.95);
+            display: none; /* 默认不显示，只显示当前行 */
+        }
+        
+        .lyric-item.active-container {
+            opacity: 1;
+            transform: scale(1);
+            display: block; /* 只显示当前行 */
+        }
+        
+        .lyric-line {
+            color: #888;
+            font-size: 13px;
+            /* height: auto; 移除固定高度 */
+            /* line-height: 1.4; */
+            transition: all 0.3s;
+            margin: 0;
+            white-space: normal; /* 允许换行 */
+            overflow: visible; /* 允许溢出 */
+            text-overflow: clip;
+        }
+        
+        .lyric-line.active {
+            color: #1989fa;
+            font-weight: bold;
+            font-size: 13px;
+            transform: scale(1.05);
         }
         
         /* 状态信息 */
@@ -13304,10 +13737,13 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             
             <!-- 歌单选择 -->
             <div id="playlist-container" style="padding: 0 15px 10px 15px;">
-                <select id="playlist-select" onchange="changePlaylist(this.value)" style="<?php if ($is_spring_festival_period) echo 'cursor: not-allowed; opacity: 0.9; pointer-events: none;'; ?>">
-                    <?php if ($is_spring_festival_period): ?>
+                <select id="playlist-select" onchange="changePlaylist(this.value)" style="<?php if ($is_spring_festival_period && !$is_admin) echo 'cursor: not-allowed; opacity: 0.9; pointer-events: none;'; ?>">
+                    <?php if ($is_spring_festival_period && !$is_admin): ?>
                     <option value="spring_festival" selected>春节特别歌单</option>
                     <?php else: ?>
+                    <?php if ($is_spring_festival_period): ?>
+                    <option value="spring_festival">春节特别歌单</option>
+                    <?php endif; ?>
                     <option value="random">随机热歌 (默认)</option>
                     
                     <?php
@@ -13365,6 +13801,13 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             <button class="action-btn" onclick="event.stopPropagation(); toggleMiniMode(event)" title="切换侧边栏模式">&lt;</button>
         </div>
             
+            <!-- 歌词容器 -->
+            <div id="lyric-container">
+                <div id="lyric-content">
+                    <p class="lyric-line">暂无歌词</p>
+                </div>
+            </div>
+
             <!-- 状态信息 -->
             <div id="player-status">正在加载音乐...</div>
         </div>
@@ -13409,7 +13852,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             let musicPlayerSetting = false; // 默认关闭
             
             // 如果在春节期间，强制启用播放器和春节模式
-            if (IS_SPRING_FESTIVAL_PERIOD) {
+            if (IS_SPRING_FESTIVAL_PERIOD && !IS_ADMIN) {
                 // 强制设置为春节模式
                 currentMusicMode = 'spring_festival';
                 localStorage.setItem('setting-music-mode', 'spring_festival');
@@ -13688,12 +14131,12 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             return false;
         }
 
-        // 初始化音乐播放器
         // 自定义歌单相关变量
         let customPlaylistName = '';
         let customPlaylistData = [];
         let customPlaylistIndex = 0;
 
+        // 初始化播放器
         async function initMusicPlayer() {
             try {
                 // 加载自定义歌单列表
@@ -13707,17 +14150,50 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 player.style.right = '20px';
                 player.style.zIndex = '9999'; // 确保播放器显示在最顶层
                 
-                // 请求音乐数据
-                await loadNewSong();
+                // 设置初始模式
+                const playerContent = document.getElementById('player-content');
+                const playerHeader = document.getElementById('player-header');
+                const musicIcon = document.getElementById('music-icon');
+                
+                // 默认展开
+                player.classList.remove('minimized', 'mini-minimized');
+                playerContent.style.display = 'block';
+                musicIcon.style.display = 'none'; // 隐藏图标
+                
+                // 获取用户偏好的歌单模式
+                let savedMode = localStorage.getItem('music_mode');
+                
+                // 春节期间处理逻辑
+                if (IS_SPRING_FESTIVAL_PERIOD) {
+                    // 如果是管理员，允许使用保存的模式，但如果没保存过则默认春节模式
+                    if (IS_ADMIN) {
+                        if (!savedMode) savedMode = 'spring_festival';
+                    } else {
+                        // 非管理员强制春节模式
+                        savedMode = 'spring_festival';
+                    }
+                } else {
+                    if (!savedMode) savedMode = 'random';
+                }
+
+                // 更新下拉菜单
+                const select = document.getElementById('playlist-select');
+                if (select) {
+                    select.value = savedMode;
+                    
+                    // 如果是自定义歌单，但select里没有（比如config变了），回退到默认
+                    if (select.value === '' && savedMode !== '') {
+                        savedMode = 'random';
+                        select.value = 'random';
+                    }
+                }
+                
+                // 调用切换逻辑以初始化状态
+                changePlaylist(savedMode);
+                
+                initDrag();
             } catch (error) {
-                // 忽略错误，不向控制台报错
-                const player = document.getElementById('music-player');
-                player.style.display = 'block';
-                player.style.position = 'fixed';
-                player.style.bottom = '20px';
-                player.style.right = '20px';
-                player.style.zIndex = '9999'; // 确保播放器显示在最顶层
-                document.getElementById('player-status').textContent = '加载失败，请刷新页面重试';
+                console.error('Init music player failed:', error);
             }
         }
         
@@ -13751,11 +14227,10 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 console.error('Failed to fetch playlists:', error);
             }
         }
-        
         // 切换歌单
         async function changePlaylist(mode) {
-            // 春节期间强制锁定
-            if (IS_SPRING_FESTIVAL_PERIOD) {
+            // 春节期间强制锁定，但管理员除外
+            if (IS_SPRING_FESTIVAL_PERIOD && !IS_ADMIN) {
                 if (mode !== 'spring_festival') {
                     // 如果试图切换到其他模式，强制切回
                     console.log('春节期间禁止切换歌单');
@@ -13774,13 +14249,32 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 customPlaylistIndex = 0;
             } else {
                 currentMusicMode = mode;
+                // 如果切换回非自定义模式，也要清理可能残留的自定义状态
+                if (mode === 'random') {
+                    // 重置随机播放的一些状态
+                } else if (mode === 'spring_festival') {
+                    springFestivalPlaylist = []; // 清空缓存以重新加载
+                    springFestivalCurrentIndex = 0;
+                }
             }
             
             // 保存偏好
             localStorage.setItem('music_mode', mode);
             
+            // 停止当前播放并重置播放器状态
+            const audioPlayer = document.getElementById('audio-player');
+            if (audioPlayer) {
+                audioPlayer.pause();
+                audioPlayer.currentTime = 0;
+                isPlaying = false;
+                document.getElementById('play-btn').textContent = '▶';
+            }
+            
             // 立即加载新歌
-            loadNewSong();
+            // 使用 setTimeout 确保状态更新完成
+            setTimeout(() => {
+                loadNewSong();
+            }, 100);
             
             // 同步更新设置弹窗中的下拉菜单（如果存在）
             const settingSelect = document.getElementById('setting-music-mode');
@@ -13830,14 +14324,55 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             
             const song = customPlaylistData[customPlaylistIndex++];
             
+            // 处理QQ音乐解析逻辑
+            if (song.source_type === 'qqmusic') {
+                document.getElementById('player-status').textContent = '正在解析歌曲...';
+                try {
+                    // 使用后端返回的 choose_id (如果存在)
+                    let apiUrl = `https://api.vkeys.cn/v2/music/tencent?word=${encodeURIComponent(song.query_name)}&quality=8`;
+                    if (song.choose_id) {
+                        apiUrl += `&choose=${song.choose_id}`;
+                    } else {
+                        apiUrl += `&choose=1`; // 默认第一个
+                    }
+                    
+                    const res = await fetch(apiUrl);
+                    const data = await res.json();
+                    if (data.code === 200) {
+                        song.title = data.data.song;
+                        song.artist = data.data.singer;
+                        song.cover = data.data.cover;
+                        song.url = data.data.url;
+                        song.id = data.data.id; // 保存歌曲ID用于获取歌词
+                    } else {
+                        console.error('QQMusic API解析失败:', data);
+                        // 如果解析失败，可能会导致播放失败，自动跳下一首由onerror处理
+                    }
+                } catch (e) {
+                    console.error('QQMusic请求错误:', e);
+                }
+            }
+            
             currentSong = {
                 name: song.title,
                 artistsname: song.artist,
                 url: song.url,
-                picurl: song.cover
+                picurl: song.cover,
+                source_type: song.source_type,
+                id: song.id // 传递ID
             };
             
             updatePlayerUI(currentSong);
+            
+            // 尝试获取歌词（如果是QQ音乐）
+            if (currentSong.source_type === 'qqmusic' && currentSong.id) {
+                fetchLyrics(currentSong.id);
+            } else {
+                // 隐藏歌词，显示状态
+                document.getElementById('lyric-container').style.display = 'none';
+                document.getElementById('player-status').style.display = 'block';
+            }
+            
             playCurrentSong();
         }
 
@@ -13864,25 +14399,110 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             audioPlayer.removeEventListener('timeupdate', updateProgress);
             audioPlayer.removeEventListener('ended', loadNewSong);
             
-            audioPlayer.src = currentSong.url;
+            // 移除旧的歌词同步事件（如果有）
+            audioPlayer.removeEventListener('timeupdate', syncLyricHandler);
+            
+            // 如果是恢复播放，不需要重新加载
+            if (audioPlayer.paused && audioPlayer.src && audioPlayer.currentTime > 0) {
+                 // 仅仅是暂停状态，直接恢复播放
+                 // 重新添加事件监听器
+                 audioPlayer.addEventListener('canplaythrough', updateDuration);
+                 audioPlayer.addEventListener('timeupdate', updateProgress);
+                 audioPlayer.addEventListener('ended', loadNewSong);
+                 
+                 // 添加歌词同步事件
+                 if (currentSong.source_type === 'qqmusic') {
+                     audioPlayer.addEventListener('timeupdate', syncLyricHandler);
+                 }
+                 
+                 // 恢复播放
+                 audioPlayer.play().then(() => {
+                    isPlaying = true;
+                    document.getElementById('play-btn').textContent = '⏸';
+                    // 如果有歌词，显示歌词容器；否则显示状态
+                    if (document.getElementById('lyric-content').innerHTML !== '' && currentSong.source_type === 'qqmusic') {
+                        document.getElementById('player-status').style.display = 'none';
+                        document.getElementById('lyric-container').style.display = 'block';
+                    } else {
+                        document.getElementById('player-status').textContent = '正在播放';
+                        document.getElementById('player-status').style.display = 'block';
+                        document.getElementById('lyric-container').style.display = 'none';
+                    }
+                 }).catch(err => {
+                    console.error('Resume play failed:', err);
+                    isPlaying = false;
+                    document.getElementById('play-btn').textContent = '▶';
+                 });
+                 
+                 return;
+            } else {
+                if (currentSong.source_type === 'qqmusic') {
+                    audioPlayer.removeAttribute('src');
+                    audioPlayer.innerHTML = `<source src="${currentSong.url}" type="audio/mpeg">您的浏览器不支持音频播放。`;
+                    audioPlayer.load();
+                } else {
+                    audioPlayer.innerHTML = '';
+                    audioPlayer.src = currentSong.url;
+                }
+            }
             
             audioPlayer.addEventListener('canplaythrough', updateDuration);
             audioPlayer.addEventListener('timeupdate', updateProgress);
             audioPlayer.addEventListener('ended', loadNewSong);
             
+            // 添加歌词同步事件
+            if (currentSong.source_type === 'qqmusic') {
+                audioPlayer.addEventListener('timeupdate', syncLyricHandler);
+            }
+            
             audioPlayer.oncanplay = () => {
                 audioPlayer.play().then(() => {
                     isPlaying = true;
                     document.getElementById('play-btn').textContent = '⏸';
-                    document.getElementById('player-status').textContent = '正在播放';
+                    // 如果有歌词，显示歌词容器；否则显示状态
+                    if (document.getElementById('lyric-content').innerHTML !== '' && currentSong.source_type === 'qqmusic') {
+                        document.getElementById('player-status').style.display = 'none';
+                        document.getElementById('lyric-container').style.display = 'block';
+                    } else {
+                        document.getElementById('player-status').textContent = '正在播放';
+                        document.getElementById('player-status').style.display = 'block';
+                        document.getElementById('lyric-container').style.display = 'none';
+                    }
                 }).catch(err => {
                     console.error('Play failed:', err);
                     isPlaying = false;
                     document.getElementById('play-btn').textContent = '▶';
+                    
+                    // 播放失败时切回状态显示
+                    document.getElementById('player-status').textContent = '点击播放';
+                    document.getElementById('player-status').style.display = 'block';
+                    document.getElementById('lyric-container').style.display = 'none';
                 });
             };
             
+            audioPlayer.onpause = () => {
+                isPlaying = false;
+                document.getElementById('play-btn').textContent = '▶';
+                // 暂停时显示状态
+                document.getElementById('player-status').textContent = '已暂停';
+                document.getElementById('player-status').style.display = 'block';
+                document.getElementById('lyric-container').style.display = 'none';
+            };
+            
+            audioPlayer.onplay = () => {
+                isPlaying = true;
+                document.getElementById('play-btn').textContent = '⏸';
+                // 播放时如果歌词已加载，切换回歌词
+                if (document.getElementById('lyric-content').innerHTML !== '' && currentSong.source_type === 'qqmusic') {
+                    document.getElementById('player-status').style.display = 'none';
+                    document.getElementById('lyric-container').style.display = 'block';
+                } else {
+                    document.getElementById('player-status').textContent = '正在播放';
+                }
+            };
+            
             audioPlayer.onerror = async () => {
+                // ... (保留原有重试逻辑)
                 // 防止无限重试
                 if (audioPlayer.dataset.retrying === 'true') {
                     audioPlayer.dataset.retrying = 'false';
@@ -13905,6 +14525,12 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                     setTimeout(loadNewSong, 2000);
                 }
             };
+        }
+        
+        // 独立的歌词同步处理函数，方便移除监听
+        function syncLyricHandler() {
+            const audioPlayer = document.getElementById('audio-player');
+            syncLyrics(audioPlayer.currentTime);
         }
 
         // 获取春节歌单
@@ -13974,7 +14600,8 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 name: song.name,
                 artistsname: song.artistsname,
                 url: song.url,
-                picurl: song.picurl
+                picurl: song.picurl,
+                source_type: 'spring_festival' // 标记来源
             };
             
             // 更新UI
@@ -14014,41 +14641,12 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 this.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiB2aWV3Qm94PSIwIDAgMTAwIDEwMCI+PHJlY3Qgd2lkdGg9IjEwMCIgaGVpZ2h0PSIxMDAiIGZpbGw9IiNkZGQiLz48dGV4dCB4PSI1MCIgeT0iNTAiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiIGZpbGw9IiM4ODgiPuVjb3ZlcjwvdGV4dD48L3N2Zz4=';
             };
             
-            // 播放
-            const audioPlayer = document.getElementById('audio-player');
+            // 隐藏歌词，显示状态
+            document.getElementById('lyric-container').style.display = 'none';
+            document.getElementById('player-status').style.display = 'block';
             
-            // 移除之前的事件监听器
-            audioPlayer.removeEventListener('canplaythrough', updateDuration);
-            audioPlayer.removeEventListener('timeupdate', updateProgress);
-            audioPlayer.removeEventListener('ended', loadNewSong);
-            
-            audioPlayer.src = song.url;
-            
-            // 重新添加事件监听器
-            audioPlayer.addEventListener('canplaythrough', updateDuration);
-            audioPlayer.addEventListener('timeupdate', updateProgress);
-            audioPlayer.addEventListener('ended', loadNewSong);
-            
-            audioPlayer.oncanplay = () => {
-                const playPromise = audioPlayer.play();
-                if (playPromise !== undefined) {
-                    playPromise.then(() => {
-                        isPlaying = true;
-                        document.getElementById('play-btn').textContent = '⏸';
-                        document.getElementById('player-status').textContent = '正在播放';
-                    }).catch(error => {
-                        console.error('Play failed:', error);
-                        isPlaying = false;
-                        document.getElementById('play-btn').textContent = '▶';
-                        document.getElementById('player-status').textContent = '已暂停（点击播放）';
-                    });
-                }
-            };
-            
-            audioPlayer.onerror = () => {
-                document.getElementById('player-status').textContent = '音频加载失败，尝试下一首';
-                setTimeout(loadSpringFestivalSong, 2000);
-            };
+            // 使用统一播放函数
+            playCurrentSong();
         }
 
         // 加载新歌曲
@@ -14056,10 +14654,19 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             document.getElementById('player-status').textContent = '正在加载音乐...';
             
             try {
+                // 强制同步当前模式，防止状态不一致
+                const select = document.getElementById('playlist-select');
+                if (select && select.value && !select.value.startsWith('custom_')) {
+                     // 只有当select的值与currentMusicMode不一致，且不是自定义歌单时才同步
+                     // 自定义歌单在changePlaylist里已经处理了
+                     if (currentMusicMode === 'random' && select.value === 'spring_festival') {
+                         currentMusicMode = 'spring_festival';
+                     }
+                }
+
                 // 检查是否是首次加载且有保存的模式
                 if (currentMusicMode === 'random' && localStorage.getItem('music_mode')) {
                     const savedMode = localStorage.getItem('music_mode');
-                    const select = document.getElementById('playlist-select');
                     // 确保选项存在（对于动态加载的选项，可能需要稍后设置）
                     if (savedMode.startsWith('custom_')) {
                          // 自定义歌单逻辑
@@ -14300,7 +14907,11 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             } else {
                 try {
                     // 检查是否有有效的音频源
-                    if (!audioPlayer.src) {
+                    // 注意：QQ音乐模式使用innerHTML插入source标签，audioPlayer.src可能为空
+                    // 所以我们需要检查 currentSrc 或者判断 currentSong 是否存在
+                    const hasSource = audioPlayer.src || (audioPlayer.currentSrc && audioPlayer.currentSrc !== window.location.href) || (currentSong && currentSong.source_type === 'qqmusic' && currentSong.url);
+                    
+                    if (!hasSource) {
                         // 重新加载音频源
                         await loadNewSong();
                         return;
@@ -15132,6 +15743,27 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
     </script>
 <!-- GitHub角标 -->
     <a href="https://github.com/LzdqesjG/modern-chat" class="github-corner" aria-label="View source on GitHub"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#151513; color:#fff; position: absolute; top: 0; border: 0; right: 0;" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"/><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"/><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"/></svg></a><style>.github-corner:hover .octo-arm{animation:octocat-wave 560ms ease-in-out}@keyframes octocat-wave{0%,100%{transform:rotate(0)}20%,60%{transform:rotate(-25deg)}40%,80%{transform:rotate(10deg)}}@media (max-width:500px){.github-corner:hover .octo-arm{animation:none}.github-corner .octo-arm{animation:octocat-wave 560ms ease-in-out}}</style>
+    <!-- Spring Festival Celebration Modal -->
+    <div id="spring-festival-modal" class="modal" style="display: none; z-index: 10001;">
+        <div class="modal-content" style="width: 400px; text-align: center; background: linear-gradient(135deg, #ff4d4f 0%, #ff7875 100%); color: white; border-radius: 12px; border: none;">
+            <div style="font-size: 60px; margin-bottom: 10px;">🧧</div>
+            <h2 style="margin-bottom: 15px; font-size: 24px; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">新春快乐</h2>
+            <p id="spring-festival-msg" style="font-size: 18px; margin-bottom: 25px; line-height: 1.5;"></p>
+            <button id="spring-festival-confirm-btn" style="
+                background: white;
+                color: #ff4d4f;
+                border: none;
+                padding: 10px 30px;
+                border-radius: 20px;
+                font-size: 16px;
+                font-weight: bold;
+                cursor: pointer;
+                box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+                transition: transform 0.1s;
+            ">确定</button>
+        </div>
+    </div>
+
     <!-- Service Worker 注册 -->
     <script>
         if ('serviceWorker' in navigator) {

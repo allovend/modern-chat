@@ -24,8 +24,8 @@ try {
     require_once 'db.php';
     require_once 'User.php';
     require_once 'Message.php';
-require_once 'FileUpload.php';
-require_once 'Group.php';
+    require_once 'FileUpload.php';
+    require_once 'Group.php';
 
     // 检查用户是否登录
     if (!isset($_SESSION['user_id'])) {
@@ -61,6 +61,17 @@ require_once 'Group.php';
     $message = new Message($conn);
     $fileUpload = new FileUpload($conn);
     $group = new Group($conn);
+    require_once 'Friend.php';
+    $friend = new Friend($conn);
+
+    // 修复：未加好友不能发送消息（针对好友聊天）
+    if ($chat_type === 'friend') {
+        // 检查是否为好友关系
+        if (!$friend->isFriend($user_id, $friend_id)) {
+            echo json_encode(['success' => false, 'message' => '你们还不是好友，无法发送消息 ❌']);
+            exit;
+        }
+    }
 
     // 添加调试信息
     error_log("Send Message Request: user_id=$user_id, chat_type=$chat_type, selected_id=$selected_id");
@@ -457,6 +468,12 @@ require_once 'Group.php';
                 echo json_encode(['success' => false, 'message' => '群聊被封禁，您暂时无法查看群聊成员和使用群聊功能']);
                 exit;
             }
+        }
+        
+        // 修复：检查用户是否为群成员
+        if (!$group->isUserInGroup($selected_id, $user_id)) {
+            echo json_encode(['success' => false, 'message' => '您未加入该群聊，无法发送消息 ❌']);
+            exit;
         }
         
         if ($file_result && $file_result['success']) {

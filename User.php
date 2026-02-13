@@ -13,21 +13,40 @@ class User {
     }
     
     // 用户注册
-    public function register($username, $email, $password, $ip_address = '') {
+    public function register($username, $email, $password, $phone, $ip_address = '') {
         try {
-            // 检查用户名和邮箱是否已存在
-            $stmt = $this->conn->prepare("SELECT id FROM users WHERE username = ? OR email = ?");
-            $stmt->execute([$username, $email]);
+            // 检查用户名、邮箱或手机号是否已存在
+            $sql = "SELECT username, email, phone FROM users WHERE username = ? OR email = ?";
+            $params = [$username, $email];
+            
+            if (!empty($phone)) {
+                $sql .= " OR phone = ?";
+                $params[] = $phone;
+            }
+            
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute($params);
+            
             if ($stmt->rowCount() > 0) {
-                return ['success' => false, 'message' => '用户名或邮箱已存在'];
+                $existing = $stmt->fetch(PDO::FETCH_ASSOC);
+                if ($existing['username'] === $username) {
+                    return ['success' => false, 'message' => '用户名已存在'];
+                }
+                if ($existing['email'] === $email) {
+                    return ['success' => false, 'message' => '邮箱已存在'];
+                }
+                if (!empty($phone) && $existing['phone'] === $phone) {
+                    return ['success' => false, 'message' => '手机号已注册'];
+                }
+                return ['success' => false, 'message' => '用户名、邮箱或手机号已存在'];
             }
             
             // 哈希密码
             $hashedPassword = password_hash($password, PASSWORD_DEFAULT, ['cost' => 12]);
             
-            // 插入新用户，不包含IP地址
-            $stmt = $this->conn->prepare("INSERT INTO users (username, email, password) VALUES (?, ?, ?)");
-            $stmt->execute([$username, $email, $hashedPassword]);
+            // 插入新用户
+            $stmt = $this->conn->prepare("INSERT INTO users (username, email, password, phone) VALUES (?, ?, ?, ?)");
+            $stmt->execute([$username, $email, $hashedPassword, $phone]);
             
             $user_id = $this->conn->lastInsertId();
             

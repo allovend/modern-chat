@@ -84,18 +84,28 @@ if (empty($phone) || !preg_match('/^1[3-9]\d{9}$/', $phone)) {
         } elseif ($_SESSION['sms_code'] !== $sms_code) {
             $errors[] = '短信验证码错误，请检查是否输入错误';
         } else {
+            // 验证通过
+            // 强制使用接收验证码的手机号作为注册手机号，实现自动关联
+            $phone = $_SESSION['sms_phone'];
+            
             // 验证通过，可以选择清除Session防止重复使用
             unset($_SESSION['sms_code']);
-            unset($_SESSION['sms_phone']);
+            // 这里不清除sms_phone，以防后续还需要用到（虽然上面已经赋值给了$phone）
             unset($_SESSION['sms_expire']);
-            // 暂时保留，防止用户提交失败后需要重新获�?        }
+            // 暂时保留，防止用户提交失败后需要重新获取
+        }
     }
 
-    // 获取用户名最大长度配�?    
-$user_name_max = getUserNameMaxLength();
+    // 获取用户名最大长度配置
+    $user_name_max = getUserNameMaxLength();
 
     if (strlen($username) < 3 || strlen($username) > $user_name_max) {
         $errors[] = "用户名长度必须在3-{$user_name_max}个字符之间";
+    }
+
+    // 修复：禁止包含HTML标签或特殊字符
+    if (preg_match('/[<>"\']/', $username)) {
+        $errors[] = "用户名不能包含特殊字符（如 <, >, \", '）";
     }
 
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {

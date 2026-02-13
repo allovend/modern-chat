@@ -256,68 +256,30 @@
         }
 
         .modal-body {
-            padding: 0;
-            overflow: auto;
+            padding: 24px;
+            overflow-y: auto;
             flex: 1;
             line-height: 1.8;
             color: #555;
             font-size: 14px;
-            position: relative;
         }
 
-        /* 内部内容容器，用于自动滚动 */
-        .modal-body-content {
-            padding: 24px;
-            min-height: 100%;
-            box-sizing: border-box;
-        }
-
-        /* 确保内容容器能够正确显示各种元素 */
-        .modal-body-content p {
-            margin: 10px 0;
-        }
-
-        .modal-body-content h1 {
-            margin-top: 30px;
-            margin-bottom: 15px;
-        }
-
-        .modal-body-content h2 {
-            margin-top: 25px;
-            margin-bottom: 12px;
-        }
-
-        .modal-body-content h3 {
-            margin-top: 20px;
-            margin-bottom: 10px;
-        }
-
-        .modal-body-content ul, .modal-body-content ol {
-            margin: 10px 0;
-            padding-left: 25px;
-        }
-
-        .modal-body-content li {
-            margin: 6px 0;
-        }
-
-        .modal-body h1, .modal-body h2, .modal-body h3,
-        .modal-body-content h1, .modal-body-content h2, .modal-body-content h3 {
+        .modal-body h1, .modal-body h2, .modal-body h3 {
             color: #333;
             margin-top: 20px;
             margin-bottom: 10px;
         }
 
-        .modal-body h1, .modal-body-content h1 { font-size: 20px; }
-        .modal-body h2, .modal-body-content h2 { font-size: 18px; }
-        .modal-body h3, .modal-body-content h3 { font-size: 16px; }
+        .modal-body h1 { font-size: 20px; }
+        .modal-body h2 { font-size: 18px; }
+        .modal-body h3 { font-size: 16px; }
 
-        .modal-body ul, .modal-body-content ul {
+        .modal-body ul {
             margin: 10px 0;
             padding-left: 20px;
         }
 
-        .modal-body li, .modal-body-content li {
+        .modal-body li {
             margin: 5px 0;
         }
 
@@ -693,6 +655,9 @@
                 if (data.success) {
                     alert('验证码已发送，请注意查收');
                     startSmsCountdown(60);
+                    // 发送成功后锁定手机号输入框，防止修改
+                    document.getElementById('phone').readOnly = true;
+                    document.getElementById('phone').style.backgroundColor = '#f0f0f0';
                 } else {
                     alert(data.message || '发送失败');
                     // 如果不是倒计时引起的失败，恢复按钮
@@ -781,205 +746,230 @@
             return true;
         }
 
-        // 协议预览功能 - 重构版
-        const AgreementManager = {
-            agreements: {
-                terms: { title: '用户协议', url: 'Agreement/terms_of_service.md' },
-                privacy: { title: '隐私协议', url: 'Agreement/privacy_policy.md' }
+        // 协议预览功能
+        const agreements = {
+            terms: {
+                title: '用户协议',
+                url: 'Agreement/terms_of_service.md'
             },
-            readStatus: { terms: false, privacy: false },
-            currentType: null,
-            animationId: null,
-            duration: 20000, // 20秒
-
-            // 获取DOM元素
-            getElements() {
-                return {
-                    modal: document.getElementById('agreementModal'),
-                    title: document.getElementById('modalTitle'),
-                    body: document.getElementById('modalBody'),
-                    agreeBtn: document.getElementById('agreeBtn'),
-                    progressFill: document.getElementById('progressFill'),
-                    progressText: document.getElementById('progressText'),
-                    timerText: document.getElementById('timerText'),
-                    readProgress: document.getElementById('readProgress'),
-                    agreementStatus: document.getElementById('agreementStatus'),
-                    registerBtn: document.getElementById('registerBtn')
-                };
-            },
-
-            // 显示协议弹窗
-            async show(type) {
-                this.currentType = type;
-                const el = this.getElements();
-                const agreement = this.agreements[type];
-
-                el.title.textContent = agreement.title;
-                el.body.innerHTML = '<div style="text-align: center; padding: 40px;">加载中...</div>';
-                this.resetProgress(el);
-
-                if (this.readStatus[type]) {
-                    this.setCompleted(el);
-                } else {
-                    el.agreeBtn.disabled = true;
-                    el.agreeBtn.textContent = '请先完整阅读协议';
-                }
-
-                el.modal.classList.add('active');
-                await this.loadContent(type, el);
-            },
-
-            // 重置进度
-            resetProgress(el) {
-                el.progressFill.style.width = '0%';
-                el.progressText.textContent = '0%';
-                el.timerText.textContent = '滚动中...';
-                el.timerText.className = 'timer-text counting';
-                el.readProgress.classList.remove('completed');
-            },
-
-            // 设置完成状态
-            setCompleted(el) {
-                el.progressFill.style.width = '100%';
-                el.progressText.textContent = '100%';
-                el.timerText.textContent = '完成';
-                el.timerText.className = 'timer-text completed';
-                el.readProgress.classList.add('completed');
-                el.agreeBtn.disabled = false;
-                el.agreeBtn.textContent = '已阅读并同意';
-            },
-
-            // 加载协议内容
-            async loadContent(type, el, retries = 3) {
-                for (let i = 0; i <= retries; i++) {
-                    try {
-                        el.body.innerHTML = '<div class="modal-body-content"><div style="text-align: center; padding: 40px;">加载中...</div></div>';
-                        const response = await fetch(this.agreements[type].url);
-                        if (response.ok) {
-                            const content = await response.text();
-                            const container = el.body.querySelector('.modal-body-content');
-                            container.innerHTML = this.renderMarkdown(content);
-                            
-                            if (!this.readStatus[type]) {
-                                this.startScroll(container, el, type);
-                            } else {
-                                this.setCompleted(el);
-                            }
-                            return;
-                        }
-                    } catch (e) {
-                        if (i < retries) await new Promise(r => setTimeout(r, 1500));
-                    }
-                }
-                el.body.innerHTML = '<div style="text-align: center; padding: 40px;"><p style="color: #ff4d4f;">加载失败</p><button onclick="AgreementManager.retry()" style="margin-top: 15px; padding: 8px 20px; background: #12b7f5; color: white; border: none; border-radius: 4px; cursor: pointer;">重试</button></div>';
-            },
-
-            // 重试加载
-            async retry() {
-                const el = this.getElements();
-                await this.loadContent(this.currentType, el);
-            },
-
-            // 开始自动滚动
-            startScroll(container, el, type) {
-                const maxScroll = container.scrollHeight - container.clientHeight;
-                if (maxScroll <= 0) {
-                    this.complete(type, el);
-                    return;
-                }
-
-                const startTime = performance.now();
-                const animate = (now) => {
-                    const progress = Math.min((now - startTime) / this.duration, 1);
-                    const eased = progress < 0.5 ? 4 * progress ** 3 : 1 - (-2 * progress + 2) ** 3 / 2;
-                    
-                    container.scrollTop = maxScroll * eased;
-                    const percent = Math.round(eased * 100);
-                    el.progressFill.style.width = percent + '%';
-                    el.progressText.textContent = percent + '%';
-                    
-                    const remaining = Math.ceil((this.duration - (now - startTime)) / 1000);
-                    if (remaining > 0) el.timerText.textContent = remaining + '秒';
-
-                    if (progress < 1) {
-                        this.animationId = requestAnimationFrame(animate);
-                    } else {
-                        this.complete(type, el);
-                    }
-                };
-                this.animationId = requestAnimationFrame(animate);
-            },
-
-            // 完成阅读
-            complete(type, el) {
-                this.readStatus[type] = true;
-                this.setCompleted(el);
-                this.updateMainStatus(el);
-            },
-
-            // 更新主页面状态
-            updateMainStatus(el) {
-                const bothRead = this.readStatus.terms && this.readStatus.privacy;
-                if (bothRead) {
-                    el.agreementStatus.textContent = '（已同意）';
-                    el.agreementStatus.parentElement.classList.add('completed');
-                    el.registerBtn.disabled = false;
-                    el.registerBtn.textContent = '注册';
-                } else {
-                    const remaining = [];
-                    if (!this.readStatus.terms) remaining.push('用户协议');
-                    if (!this.readStatus.privacy) remaining.push('隐私协议');
-                    el.agreementStatus.textContent = `（还需阅读：${remaining.join('、')}）`;
-                    el.agreementStatus.parentElement.classList.remove('completed');
-                    el.registerBtn.disabled = true;
-                    el.registerBtn.textContent = '请先同意协议';
-                }
-            },
-
-            // 关闭弹窗
-            close() {
-                if (this.animationId) {
-                    cancelAnimationFrame(this.animationId);
-                    this.animationId = null;
-                }
-                this.getElements().modal.classList.remove('active');
-                this.currentType = null;
-            },
-
-            // 同意并关闭
-            agree() {
-                this.close();
-            },
-
-            // Markdown渲染
-            renderMarkdown(text) {
-                return text
-                    .replace(/^###### (.+)$/gm, '<h6 style="font-size: 14px; color: #666; margin: 15px 0 8px; font-weight: 600;">$1</h6>')
-                    .replace(/^##### (.+)$/gm, '<h5 style="font-size: 15px; color: #555; margin: 18px 0 10px; font-weight: 600;">$1</h5>')
-                    .replace(/^#### (.+)$/gm, '<h4 style="font-size: 16px; color: #444; margin: 20px 0 12px; font-weight: 600;">$1</h4>')
-                    .replace(/^### (.+)$/gm, '<h3 style="font-size: 18px; color: #333; margin: 22px 0 14px; font-weight: 600; border-bottom: 2px solid #e0e0e0; padding-bottom: 8px;">$1</h3>')
-                    .replace(/^## (.+)$/gm, '<h2 style="font-size: 20px; color: #333; margin: 25px 0 16px; font-weight: 600; border-bottom: 2px solid #12b7f5; padding-bottom: 10px;">$1</h2>')
-                    .replace(/^# (.+)$/gm, '<h1 style="font-size: 24px; color: #333; margin: 30px 0 20px; font-weight: 600; text-align: center;">$1</h1>')
-                    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-                    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-                    .replace(/~~(.+?)~~/g, '<del>$1</del>')
-                    .replace(/`(.+?)`/g, '<code style="background: #f5f5f5; padding: 2px 6px; border-radius: 3px; font-family: Consolas, monospace;">$1</code>')
-                    .replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre style="background: #f8f9fa; padding: 16px; border-radius: 8px; overflow-x: auto; font-family: Consolas, monospace; font-size: 13px;"><code>$2</code></pre>')
-                    .replace(/^(?:---|\*\*\*|___)$/gm, '<hr style="margin: 25px 0; border: none; border-top: 2px solid #e0e0e0;">')
-                    .replace(/^> (.+)$/gm, '<blockquote style="border-left: 4px solid #12b7f5; padding: 12px 16px; margin: 15px 0; background: #f0f9ff; color: #555;">$1</blockquote>')
-                    .replace(/^- (.+)$/gm, '<li style="margin: 6px 0;">$1</li>')
-                    .replace(/(<li.*<\/li>\n?)+/g, '<ul style="margin: 15px 0; padding-left: 28px;">$&</ul>')
-                    .replace(/^(\d+)\. (.+)$/gm, '<li style="margin: 6px 0;">$2</li>')
-                    .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" target="_blank" style="color: #12b7f5;">$1</a>')
-                    .replace(/!\[(.+?)\]\((.+?)\)/g, '<img src="$2" alt="$1" style="max-width: 100%; border-radius: 8px; margin: 15px 0;">')
-                    .replace(/^([^<\n][\s\S]*?)$/gm, (m) => m.trim() && !m.match(/^<(h|ul|ol|li|bl|pr|ta)/) ? '<p style="margin: 12px 0; line-height: 1.8;">' + m + '</p>' : m);
+            privacy: {
+                title: '隐私协议',
+                url: 'Agreement/privacy_policy.md'
             }
         };
 
-        // 全局函数兼容
-        function showModal(type) { AgreementManager.show(type); }
-        function closeModal() { AgreementManager.close(); }
-        function agreeAndClose() { AgreementManager.agree(); }
+        let currentAgreement = null;
+        let hasReadToBottom = {
+            terms: false,
+            privacy: false
+        };
+        let hasReadForTenSeconds = {
+            terms: false,
+            privacy: false
+        };
+        let countdownTimers = {
+            terms: null,
+            privacy: null
+        };
+        let countdownSeconds = {
+            terms: 10,
+            privacy: 10
+        };
+        const REQUIRED_READ_TIME = 10; // 必须倒计时10秒
+
+        // 显示协议弹窗
+        async function showModal(type) {
+            currentAgreement = type;
+            const modal = document.getElementById('agreementModal');
+            const titleEl = document.getElementById('modalTitle');
+            const bodyEl = document.getElementById('modalBody');
+            const agreeBtn = document.getElementById('agreeBtn');
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            const timerText = document.getElementById('timerText');
+            const readProgress = document.getElementById('readProgress');
+
+            titleEl.textContent = agreements[type].title;
+            bodyEl.innerHTML = '<div style="text-align: center; padding: 40px;">加载中...</div>';
+
+            // 重置进度
+            progressFill.style.width = '0%';
+            progressText.textContent = '0%';
+            countdownSeconds[type] = REQUIRED_READ_TIME;
+            timerText.textContent = countdownSeconds[type] + '秒';
+            timerText.className = 'timer-text counting';
+            readProgress.classList.remove('completed');
+
+            // 清除旧的计时器
+            if (countdownTimers[type]) {
+                clearInterval(countdownTimers[type]);
+                countdownTimers[type] = null;
+            }
+
+            // 检查是否已经阅读完成
+            const bothRead = hasReadToBottom.terms && hasReadForTenSeconds.terms &&
+                           hasReadToBottom.privacy && hasReadForTenSeconds.privacy;
+
+            if (hasReadToBottom[type] && hasReadForTenSeconds[type]) {
+                agreeBtn.disabled = false;
+                agreeBtn.textContent = '已阅读并同意';
+                timerText.textContent = '完成';
+                timerText.className = 'timer-text completed';
+            } else {
+                agreeBtn.disabled = true;
+                agreeBtn.textContent = '请先完整阅读协议';
+            }
+
+            modal.classList.add('active');
+
+            try {
+                const response = await fetch(agreements[type].url);
+                if (response.ok) {
+                    const content = await response.text();
+                    bodyEl.innerHTML = renderMarkdown(content);
+
+                    // 如果还没有阅读完成，启动倒计时
+                    if (!hasReadForTenSeconds[type]) {
+                        countdownSeconds[type] = REQUIRED_READ_TIME;
+                        countdownTimers[type] = setInterval(() => {
+                            countdownSeconds[type]--;
+                            timerText.textContent = countdownSeconds[type] + '秒';
+
+                            if (countdownSeconds[type] <= 0) {
+                                hasReadForTenSeconds[type] = true;
+                                clearInterval(countdownTimers[type]);
+                                countdownTimers[type] = null;
+                                timerText.textContent = '完成';
+                                timerText.className = 'timer-text completed';
+                                checkAgreementStatus(type);
+                            }
+                        }, 1000);
+                    } else {
+                        timerText.textContent = '完成';
+                        timerText.className = 'timer-text completed';
+                    }
+
+                    // 添加滚动监听
+                    setTimeout(() => {
+                        setupScrollListener(type);
+                    }, 100);
+                } else {
+                    bodyEl.innerHTML = '<div style="text-align: center; padding: 40px; color: #ff4d4f;">加载失败，请稍后重试</div>';
+                }
+            } catch (error) {
+                console.error('加载协议失败:', error);
+                bodyEl.innerHTML = '<div style="text-align: center; padding: 40px; color: #ff4d4f;">加载失败，请稍后重试</div>';
+            }
+        }
+
+        // 设置滚动监听
+        function setupScrollListener(type) {
+            const bodyEl = document.getElementById('modalBody');
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            const agreeBtn = document.getElementById('agreeBtn');
+            const readProgress = document.getElementById('readProgress');
+
+            bodyEl.onscroll = function() {
+                const scrollTop = bodyEl.scrollTop;
+                const scrollHeight = bodyEl.scrollHeight;
+                const clientHeight = bodyEl.clientHeight;
+
+                // 计算滚动百分比
+                const scrollPercent = Math.min(100, Math.round((scrollTop / (scrollHeight - clientHeight)) * 100));
+
+                progressFill.style.width = scrollPercent + '%';
+                progressText.textContent = scrollPercent + '%';
+
+                // 判断是否滚动到底部（放宽判定条件：允许50px误差，或者百分比达到99%）
+                if ((scrollTop + clientHeight >= scrollHeight - 50 || scrollPercent >= 99) && !hasReadToBottom[type]) {
+                    hasReadToBottom[type] = true;
+                    readProgress.classList.add('completed');
+                    checkAgreementStatus(type);
+                }
+            };
+        }
+
+        // 检查协议状态
+        function checkAgreementStatus(type) {
+            const agreeBtn = document.getElementById('agreeBtn');
+
+            // 检查当前协议是否阅读完成
+            if (hasReadToBottom[type] && hasReadForTenSeconds[type]) {
+                agreeBtn.disabled = false;
+                agreeBtn.textContent = '已阅读并同意';
+            }
+
+            // 检查是否两个协议都阅读完成
+            const bothRead = hasReadToBottom.terms && hasReadForTenSeconds.terms &&
+                           hasReadToBottom.privacy && hasReadForTenSeconds.privacy;
+
+            const agreementStatus = document.getElementById('agreementStatus');
+            const registerBtn = document.getElementById('registerBtn');
+
+            if (bothRead) {
+                agreementStatus.textContent = '（已同意）';
+                agreementStatus.parentElement.classList.add('completed');
+                registerBtn.disabled = false;
+                registerBtn.textContent = '注册';
+            } else {
+                let remaining = [];
+                if (!hasReadToBottom.terms || !hasReadForTenSeconds.terms) {
+                    remaining.push('用户协议');
+                }
+                if (!hasReadToBottom.privacy || !hasReadForTenSeconds.privacy) {
+                    remaining.push('隐私协议');
+                }
+                agreementStatus.textContent = `（还需阅读：${remaining.join('、')}）`;
+                agreementStatus.parentElement.classList.remove('completed');
+                registerBtn.disabled = true;
+                registerBtn.textContent = '请先同意协议';
+            }
+        }
+
+        // 关闭弹窗
+        function closeModal() {
+            const bodyEl = document.getElementById('modalBody');
+
+            // 停止倒计时
+            if (currentAgreement && countdownTimers[currentAgreement]) {
+                clearInterval(countdownTimers[currentAgreement]);
+                countdownTimers[currentAgreement] = null;
+            }
+
+            if (bodyEl.onscroll) {
+                bodyEl.onscroll = null;
+            }
+            document.getElementById('agreementModal').classList.remove('active');
+            currentAgreement = null;
+        }
+
+        // 同意并关闭
+        function agreeAndClose() {
+            closeModal();
+        }
+
+        // 简单的 Markdown 渲染
+        function renderMarkdown(text) {
+            return text
+                // 标题
+                .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+                .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+                .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+                // 分隔线
+                .replace(/^---$/gm, '<hr style="margin: 20px 0; border: none; border-top: 1px solid #e0e0e0;">')
+                // 粗体
+                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                // 列表
+                .replace(/^- (.+)$/gm, '<li>$1</li>')
+                .replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>')
+                // 段落
+                .replace(/^([^<\n].+)$/gm, '<p>$1</p>')
+                // 清理空段落
+                .replace(/<p><\/p>/g, '')
+                .replace(/<p>(<h[1-6]>)/g, '$1')
+                .replace(/(<\/h[1-6]>)<\/p>/g, '$1');
+        }
 
         // 点击遮罩层关闭弹窗
         document.getElementById('agreementModal').addEventListener('click', (e) => {

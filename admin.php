@@ -648,6 +648,32 @@ if (isset($_POST['action']) && in_array($_POST['action'], [
                 header('Location: admin.php?success=用户名称已成功修改');
                 break;
                 
+        case 'unbind_phone':
+                // 解绑手机号
+                $user_id = intval($_POST['user_id']);
+                
+                // 检查用户是否存在
+                $stmt = $conn->prepare("SELECT id, phone FROM users WHERE id = ?");
+                $stmt->execute([$user_id]);
+                $user = $stmt->fetch();
+                
+                if (!$user) {
+                    header('Location: admin.php?error=用户不存在');
+                    exit;
+                }
+                
+                if (empty($user['phone'])) {
+                    header('Location: admin.php?error=该用户未绑定手机号');
+                    exit;
+                }
+                
+                // 更新用户手机号为空
+                $stmt = $conn->prepare("UPDATE users SET phone = NULL WHERE id = ?");
+                $stmt->execute([$user_id]);
+                
+                header('Location: admin.php?success=用户手机号已成功解绑');
+                break;
+                
         case 'ban_user':
                 // 封禁用户
                 $user_id = intval($_POST['user_id']);
@@ -1666,6 +1692,25 @@ try {
         input:checked + .toggle-slider:before {
             transform: translateX(26px);
         }
+        .qqmusic-search-results::-webkit-scrollbar {
+            width: 6px;
+        }
+        .qqmusic-search-results::-webkit-scrollbar-thumb {
+            background-color: #ccc;
+            border-radius: 3px;
+        }
+        .qqmusic-search-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 13px;
+        }
+        .qqmusic-search-item:hover {
+            background-color: #f5f5f5;
+        }
+        .qqmusic-search-item:last-child {
+            border-bottom: none;
+        }
     </style>
 </head>
 <body>
@@ -1881,6 +1926,7 @@ try {
                             <p>邮箱: <?php echo $user_item['email']; ?></p>
                             <p>状态: <?php echo $user_item['status']; ?></p>
                             <p>角色: <?php echo $user_item['is_admin'] ? '管理员' : '普通用户'; ?></p>
+                            <p>手机号: <?php echo !empty($user_item['phone']) ? $user_item['phone'] : '未绑定'; ?></p>
                             <p>注册时间: <?php echo $user_item['created_at']; ?></p>
                             <p>最后活跃: <?php echo $user_item['last_active']; ?></p>
                             <!-- 检查用户封禁状态 -->
@@ -1899,6 +1945,9 @@ try {
                                     <button onclick="showClearDataModal('delete_user', <?php echo $user_item['id']; ?>)" style="padding: 6px 12px; background: #ef5350; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">强制删除</button>
                                     <button onclick="showChangePasswordModal(<?php echo $user_item['id']; ?>, '<?php echo $user_item['username']; ?>')" style="padding: 6px 12px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">修改密码</button>
                                     <button onclick="showChangeUsernameModal(<?php echo $user_item['id']; ?>, '<?php echo $user_item['username']; ?>')" style="padding: 6px 12px; background: #4caf50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">修改名称</button>
+                                    <?php if (!empty($user_item['phone'])): ?>
+                                        <button onclick="showClearDataModal('unbind_phone', <?php echo $user_item['id']; ?>)" style="padding: 6px 12px; background: #795548; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">解绑手机</button>
+                                    <?php endif; ?>
                                     <?php if ($ban_info): ?>
                                         <?php if ($ban_info['expires_at']): ?>
                                             <button onclick="showLiftBanModal(<?php echo $user_item['id']; ?>, '<?php echo $user_item['username']; ?>')" style="padding: 6px 12px; background: #81c784; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">解除封禁</button>
@@ -2230,7 +2279,214 @@ try {
                                 
                                 // 监听选择变化
                                 document.getElementById('maintenance_page').addEventListener('change', checkMaintenancePage);
-                            </script>
+                            // 页面加载完成后初始化所有 QQ音乐 表格
+            document.addEventListener('DOMContentLoaded', function() {
+                document.querySelectorAll('.qqmusic-editor-container').forEach(container => {
+                    renderQQMusicTable(container);
+                });
+            });
+
+            // 渲染 QQ音乐 表格
+            function renderQQMusicTable(container) {
+                const hiddenInput = container.querySelector('.qqmusic-json-input');
+                const tbody = container.querySelector('.qqmusic-table-body');
+                const emptyTip = container.querySelector('.empty-tip');
+                
+                let songs = [];
+                try {
+                    songs = JSON.parse(hiddenInput.value || '[]');
+                } catch (e) {
+                    songs = [];
+                }
+                
+                tbody.innerHTML = '';
+                
+                if (songs.length === 0) {
+                    emptyTip.style.display = 'block';
+                } else {
+                    emptyTip.style.display = 'none';
+                    songs.forEach((song, index) => {
+                        const tr = document.createElement('tr');
+                        tr.style.borderBottom = '1px solid #f0f0f0';
+                        
+                        let songName = '';
+                        let chooseId = '';
+                        
+                        if (typeof song === 'string') {
+                            songName = song;
+                        } else if (typeof song === 'object') {
+                            songName = Object.keys(song)[0];
+                            chooseId = song[songName];
+                        }
+                        
+                        tr.innerHTML = `
+                            <td style="padding: 8px; text-align: center; color: #666;">${index + 1}</td>
+                            <td style="padding: 8px; color: #333;">${songName}</td>
+                            <td style="padding: 8px; text-align: center; color: #666;">${chooseId || '-'}</td>
+                            <td style="padding: 8px; text-align: center;">
+                                <button type="button" onclick="editQQMusicRow(this, ${index})" style="padding: 4px 8px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 5px;">编辑</button>
+                                <button type="button" onclick="removeQQMusicRow(this, ${index})" style="padding: 4px 8px; background: #ff4757; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">删除</button>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+            }
+
+            // QQ音乐搜索功能
+            let searchTimeout;
+            function searchQQMusic(input) {
+                const container = input.closest('div');
+                const resultsContainer = container.querySelector('.qqmusic-search-results');
+                const word = input.value.trim();
+                
+                if (!word) {
+                    resultsContainer.style.display = 'none';
+                    return;
+                }
+
+                // 防抖
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    fetch(`https://api.vkeys.cn/v2/music/tencent?word=${encodeURIComponent(word)}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.code === 200 && data.data) {
+                                resultsContainer.innerHTML = '';
+                                data.data.forEach((item, index) => {
+                                    const div = document.createElement('div');
+                                    div.className = 'qqmusic-search-item';
+                                    const chooseIndex = index + 1;
+                                    div.textContent = `${item.song} - ${item.singer} (chose:${chooseIndex})`;
+                                    div.onclick = function() {
+                                        // 这里修改：只填入用户输入的搜索词，或者让用户自己决定，
+                                        // 但根据用户最新需求："我输入的什么就拿我输入的作为名称"
+                                        // 所以这里我们不自动修改输入框的值为 "song - singer"，而是保留用户输入
+                                        // 或者更智能一点：如果用户想用搜出来的名字，他可以自己改。
+                                        // 但根据需求描述，用户似乎希望输入框里的内容就是最终保存的内容。
+                                        // 这里我们仅自动填入ID，不修改输入框里的歌名，
+                                        // 除非用户是清空了输入框重新搜的... 
+                                        // 实际上，通常搜索完点击结果，是希望采纳结果的。
+                                        // 但用户的意思是：搜索结果显示的是 "song - singer"，但他可能只输入了 "song"，
+                                        // 他希望保存的是 "song" 还是 "song - singer"？
+                                        // 用户说 "还有我输入的什么就拿我输入的作为名称而不是搜索结果的song - singer 作为名称"
+                                        // 这意味着点击搜索结果后，input.value 不应该被覆盖为 `${item.song} - ${item.singer}`
+                                        
+                                        // input.value = `${item.song} - ${item.singer}`; // 这一行被注释掉了
+                                        
+                                        // 找到对应的ID输入框
+                                        const flexContainer = input.closest('div').parentElement;
+                                        const idInput = flexContainer.querySelector('.new-qqmusic-id');
+                                        if (idInput) {
+                                            idInput.value = chooseIndex;
+                                        }
+                                        resultsContainer.style.display = 'none';
+                                    };
+                                    resultsContainer.appendChild(div);
+                                });
+                                resultsContainer.style.display = 'block';
+                            } else {
+                                resultsContainer.style.display = 'none';
+                            }
+                        })
+                        .catch(err => {
+                            console.error('Search failed:', err);
+                            resultsContainer.style.display = 'none';
+                        });
+                }, 300); // 300ms delay
+            }
+
+            // 点击外部关闭搜索结果
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('.new-qqmusic-name') && !e.target.closest('.qqmusic-search-results')) {
+                    document.querySelectorAll('.qqmusic-search-results').forEach(el => el.style.display = 'none');
+                }
+            });
+
+            // 添加 QQ音乐
+            function addQQMusicRow(btn) {
+                const container = btn.closest('.qqmusic-editor-container');
+                const nameInput = container.querySelector('.new-qqmusic-name');
+                const idInput = container.querySelector('.new-qqmusic-id');
+                const name = nameInput.value.trim();
+                const id = idInput.value.trim();
+                
+                if (!name) {
+                    alert('请输入歌名');
+                    return;
+                }
+                
+                if (!id) {
+                    alert('请输入ID');
+                    return;
+                }
+                
+                const hiddenInput = container.querySelector('.qqmusic-json-input');
+                let songs = [];
+                try {
+                    songs = JSON.parse(hiddenInput.value || '[]');
+                } catch (e) { songs = []; }
+                
+                // 总是使用对象格式 {name: id}
+                let obj = {};
+                obj[name] = id;
+                songs.push(obj);
+                
+                hiddenInput.value = JSON.stringify(songs);
+                nameInput.value = '';
+                idInput.value = '';
+                
+                renderQQMusicTable(container);
+            }
+
+            // 删除 QQ音乐
+            function removeQQMusicRow(btn, index) {
+                if (!confirm('确定要删除此歌曲吗？')) return;
+                
+                const container = btn.closest('.qqmusic-editor-container');
+                const hiddenInput = container.querySelector('.qqmusic-json-input');
+                let songs = JSON.parse(hiddenInput.value || '[]');
+                
+                songs.splice(index, 1);
+                hiddenInput.value = JSON.stringify(songs);
+                
+                renderQQMusicTable(container);
+            }
+
+            // 编辑 QQ音乐
+            function editQQMusicRow(btn, index) {
+                const container = btn.closest('.qqmusic-editor-container');
+                const hiddenInput = container.querySelector('.qqmusic-json-input');
+                let songs = JSON.parse(hiddenInput.value || '[]');
+                const song = songs[index];
+                
+                let oldName = '';
+                let oldId = '';
+                
+                if (typeof song === 'string') {
+                    oldName = song;
+                } else {
+                    oldName = Object.keys(song)[0];
+                    oldId = song[oldName];
+                }
+                
+                const newName = prompt('编辑歌名:', oldName);
+                if (newName !== null && newName.trim() !== '') {
+                    const newId = prompt('编辑选择ID(可选):', oldId);
+                    
+                    if (newId && newId.trim() !== '') {
+                        let obj = {};
+                        obj[newName.trim()] = newId.trim();
+                        songs[index] = obj;
+                    } else {
+                        songs[index] = newName.trim();
+                    }
+                    
+                    hiddenInput.value = JSON.stringify(songs);
+                    renderQQMusicTable(container);
+                }
+            }
+            </script>
                             
                             <div style="margin-bottom: 20px;">
                                 <label style="display: block; margin-bottom: 5px; font-weight: 600;">管理员密码</label>
@@ -2395,6 +2651,7 @@ try {
                                 // 本地类型保持字符串
                                 $displayData = $type === 'local' ? (is_array($data) ? '' : $data) : '';
                                 $urlDataJson = $type === 'url' ? json_encode($data) : '[]';
+                                $qqMusicDataJson = $type === 'qqmusic' ? json_encode($data) : '[]';
                             ?>
                             <div class="setting-item playlist-item" style="flex-direction: column; align-items: stretch; gap: 10px; background: #f9f9f9; margin: 10px; border-radius: 8px; border: 1px solid #eee;">
                                 <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -2412,6 +2669,7 @@ try {
                                         <select name="playlist_type[]" class="search-input" onchange="togglePlaylistInput(this)">
                                             <option value="local" <?php echo $type === 'local' ? 'selected' : ''; ?>>本地目录 (Local)</option>
                                             <option value="url" <?php echo $type === 'url' ? 'selected' : ''; ?>>网络链接 (URL)</option>
+                                            <option value="qqmusic" <?php echo $type === 'qqmusic' ? 'selected' : ''; ?>>QQ音乐 (QQMusic)</option>
                                         </select>
                                     </div>
                                 </div>
@@ -2419,7 +2677,11 @@ try {
                                 <div>
                                     <label style="display: block; margin-bottom: 5px; font-weight: 600;">内容配置</label>
                                     <div class="playlist-desc" style="font-size: 12px; color: #666; margin-bottom: 5px;">
-                                        <?php echo $type === 'local' ? '请输入网站根目录下的文件夹路径（例如：new_music）' : '配置音频URL列表'; ?>
+                                        <?php 
+                                        if ($type === 'local') echo '请输入网站根目录下的文件夹路径（例如：new_music）';
+                                        elseif ($type === 'qqmusic') echo '配置QQ音乐歌曲列表';
+                                        else echo '配置音频URL列表'; 
+                                        ?>
                                     </div>
                                     
                                     <!-- 本地路径输入框 -->
@@ -2450,6 +2712,39 @@ try {
                                         <div style="display: flex; gap: 10px;">
                                             <input type="text" class="new-url-input search-input" placeholder="输入音频URL (http/https...)" style="margin-bottom: 0; flex: 1;">
                                             <button type="button" onclick="addUrlRow(this)" style="padding: 8px 16px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; white-space: nowrap;">添加</button>
+                                        </div>
+                                    </div>
+
+                                    <!-- QQ音乐列表编辑器 -->
+                                    <div class="qqmusic-editor-container" style="display: <?php echo $type === 'qqmusic' ? 'block' : 'none'; ?>;">
+                                        <input type="hidden" name="playlist_content[]" class="qqmusic-json-input" value='<?php echo htmlspecialchars($qqMusicDataJson, ENT_QUOTES); ?>' <?php echo $type === 'qqmusic' ? '' : 'disabled'; ?>>
+                                        
+                                        <!-- QQ音乐表格 -->
+                                        <div class="qqmusic-table-wrapper" style="background: white; border: 1px solid #ddd; border-radius: 4px; overflow: hidden; margin-bottom: 10px;">
+                                            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                                                <thead style="background: #f1f3f5; border-bottom: 1px solid #ddd;">
+                                                    <tr>
+                                                        <th style="padding: 8px; text-align: center; width: 50px; color: #555;">ID</th>
+                                                        <th style="padding: 8px; text-align: left; color: #555;">歌名</th>
+                                                        <th style="padding: 8px; text-align: center; width: 80px; color: #555;">选择ID</th>
+                                                        <th style="padding: 8px; text-align: center; width: 120px; color: #555;">操作</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody class="qqmusic-table-body">
+                                                    <!-- JS将在这里渲染行 -->
+                                                </tbody>
+                                            </table>
+                                            <div class="empty-tip" style="padding: 20px; text-align: center; color: #999; display: none;">暂无歌曲</div>
+                                        </div>
+                                        
+                                        <!-- 添加区域 -->
+                                        <div style="display: flex; gap: 10px; position: relative;">
+                                            <div style="flex: 2; position: relative;">
+                                                <input type="text" class="new-qqmusic-name search-input" placeholder="输入歌名" style="margin-bottom: 0; width: 100%;" oninput="searchQQMusic(this)">
+                                                <div class="qqmusic-search-results" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ddd; border-top: none; max-height: 200px; overflow-y: auto; z-index: 1000; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>
+                                            </div>
+                                            <input type="text" class="new-qqmusic-id search-input" placeholder="ID(必填)" style="margin-bottom: 0; flex: 1;">
+                                            <button type="button" onclick="addQQMusicRow(this)" style="padding: 8px 16px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; white-space: nowrap;">添加</button>
                                         </div>
                                     </div>
                                 </div>
@@ -2585,21 +2880,32 @@ try {
                 const localInput = item.querySelector('.local-input');
                 const urlEditor = item.querySelector('.url-editor-container');
                 const urlJsonInput = urlEditor.querySelector('.url-json-input');
+                const qqEditor = item.querySelector('.qqmusic-editor-container');
+                const qqJsonInput = qqEditor.querySelector('.qqmusic-json-input');
+                
+                // 重置所有状态
+                localInput.style.display = 'none';
+                localInput.required = false;
+                localInput.disabled = true;
+                
+                urlEditor.style.display = 'none';
+                urlJsonInput.disabled = true;
+                
+                qqEditor.style.display = 'none';
+                qqJsonInput.disabled = true;
                 
                 if (select.value === 'local') {
                     desc.textContent = '请输入网站根目录下的文件夹路径（例如：new_music）';
                     localInput.style.display = 'block';
                     localInput.required = true;
                     localInput.disabled = false;
-                    
-                    urlEditor.style.display = 'none';
-                    urlJsonInput.disabled = true; // 禁用以免提交
+                } else if (select.value === 'qqmusic') {
+                    desc.textContent = '配置QQ音乐歌曲列表';
+                    qqEditor.style.display = 'block';
+                    qqJsonInput.disabled = false;
+                    renderQQMusicTable(qqEditor);
                 } else {
                     desc.textContent = '配置音频URL列表';
-                    localInput.style.display = 'none';
-                    localInput.required = false;
-                    localInput.disabled = true;
-                    
                     urlEditor.style.display = 'block';
                     urlJsonInput.disabled = false;
                     renderUrlTable(urlEditor);
@@ -2635,6 +2941,7 @@ try {
                                 <select name="playlist_type[]" class="search-input" onchange="togglePlaylistInput(this)">
                                     <option value="local">本地目录 (Local)</option>
                                     <option value="url" selected>网络链接 (URL)</option>
+                                    <option value="qqmusic">QQ音乐 (QQMusic)</option>
                                 </select>
                             </div>
                         </div>
@@ -2672,6 +2979,36 @@ try {
                                     <button type="button" onclick="addUrlRow(this)" style="padding: 8px 16px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; white-space: nowrap;">添加</button>
                                 </div>
                             </div>
+
+                            <!-- QQ音乐列表编辑器 -->
+                            <div class="qqmusic-editor-container" style="display: none;">
+                                <input type="hidden" name="playlist_content[]" class="qqmusic-json-input" value="[]" disabled>
+                                
+                                <div class="qqmusic-table-wrapper" style="background: white; border: 1px solid #ddd; border-radius: 4px; overflow: hidden; margin-bottom: 10px;">
+                                    <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                                        <thead style="background: #f1f3f5; border-bottom: 1px solid #ddd;">
+                                            <tr>
+                                                <th style="padding: 8px; text-align: center; width: 50px; color: #555;">ID</th>
+                                                <th style="padding: 8px; text-align: left; color: #555;">歌名</th>
+                                                <th style="padding: 8px; text-align: center; width: 80px; color: #555;">选择ID</th>
+                                                <th style="padding: 8px; text-align: center; width: 120px; color: #555;">操作</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="qqmusic-table-body">
+                                        </tbody>
+                                    </table>
+                                    <div class="empty-tip" style="padding: 20px; text-align: center; color: #999; display: block;">暂无歌曲</div>
+                                </div>
+                                
+                                <div style="display: flex; gap: 10px; position: relative;">
+                                    <div style="flex: 2; position: relative;">
+                                        <input type="text" class="new-qqmusic-name search-input" placeholder="输入歌名" style="margin-bottom: 0; width: 100%;" oninput="searchQQMusic(this)">
+                                        <div class="qqmusic-search-results" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ddd; border-top: none; max-height: 200px; overflow-y: auto; z-index: 1000; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>
+                                    </div>
+                                    <input type="text" class="new-qqmusic-id search-input" placeholder="ID(必填)" style="margin-bottom: 0; flex: 1;">
+                                    <button type="button" onclick="addQQMusicRow(this)" style="padding: 8px 16px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; white-space: nowrap;">添加</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -2684,6 +3021,144 @@ try {
                 items.forEach((h4, index) => {
                     h4.textContent = '歌单 #' + (index + 1);
                 });
+            }
+
+            // 页面加载完成后初始化所有 QQ音乐 表格
+            document.addEventListener('DOMContentLoaded', function() {
+                document.querySelectorAll('.qqmusic-editor-container').forEach(container => {
+                    renderQQMusicTable(container);
+                });
+            });
+
+            // 渲染 QQ音乐 表格
+            function renderQQMusicTable(container) {
+                const hiddenInput = container.querySelector('.qqmusic-json-input');
+                const tbody = container.querySelector('.qqmusic-table-body');
+                const emptyTip = container.querySelector('.empty-tip');
+                
+                let songs = [];
+                try {
+                    songs = JSON.parse(hiddenInput.value || '[]');
+                } catch (e) {
+                    songs = [];
+                }
+                
+                tbody.innerHTML = '';
+                
+                if (songs.length === 0) {
+                    emptyTip.style.display = 'block';
+                } else {
+                    emptyTip.style.display = 'none';
+                    songs.forEach((song, index) => {
+                        const tr = document.createElement('tr');
+                        tr.style.borderBottom = '1px solid #f0f0f0';
+                        
+                        let songName = '';
+                        let chooseId = '';
+                        
+                        if (typeof song === 'string') {
+                            songName = song;
+                        } else if (typeof song === 'object') {
+                            songName = Object.keys(song)[0];
+                            chooseId = song[songName];
+                        }
+                        
+                        tr.innerHTML = `
+                            <td style="padding: 8px; text-align: center; color: #666;">${index + 1}</td>
+                            <td style="padding: 8px; color: #333;">${songName}</td>
+                            <td style="padding: 8px; text-align: center; color: #666;">${chooseId || '-'}</td>
+                            <td style="padding: 8px; text-align: center;">
+                                <button type="button" onclick="editQQMusicRow(this, ${index})" style="padding: 4px 8px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 5px;">编辑</button>
+                                <button type="button" onclick="removeQQMusicRow(this, ${index})" style="padding: 4px 8px; background: #ff4757; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">删除</button>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+            }
+
+            // 添加 QQ音乐
+            function addQQMusicRow(btn) {
+                const container = btn.closest('.qqmusic-editor-container');
+                const nameInput = container.querySelector('.new-qqmusic-name');
+                const idInput = container.querySelector('.new-qqmusic-id');
+                const name = nameInput.value.trim();
+                const id = idInput.value.trim();
+                
+                if (!name) {
+                    alert('请输入歌名');
+                    return;
+                }
+
+                if (!id) {
+                    alert('请输入ID');
+                    return;
+                }
+                
+                const hiddenInput = container.querySelector('.qqmusic-json-input');
+                let songs = [];
+                try {
+                    songs = JSON.parse(hiddenInput.value || '[]');
+                } catch (e) { songs = []; }
+                
+                // 总是使用对象格式 {name: id}
+                let obj = {};
+                obj[name] = id;
+                songs.push(obj);
+                
+                hiddenInput.value = JSON.stringify(songs);
+                nameInput.value = '';
+                idInput.value = '';
+                
+                renderQQMusicTable(container);
+            }
+
+            // 删除 QQ音乐
+            function removeQQMusicRow(btn, index) {
+                if (!confirm('确定要删除此歌曲吗？')) return;
+                
+                const container = btn.closest('.qqmusic-editor-container');
+                const hiddenInput = container.querySelector('.qqmusic-json-input');
+                let songs = JSON.parse(hiddenInput.value || '[]');
+                
+                songs.splice(index, 1);
+                hiddenInput.value = JSON.stringify(songs);
+                
+                renderQQMusicTable(container);
+            }
+
+            // 编辑 QQ音乐
+            function editQQMusicRow(btn, index) {
+                const container = btn.closest('.qqmusic-editor-container');
+                const hiddenInput = container.querySelector('.qqmusic-json-input');
+                let songs = JSON.parse(hiddenInput.value || '[]');
+                const song = songs[index];
+                
+                let oldName = '';
+                let oldId = '';
+                
+                if (typeof song === 'string') {
+                    oldName = song;
+                } else {
+                    oldName = Object.keys(song)[0];
+                    oldId = song[oldName];
+                }
+                
+                const newName = prompt('编辑歌名:', oldName);
+                if (newName !== null && newName.trim() !== '') {
+                    const newId = prompt('编辑选择ID(可选):', oldId);
+                    
+                    if (newId && newId.trim() !== '') {
+                        let obj = {};
+                        obj[newName.trim()] = newId.trim();
+                        songs[index] = obj;
+                    } else {
+                        songs[index] = newName.trim();
+                    }
+                    
+                    hiddenInput.value = JSON.stringify(songs);
+                    renderQQMusicTable(container);
+                }
             }
             </script>
 
@@ -2739,7 +3214,6 @@ try {
                             <thead>
                                 <tr style="background: #e9ecef; border-bottom: 2px solid #dee2e6;">
                                     <th style="padding: 12px; text-align: left; font-weight: 600; color: #333;">IP地址</th>
-                                    <th style="padding: 12px; text-align: left; font-weight: 600; color: #333;">尝试次数</th>
                                     <th style="padding: 12px; text-align: left; font-weight: 600; color: #333;">封禁开始时间</th>
                                     <th style="padding: 12px; text-align: left; font-weight: 600; color: #333;">封禁结束时间</th>
                                     <th style="padding: 12px; text-align: left; font-weight: 600; color: #333;">状态</th>
@@ -2755,7 +3229,7 @@ try {
                                     $ip_bans = $stmt->fetchAll();
                                     
                                     if (empty($ip_bans)) {
-                                        echo '<tr><td colspan="6" style="padding: 20px; text-align: center; color: #666;">没有IP封禁记录</td></tr>';
+                                        echo '<tr><td colspan="5" style="padding: 20px; text-align: center; color: #666;">没有IP封禁记录</td></tr>';
                                     } else {
                                         foreach ($ip_bans as $ban) {
                                             $status = '已封禁';
@@ -2765,7 +3239,6 @@ try {
                                             
                                             echo '<tr style="border-bottom: 1px solid #f0f0f0;">
                                                 <td style="padding: 12px; color: #333;">' . htmlspecialchars($ban['ip_address']) . '</td>
-                                                <td style="padding: 12px; color: #666;">' . $ban['attempts'] . '</td>
                                                 <td style="padding: 12px; color: #666;">' . $ban['ban_start'] . '</td>
                                                 <td style="padding: 12px; color: #666;">' . ($ban['ban_end'] ? $ban['ban_end'] : '永久') . '</td>
                                                 <td style="padding: 12px;"><span class="status-' . ($status === '已封禁' ? 'pending' : 'approved') . '">' . $status . '</span></td>

@@ -529,11 +529,31 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             font-size: 14px;
             font-weight: 600;
             margin-bottom: 2px;
+            /* 如果不是好友或未加入群聊，隐藏名称 */
+            display: <?php 
+                if ($chat_type === 'friend') {
+                    echo ($selected_friend_id && !$friend->isFriend($user_id, $selected_friend_id)) ? 'none' : 'block';
+                } elseif ($chat_type === 'group') {
+                    echo ($selected_id && !$group->isUserInGroup($selected_id, $user_id)) ? 'none' : 'block';
+                } else {
+                    echo 'block';
+                }
+            ?>;
         }
         
         .user-ip {
             font-size: 11px;
             color: #999;
+            /* 如果不是好友或未加入群聊，隐藏IP/在线状态 */
+            display: <?php 
+                if ($chat_type === 'friend') {
+                    echo ($selected_friend_id && !$friend->isFriend($user_id, $selected_friend_id)) ? 'none' : 'block';
+                } elseif ($chat_type === 'group') {
+                    echo ($selected_id && !$group->isUserInGroup($selected_id, $user_id)) ? 'none' : 'block';
+                } else {
+                    echo 'block';
+                }
+            ?>;
         }
         
         /* 搜索栏 */
@@ -783,11 +803,31 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             font-size: 16px;
             font-weight: 600;
             margin-bottom: 2px;
+            /* 如果不是好友或未加入群聊，隐藏聊天对象名称 */
+            display: <?php 
+                if ($chat_type === 'friend') {
+                    echo ($selected_friend_id && !$friend->isFriend($user_id, $selected_friend_id)) ? 'none' : 'block';
+                } elseif ($chat_type === 'group') {
+                    echo ($selected_id && !$group->isUserInGroup($selected_id, $user_id)) ? 'none' : 'block';
+                } else {
+                    echo 'block';
+                }
+            ?>;
         }
         
         .chat-header-status {
             font-size: 12px;
             color: var(--text-desc);
+            /* 如果不是好友或未加入群聊，隐藏聊天对象状态 */
+            display: <?php 
+                if ($chat_type === 'friend') {
+                    echo ($selected_friend_id && !$friend->isFriend($user_id, $selected_friend_id)) ? 'none' : 'block';
+                } elseif ($chat_type === 'group') {
+                    echo ($selected_id && !$group->isUserInGroup($selected_id, $user_id)) ? 'none' : 'block';
+                } else {
+                    echo 'block';
+                }
+            ?>;
         }
         
         /* 消息容器 */
@@ -2020,6 +2060,31 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                     ">设置</button>
                 </div>
                 
+                <!-- 管理员入口 -->
+                <?php if (isset($current_user['role']) && $current_user['role'] === 'admin'): ?>
+                <div style="padding: 20px; background: var(--panel-bg); border-radius: 8px; margin-bottom: 20px; transition: background-color 0.3s;">
+                    <h3 style="color: var(--text-color); font-size: 16px; font-weight: 600; margin-bottom: 15px;">系统管理</h3>
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <div>
+                            <div style="font-size: 14px; font-weight: 500; color: var(--text-color);">管理后台</div>
+                            <div style="font-size: 12px; color: var(--text-secondary);">进入系统管理控制台</div>
+                        </div>
+                        <button onclick="window.open('admin.php', '_blank')" style="
+                            padding: 8px 16px;
+                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                            color: white;
+                            border: none;
+                            border-radius: 6px;
+                            cursor: pointer;
+                            font-size: 13px;
+                            font-weight: 500;
+                            box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
+                            transition: all 0.2s;
+                        ">进入</button>
+                    </div>
+                </div>
+                <?php endif; ?>
+
                 <!-- 外观设置 -->
                 <div class="setting-item" style="display: flex; justify-content: space-between; align-items: center; padding: 15px 0;">
                     <div>
@@ -6516,7 +6581,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 // 更新进度条和时间
                 audio.addEventListener('timeupdate', function() {
                     // 确保duration有效才计算进度
-                    if (isNaN(audio.duration) || audio.duration <= 0) {
+                    if (!isFinite(audio.duration) || isNaN(audio.duration) || audio.duration <= 0) {
                         return;
                     }
                     const progressPercent = (audio.currentTime / audio.duration) * 100;
@@ -6534,7 +6599,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 // 进度条点击跳转到指定位置
                 progressBar.addEventListener('click', function(e) {
                     // 确保duration有效才允许跳转
-                    if (isNaN(audio.duration) || audio.duration <= 0) {
+                    if (!isFinite(audio.duration) || isNaN(audio.duration) || audio.duration <= 0) {
                         return;
                     }
                     const progressWidth = progressBar.clientWidth;
@@ -6565,7 +6630,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 };
                 
                 const updateProgressFromEvent = (e) => {
-                    if (isNaN(audio.duration) || audio.duration <= 0) return;
+                    if (!isFinite(audio.duration) || isNaN(audio.duration) || audio.duration <= 0) return;
                     
                     const progressWidth = progressBar.clientWidth;
                     const rect = progressBar.getBoundingClientRect();
@@ -8401,7 +8466,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             document.getElementById('change-avatar-modal').style.display = 'none';
         }
 
-        // 监听头像文件选择并预览
+        // 监听头像文件选择并显示文件名
         document.addEventListener('DOMContentLoaded', function() {
             const avatarFileInput = document.getElementById('avatar-file');
             if (avatarFileInput) {
@@ -8435,6 +8500,12 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                         img.style.height = '100%';
                         img.style.objectFit = 'cover';
                         avatarPreview.appendChild(img);
+                        
+                        // 显示文件名
+                        const fileNameDiv = document.getElementById('selected-file-name');
+                        if (fileNameDiv) {
+                            fileNameDiv.textContent = '已选择: ' + file.name;
+                        }
                     };
                     reader.readAsDataURL(file);
                 });
@@ -9712,7 +9783,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         
         // 格式化时间显示（秒 -> mm:ss）
         function formatTime(seconds) {
-            if (isNaN(seconds)) return '0:00';
+            if (isNaN(seconds) || !isFinite(seconds) || seconds < 0) return '0:00';
             
             const mins = Math.floor(seconds / 60);
             const secs = Math.floor(seconds % 60);
