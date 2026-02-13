@@ -41,7 +41,7 @@ if (isset($_SESSION['last_sms_time']) && (time() - $_SESSION['last_sms_time'] < 
 // 验证极验签名
 $captchaId = '55574dfff9c40f2efeb5a26d6d188245';
 $captchaKey = 'e69583b3ddcc2b114388b5e1dc213cfd';
-$apiUrl = 'http://gcaptcha4.geetest.com/validate?captcha_id=' . urlencode($captchaId);
+$apiUrl = 'https://gcaptcha4.geetest.com/validate?captcha_id=' . urlencode($captchaId);
 
 $sign_token = hash_hmac('sha256', $lot_number, $captchaKey);
 

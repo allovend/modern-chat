@@ -94,7 +94,7 @@ try {
         // 生成签名
         $sign_token = hash_hmac('sha256', $lot_number, $captchaKey);
         
-        $apiUrl = 'http://gcaptcha4.geetest.com/validate?captcha_id=' . urlencode($captchaId);
+        $apiUrl = 'https://gcaptcha4.geetest.com/validate?captcha_id=' . urlencode($captchaId);
         $params = [
             'lot_number' => $lot_number,
             'captcha_output' => $captcha_output,
