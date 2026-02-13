@@ -480,23 +480,7 @@ try {
 else if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // 获取表单数据
     $email = trim($_POST['email']);
-    
-    // 处理 RSA 加密密码
-    $password = '';
-    if (isset($_POST['encrypted_password']) && !empty($_POST['encrypted_password'])) {
-        // 使用 RSA 解密密码
-        require_once 'RSAUtil.php';
-        $rsaUtil = new RSAUtil();
-        $decryptedPassword = $rsaUtil->decrypt($_POST['encrypted_password']);
-        if ($decryptedPassword !== false) {
-            $password = $decryptedPassword;
-        } else {
-            $errors[] = '密码解密失败，请重试';
-        }
-    } elseif (isset($_POST['password']) && !empty($_POST['password'])) {
-        // 兼容未加密的情况（用于测试或降级）
-        $password = $_POST['password'];
-    }
+    $password = $_POST['password'];
     
     // 获取极验4.0验证码验证结�?    
     $lot_number = isset($_POST['geetest_challenge']) ? $_POST['geetest_challenge'] : '';
@@ -567,8 +551,9 @@ $ch = curl_init();
                 error_log("Geetest 4.0 validation failed - Result: " . json_encode($result) . ", Reason: $reason");
             }
         } else {
-            // API请求失败，暂时跳过验证（可能是网络问题）
+            // API请求失败，视为验证失败，防止绕过
             error_log("Geetest 4.0 API request failed - HTTP Code: $http_code, Response: $response");
+            $errors[] = '验证服务暂时不可用，请稍后重试';
         }
     }
     
@@ -596,7 +581,8 @@ $ch = curl_init();
         }
         
         // 登录成功，将用户信息存储在会话中
-            $_SESSION['user_id'] = $result['user']['id'];
+        session_regenerate_id(true); // 防止会话固定攻击
+        $_SESSION['user_id'] = $result['user']['id'];
             $_SESSION['username'] = $result['user']['username'];
             $_SESSION['email'] = $result['user']['email'];
             $_SESSION['avatar'] = $result['user']['avatar'];
@@ -682,7 +668,10 @@ $stmt = $conn->prepare("DELETE FROM forget_password_requests WHERE username = ? 
         // 登录失败，记录失败的登录尝试
         logLoginAttempt($conn, $client_ip, false);
         
-        // 检查失败尝试次�?        
+        // 增加延迟，防止暴力破解
+        sleep(2);
+        
+        // 检查失败尝试次数        
 $failed_attempts = checkFailedLoginAttempts($conn, $client_ip);
         if ($failed_attempts >= MAX_LOGIN_ATTEMPTS) {
             // 封禁IP

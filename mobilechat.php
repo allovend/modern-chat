@@ -3423,7 +3423,8 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                             $msg_time = strtotime($msg['created_at']);
                             $now = time();
                             $time_diff_minutes = ($now - $msg_time) / 60;
-                            $is_within_2_minutes = $time_diff_minutes < 2;
+                            // 使用 <= 2，与 JavaScript 保持一致，允许刚好 2 分钟时撤回
+                            $is_within_2_minutes = $time_diff_minutes <= 2;
                         ?>
                         <div class="message <?php echo $is_sent ? 'sent' : 'received'; ?>" 
                             data-message-id="<?php echo $msg['id']; ?>" 

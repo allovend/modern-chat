@@ -3842,7 +3842,8 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                             $msg_time = strtotime($msg['created_at']);
                             $now = time();
                             $time_diff_minutes = ($now - $msg_time) / 60;
-                            $is_within_2_minutes = $time_diff_minutes < 2;
+                            // 使用 <= 2，与 JavaScript 保持一致，允许刚好 2 分钟时撤回
+                            $is_within_2_minutes = $time_diff_minutes <= 2;
                         ?>
                         <div class="message <?php echo $is_sent ? 'sent' : 'received'; ?>" 
                             data-message-id="<?php echo $msg['id']; ?>" 
@@ -3928,18 +3929,24 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                                         }
                                     ?>
                                     <div class="message-time"><?php echo date('Y年m月d日 H:i', strtotime($msg['created_at'])); ?></div>
-                                    <?php if (true): // 始终显示三个点按钮，撤回功能在菜单内判断 ?>
+                                    <?php 
+                                    // 判断是否需要显示操作按钮
+                                    $has_recall_btn = $is_within_2_minutes;
+                                    $has_download_btn = (isset($msg['type']) && $msg['type'] == 'file') || (isset($msg['file_path']) && !empty($msg['file_path']));
+                                    $show_actions_menu = $has_recall_btn || $has_download_btn;
+                                    
+                                    if ($show_actions_menu): 
+                                    ?>
                                         <div class='message-actions' style='position: absolute; top: 50%; right: -10px; transform: translateY(-50%); display: flex; align-items: center; gap: 5px; z-index: 9999;'>
                                             <div style='position: relative; z-index: 9999;'>
                                                 <button class='message-action-btn' onclick='toggleMessageActions(this)' style='width: 28px; height: 28px; font-size: 18px; background: rgba(0,0,0,0.2); border: none; border-radius: 50%; color: #333; cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: 1; transition: all 0.2s ease; position: relative; z-index: 9999;'>⋮</button>
                                                 <div class='message-action-menu' style='display: none; position: absolute; top: 35px; right: 0; background: white; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.2); padding: 8px 0; z-index: 10000; min-width: 100px; border: 1px solid var(--border-color);'>
-                                                    <?php if ($is_within_2_minutes): ?>
+                                                    <?php if ($has_recall_btn): ?>
                                                         <button class='message-action-item' onclick='recallMessage(this, "<?php echo $msg['id']; ?>", "<?php echo $chat_type; ?>", "<?php echo $selected_id; ?>")' style='display: block; width: 100%; text-align: left; padding: 8px 16px; border: none; background: transparent; cursor: pointer; transition: all 0.2s ease; color: #333;'>撤回</button>
                                                     <?php endif; ?>
                                                     
                                                     <?php 
-                                                    // 如果是文件消息，添加下载按钮
-                                                    if (isset($msg['type']) && $msg['type'] == 'file' || (isset($msg['file_path']) && !empty($msg['file_path']))) {
+                                                    if ($has_download_btn) {
                                                         $dl_file_name = isset($msg['file_name']) ? $msg['file_name'] : '';
                                                         $dl_file_path = isset($msg['file_path']) ? $msg['file_path'] : '';
                                                         $dl_file_size = isset($msg['file_size']) ? $msg['file_size'] : 0;
