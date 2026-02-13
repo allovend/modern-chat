@@ -3036,7 +3036,181 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                             overlay.classList.toggle('open');
                         }
                     }
-                </script>
+                    // 邀请好友加入群聊
+        function inviteFriendsToGroup(groupId) {
+            // 创建并显示邀请好友弹窗
+            const modal = document.createElement('div');
+            modal.id = 'invite-friends-modal';
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.5);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 1000;
+            `;
+
+            const modalContent = document.createElement('div');
+            modalContent.style.cssText = `
+                background: var(--modal-bg);
+                border-radius: 12px;
+                width: 90%;
+                max-width: 500px;
+                max-height: 80vh;
+                overflow: hidden;
+                color: var(--text-color);
+            `;
+
+            // 弹窗标题
+            const modalHeader = document.createElement('div');
+            modalHeader.style.cssText = `
+                padding: 20px;
+                border-bottom: 1px solid var(--border-color);
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            `;
+            modalHeader.innerHTML = `
+                <h3 style="margin: 0; font-size: 18px; font-weight: 600;">邀请好友加入群聊</h3>
+                <button onclick="document.getElementById('invite-friends-modal').remove()" style="
+                    background: none;
+                    border: none;
+                    font-size: 24px;
+                    cursor: pointer;
+                    color: var(--text-color);
+                    padding: 0;
+                    width: 30px;
+                    height: 30px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                ">×</button>
+            `;
+            modalContent.appendChild(modalHeader);
+
+            // 弹窗内容
+            const modalBody = document.createElement('div');
+            modalBody.style.cssText = `
+                padding: 20px;
+                overflow-y: auto;
+                max-height: calc(80vh - 120px);
+            `;
+            modalBody.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--text-desc);">加载好友列表中...</div>';
+            modalContent.appendChild(modalBody);
+
+            modal.appendChild(modalContent);
+            document.body.appendChild(modal);
+
+            // 加载好友列表
+            fetch(`get_friends_for_group_invite.php?group_id=${groupId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        let friendsHTML = '';
+                        if (data.friends.length > 0) {
+                            data.friends.forEach(friend => {
+                                friendsHTML += `
+                                    <div style="
+                                        display: flex;
+                                        justify-content: space-between;
+                                        align-items: center;
+                                        padding: 12px;
+                                        border-bottom: 1px solid var(--border-color);
+                                    ">
+                                        <div style="display: flex; align-items: center; gap: 12px;">
+                                            <div style="
+                                                width: 40px;
+                                                height: 40px;
+                                                border-radius: 50%;
+                                                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                                                display: flex;
+                                                align-items: center;
+                                                justify-content: center;
+                                                color: white;
+                                                font-weight: 600;
+                                                font-size: 16px;
+                                                position: relative;
+                                            ">
+                                                ${friend.username.substring(0, 2)}
+                                                <div style="
+                                                    position: absolute;
+                                                    bottom: 2px;
+                                                    right: 2px;
+                                                    width: 12px;
+                                                    height: 12px;
+                                                    border-radius: 50%;
+                                                    border: 2px solid white;
+                                                    background: ${friend.status === 'online' ? '#4caf50' : '#ffa502'};
+                                                "></div>
+                                            </div>
+                                            <div>
+                                                <h4 style="margin: 0 0 4px 0; font-size: 14px; font-weight: 600; color: var(--text-color);">${friend.username}</h4>
+                                                <p style="margin: 0; font-size: 12px; color: var(--text-desc);">${friend.status === 'online' ? '在线' : '离线'}</p>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            ${friend.in_group ? 
+                                                '<span style="color: var(--text-desc); font-size: 14px; padding: 6px 12px; background: var(--hover-bg); border-radius: 16px;">用户已存在</span>' : 
+                                                `<button onclick="sendGroupInvitation(${groupId}, ${friend.id})" style="
+                                                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                                                    color: white;
+                                                    border: none;
+                                                    border-radius: 16px;
+                                                    padding: 6px 16px;
+                                                    font-size: 14px;
+                                                    font-weight: 600;
+                                                    cursor: pointer;
+                                                    transition: all 0.2s;
+                                                ">邀请</button>`
+                                            }
+                                        </div>
+                                    </div>
+                                `;
+                            });
+                        } else {
+                            friendsHTML = '<div style="text-align: center; padding: 20px; color: var(--text-desc);">没有可用的好友可以邀请</div>';
+                        }
+                        modalBody.innerHTML = friendsHTML;
+                    } else {
+                        modalBody.innerHTML = `<div style="text-align: center; padding: 20px; color: #ff4757;">${data.message}</div>`;
+                    }
+                })
+                .catch(error => {
+                    modalBody.innerHTML = '<div style="text-align: center; padding: 20px; color: #ff4757;">加载好友列表失败</div>';
+                    console.error('加载好友列表失败:', error);
+                });
+        }
+
+        // 发送群聊邀请
+        function sendGroupInvitation(groupId, friendId) {
+            fetch('send_group_invitation.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: `group_id=${groupId}&friend_id=${friendId}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('邀请已发送');
+                    // 重新加载邀请好友弹窗
+                    document.getElementById('invite-friends-modal').remove();
+                    inviteFriendsToGroup(groupId);
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(error => {
+                console.error('发送邀请失败:', error);
+                alert('发送邀请失败，请稍后重试');
+            });
+        }
+    </script>
                 <div class="user-avatar">
                     <?php if (!empty($current_user['avatar'])): ?>
                         <img src="<?php echo $current_user['avatar']; ?>" alt="<?php echo $username; ?>" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
@@ -7409,7 +7583,7 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                                     </div>
                                     <div style="display: flex; gap: 8px;">
                                         <button onclick="acceptFriendRequest(${request.request_id}, ${request.id}, '${request.username}')" style="padding: 6px 12px; background: #4CAF50; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px;">接受</button>
-                                        <button onclick="rejectFriendRequest(${request.request_id}, ${request.id}, '${request.username}')" style="padding: 6px 12px; background: #f44336; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px;">拒绝</button>
+                                        <button onclick="rejectFriendRequest(${request.request_id}, '${request.username}')" style="padding: 6px 12px; background: #f44336; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px;">拒绝</button>
                                     </div>
                                 </div>`;
                             } else if (request.type === 'group') {
@@ -7473,10 +7647,16 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
 
         // 接受好友请求
         function acceptFriendRequest(requestId, userId, username) {
+            console.log('Accepting request:', requestId, userId, username); // Debug log
+            
             // 发送接受好友请求到服务器
+            const formData = new FormData();
+            formData.append('request_id', requestId);
+            
             fetch(`accept_request.php?request_id=${requestId}`, {
                 credentials: 'include',
-                method: 'POST'
+                method: 'POST',
+                body: formData
             })
             .then(response => response.json())
             .then(data => {
@@ -7497,11 +7677,15 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
         }
 
         // 拒绝好友请求
-        function rejectFriendRequest(requestId, userId, username) {
+        function rejectFriendRequest(requestId, username) {
             // 发送拒绝好友请求到服务器
+            const formData = new FormData();
+            formData.append('request_id', requestId);
+            
             fetch(`reject_request.php?request_id=${requestId}`, {
                 credentials: 'include',
-                method: 'POST'
+                method: 'POST',
+                body: formData
             })
             .then(response => response.json())
             .then(data => {

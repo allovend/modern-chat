@@ -2551,6 +2551,28 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 <button onclick="closeMoreSettingsModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-secondary);">×</button>
             </div>
             <div class="more-settings-content" style="flex: 1; overflow-y: auto; padding: 20px;">
+                <!-- Service Worker 缓存清理 -->
+                <div style="padding: 20px; background: var(--panel-bg); border-radius: 8px; margin-bottom: 20px; transition: background-color 0.3s;">
+                    <h3 style="color: var(--text-color); font-size: 16px; font-weight: 600; margin-bottom: 15px;">系统设置</h3>
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <div>
+                            <div style="font-size: 14px; font-weight: 500; color: var(--text-color);">清除文件缓存</div>
+                            <div style="font-size: 12px; color: var(--text-secondary);">清除所有本地存储的文件数据，此操作不可恢复</div>
+                        </div>
+                        <button onclick="clearServiceWorkerCache()" style="
+                            padding: 8px 16px;
+                            background: #ff4757;
+                            color: white;
+                            border: none;
+                            border-radius: 6px;
+                            cursor: pointer;
+                            font-size: 13px;
+                            font-weight: 500;
+                            transition: background-color 0.2s;
+                        ">清除</button>
+                    </div>
+                </div>
+
                 <!-- 用户信息部分 -->
                 <div style="display: flex; align-items: flex-start; padding: 20px; background: var(--panel-bg); border-radius: 8px; margin-bottom: 20px;">
                     <!-- 左侧32*32头像 -->
@@ -2602,6 +2624,21 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                                 font-size: 12px;
                                 transition: background-color 0.2s;
                             ">修改邮箱</button>
+                        </div>
+                        <!-- Service Worker 缓存清理 -->
+                        <div style="margin-top: 10px;">
+                            <div style="font-size: 14px; font-weight: 600; color: var(--text-color); margin-bottom: 5px;">Service Worker 缓存</div>
+                            <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">清除所有本地缓存文件，解决页面加载问题</div>
+                            <button onclick="clearServiceWorkerCache()" style="
+                                padding: 6px 12px;
+                                background: #ff4757;
+                                color: white;
+                                border: none;
+                                border-radius: 6px;
+                                cursor: pointer;
+                                font-size: 12px;
+                                transition: background-color 0.2s;
+                            ">清除缓存并注销</button>
                         </div>
                     </div>
                 </div>
@@ -2730,6 +2767,30 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                     </div>
                 </div>
                 <?php endif; ?>
+
+                <!-- 系统设置 -->
+                <div style="padding: 20px; background: var(--panel-bg); border-radius: 8px; margin-bottom: 20px; transition: background-color 0.3s;">
+                    <h3 style="color: var(--text-color); font-size: 16px; font-weight: 600; margin-bottom: 15px;">系统设置</h3>
+                    
+                    <!-- Service Worker 缓存清理 -->
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <div>
+                            <div style="font-size: 14px; font-weight: 500; color: var(--text-color);">清除文件缓存</div>
+                            <div style="font-size: 12px; color: var(--text-secondary);">清除所有本地存储的文件数据，此操作不可恢复</div>
+                        </div>
+                        <button onclick="clearServiceWorkerCache()" style="
+                            padding: 8px 16px;
+                            background: #ff4757;
+                            color: white;
+                            border: none;
+                            border-radius: 6px;
+                            cursor: pointer;
+                            font-size: 13px;
+                            font-weight: 500;
+                            transition: background-color 0.2s;
+                        ">清除</button>
+                    </div>
+                </div>
 
                 <!-- 外观设置 -->
                 <div style="padding: 20px; background: var(--panel-bg); border-radius: 8px; margin-bottom: 20px; transition: background-color 0.3s;">
@@ -2983,6 +3044,20 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                         background: var(--input-bg);
                         color: var(--text-color);
                     " placeholder="请输入新邮箱">
+                </div>
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500; color: var(--text-color);">Service Worker 缓存</label>
+                    <button onclick="clearServiceWorkerCache()" style="
+                        padding: 10px 20px;
+                        background: #ff4757;
+                        color: white;
+                        border: none;
+                        border-radius: 6px;
+                        cursor: pointer;
+                        font-size: 14px;
+                        transition: background-color 0.2s;
+                    ">清除缓存并注销</button>
+                    <p style="margin-top: 5px; font-size: 12px; color: var(--text-desc);">如果遇到页面显示问题，可以尝试清除缓存。</p>
                 </div>
                 <div style="display: flex; justify-content: flex-end; gap: 10px;">
                     <button onclick="closeChangeEmailModal()" style="
@@ -7165,6 +7240,68 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             }
         }
         
+        // 接受好友请求
+        function acceptFriendRequest(requestId, userId, username) {
+            console.log('Accepting request:', requestId, userId, username); // Debug log
+            
+            // 发送接受好友请求到服务器
+            const formData = new FormData();
+            formData.append('request_id', requestId);
+            
+            // 确保URL中也包含参数，以防万一
+            fetch(`accept_request.php?request_id=${requestId}`, {
+                credentials: 'include',
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification(`已接受 ${username} 的好友请求`, 'success');
+                    // 重新加载好友申请列表
+                    loadFriendRequests();
+                    // 重新加载好友列表
+                    loadFriendsList();
+                } else {
+                    showNotification(`接受好友请求失败: ${data.message}`, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('接受好友请求失败:', error);
+                showNotification('接受好友请求失败', 'error');
+            });
+        }
+
+        // 拒绝好友请求
+        function rejectFriendRequest(requestId, username) {
+            if (!confirm(`确定要拒绝 ${username} 的好友请求吗？`)) {
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('request_id', requestId);
+            
+            fetch(`reject_request.php?request_id=${requestId}`, {
+                credentials: 'include',
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification(`已拒绝 ${username} 的好友请求`, 'success');
+                    // 重新加载好友申请列表
+                    loadFriendRequests();
+                } else {
+                    showNotification(`操作失败: ${data.message}`, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('拒绝好友请求失败:', error);
+                showNotification('操作失败，请检查网络连接', 'error');
+            });
+        }
+
         // 好友申请相关函数
         function showFriendRequests() {
             document.getElementById('friend-requests-modal').style.display = 'flex';
@@ -8284,10 +8421,17 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
 
         // 接受好友请求
         function acceptFriendRequest(requestId, userId, username) {
+            console.log('Accepting request:', requestId, userId, username); // Debug log
+            
             // 发送接受好友请求到服务器
+            const formData = new FormData();
+            formData.append('request_id', requestId);
+            
+            // 确保URL中也包含参数，以防万一
             fetch(`accept_request.php?request_id=${requestId}`, {
                 credentials: 'include',
-                method: 'POST'
+                method: 'POST',
+                body: formData
             })
             .then(response => response.json())
             .then(data => {
@@ -9051,6 +9195,37 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
             });
         }
         
+        // 清除Service Worker缓存并注销
+        async function clearServiceWorkerCache() {
+            if ('serviceWorker' in navigator) {
+                try {
+                    // 1. 获取所有Service Worker注册并注销
+                    const registrations = await navigator.serviceWorker.getRegistrations();
+                    for (let registration of registrations) {
+                        await registration.unregister();
+                        console.log('Service Worker 已注销');
+                    }
+                    
+                    // 2. 清除缓存存储
+                    if ('caches' in window) {
+                        const keys = await caches.keys();
+                        for (let key of keys) {
+                            await caches.delete(key);
+                            console.log(`缓存 ${key} 已删除`);
+                        }
+                    }
+                    
+                    alert('缓存已清除，页面将重新加载');
+                    location.reload();
+                } catch (error) {
+                    console.error('清除缓存失败:', error);
+                    alert('清除缓存失败，请手动在浏览器设置中清除');
+                }
+            } else {
+                alert('您的浏览器不支持 Service Worker');
+            }
+        }
+
         // 处理媒体文件加载失败
         function handleMediaLoadError(media, filePath, fileName, fileType) {
             // 初始化重试计数器（仅在第一次调用时）
@@ -12773,6 +12948,179 @@ $user_ip = $_SERVER['REMOTE_ADDR'];
                 });
             }
         })();
+        // 邀请好友加入群聊
+        function inviteFriendsToGroup(groupId) {
+            // 创建并显示邀请好友弹窗
+            const modal = document.createElement('div');
+            modal.id = 'invite-friends-modal';
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.5);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 1000;
+            `;
+
+            const modalContent = document.createElement('div');
+            modalContent.style.cssText = `
+                background: white;
+                border-radius: 12px;
+                width: 90%;
+                max-width: 500px;
+                max-height: 80vh;
+                overflow: hidden;
+            `;
+
+            // 弹窗标题
+            const modalHeader = document.createElement('div');
+            modalHeader.style.cssText = `
+                padding: 20px;
+                border-bottom: 1px solid #e0e0e0;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            `;
+            modalHeader.innerHTML = `
+                <h3 style="margin: 0; font-size: 18px; font-weight: 600;">邀请好友加入群聊</h3>
+                <button onclick="document.getElementById('invite-friends-modal').remove()" style="
+                    background: none;
+                    border: none;
+                    font-size: 24px;
+                    cursor: pointer;
+                    color: #666;
+                    padding: 0;
+                    width: 30px;
+                    height: 30px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                ">×</button>
+            `;
+            modalContent.appendChild(modalHeader);
+
+            // 弹窗内容
+            const modalBody = document.createElement('div');
+            modalBody.style.cssText = `
+                padding: 20px;
+                overflow-y: auto;
+                max-height: calc(80vh - 120px);
+            `;
+            modalBody.innerHTML = '<div style="text-align: center; padding: 20px; color: #666;">加载好友列表中...</div>';
+            modalContent.appendChild(modalBody);
+
+            modal.appendChild(modalContent);
+            document.body.appendChild(modal);
+
+            // 加载好友列表
+            fetch(`get_friends_for_group_invite.php?group_id=${groupId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        let friendsHTML = '';
+                        if (data.friends.length > 0) {
+                            data.friends.forEach(friend => {
+                                friendsHTML += `
+                                    <div style="
+                                        display: flex;
+                                        justify-content: space-between;
+                                        align-items: center;
+                                        padding: 12px;
+                                        border-bottom: 1px solid #f0f0f0;
+                                    ">
+                                        <div style="display: flex; align-items: center; gap: 12px;">
+                                            <div style="
+                                                width: 40px;
+                                                height: 40px;
+                                                border-radius: 50%;
+                                                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                                                display: flex;
+                                                align-items: center;
+                                                justify-content: center;
+                                                color: white;
+                                                font-weight: 600;
+                                                font-size: 16px;
+                                                position: relative;
+                                            ">
+                                                ${friend.username.substring(0, 2)}
+                                                <div style="
+                                                    position: absolute;
+                                                    bottom: 2px;
+                                                    right: 2px;
+                                                    width: 12px;
+                                                    height: 12px;
+                                                    border-radius: 50%;
+                                                    border: 2px solid white;
+                                                    background: ${friend.status === 'online' ? '#4caf50' : '#ffa502'};
+                                                "></div>
+                                            </div>
+                                            <div>
+                                                <h4 style="margin: 0 0 4px 0; font-size: 14px; font-weight: 600;">${friend.username}</h4>
+                                                <p style="margin: 0; font-size: 12px; color: #666;">${friend.status === 'online' ? '在线' : '离线'}</p>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            ${friend.in_group ? 
+                                                '<span style="color: #666; font-size: 14px; padding: 6px 12px; background: #f0f0f0; border-radius: 16px;">用户已存在</span>' : 
+                                                `<button onclick="sendGroupInvitation(${groupId}, ${friend.id})" style="
+                                                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                                                    color: white;
+                                                    border: none;
+                                                    border-radius: 16px;
+                                                    padding: 6px 16px;
+                                                    font-size: 14px;
+                                                    font-weight: 600;
+                                                    cursor: pointer;
+                                                    transition: all 0.2s;
+                                                ">邀请</button>`
+                                            }
+                                        </div>
+                                    </div>
+                                `;
+                            });
+                        } else {
+                            friendsHTML = '<div style="text-align: center; padding: 20px; color: #666;">没有可用的好友可以邀请</div>';
+                        }
+                        modalBody.innerHTML = friendsHTML;
+                    } else {
+                        modalBody.innerHTML = `<div style="text-align: center; padding: 20px; color: #ff4757;">${data.message}</div>`;
+                    }
+                })
+                .catch(error => {
+                    modalBody.innerHTML = '<div style="text-align: center; padding: 20px; color: #ff4757;">加载好友列表失败</div>';
+                    console.error('加载好友列表失败:', error);
+                });
+        }
+
+        // 发送群聊邀请
+        function sendGroupInvitation(groupId, friendId) {
+            fetch('send_group_invitation.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: `group_id=${groupId}&friend_id=${friendId}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('邀请已发送');
+                    // 重新加载邀请好友弹窗
+                    document.getElementById('invite-friends-modal').remove();
+                    inviteFriendsToGroup(groupId);
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(error => {
+                console.error('发送邀请失败:', error);
+                alert('发送邀请失败，请稍后重试');
+            });
+        }
     </script>
     <!-- 音乐播放器 -->
     <?php if (getConfig('Random_song', false)): ?>

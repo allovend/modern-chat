@@ -47,6 +47,12 @@ try {
     // 创建Group实例
     $group = new Group($conn);
     
+    // 修复越权漏洞：检查用户是否是该群聊成员
+    if (!$group->isUserInGroup($group_id, $user_id)) {
+        echo json_encode(['success' => false, 'message' => '您不是该群聊成员，无权查看成员列表 ❌']);
+        exit;
+    }
+    
     // 获取群聊成员列表
     $members = $group->getGroupMembers($group_id);
     
@@ -54,8 +60,8 @@ try {
     $result = [];
     foreach ($members as $member) {
         $result[] = [
-            'id' => $member['id'] ?? null,
-            'username' => $member['username'] ?? '',
+            'id' => $member['user_id'],
+            'username' => $member['username'],
             'nickname' => $member['nickname'] ?? '',
             'avatar' => $member['avatar'] ?? ''
         ];

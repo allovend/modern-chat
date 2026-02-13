@@ -1,4 +1,4 @@
-# Modern Chat - 现代化聊天系统-V2.3.0
+# Modern Chat - 现代化聊天系统-V2.1.20
 
 一个基于 PHP + MySQL + HTML 的现代化聊天系统，具有现代化的 UI 设计和丰富的功能。
 
@@ -20,7 +20,15 @@
    ### 已部署好的体验网站
 
   - https://chat.hyacine.com.cn/chat
-
+  - 如果觉得项目好可以向开发者赞助（自愿）
+  - wx:
+    <p>
+    <img src="https://www.varesa.top/wallpapers/1770705339865.png" width="256" height="256"/>
+    </p>
+  - zfb:
+    <p>
+    <img src="https://www.varesa.top/wallpapers/177070538832.jpg" width="256" height="256"/>
+    </p>
 ---
 
 <p>
@@ -79,15 +87,7 @@
 - 🔄 **在线更新系统** - 管理员可以通过网页端在线更新系统，自动下载并安装更新
 - 🛡️ **安全验证** - 集成极验 (Geetest 4.0) 行为验证，防止恶意注册和登录
 - 📱 **短信验证** - 集成阿里云短信服务，支持手机号注册和验证（需根据引导页面自己配置）
-- 如果觉得项目好可以向开发者赞助（自愿）
-- wx:
-    <p>
-    <img src="https://www.varesa.top/wallpapers/1770705339865.png" width="256" height="256"/>
-    </p>
-- zfb:
-    <p>
-    <img src="https://www.varesa.top/wallpapers/177070538832.jpg" width="256" height="256"/>
-    </p>
+
 ## 技术栈
 
 - **前端**: HTML5, CSS3, JavaScript
@@ -277,6 +277,27 @@ docker-compose logs
 
 ```bash
 docker-compose restart
+```
+### 手动配置短信验证
+
+如果您没有配置短信验证 API，您可以手动配置短信验证。
+#### 1. 下载最新的文件
+下载 `send_sms.php` `register.php` `register_process.php` 文件到您的服务器目录中。
+#### 2. 配置短信验证 API
+
+编辑 `send_sms.php` 文件，修改并在文件第81-82更改以下配置（根据您的实际需求修改）：
+
+```php
+$accessKeyId = '你的阿里云的AccessKeyID';
+$accessKeySecret = '你的阿里云的AccessKeySecret';
+```
+
+#### 3. 配置短信验证参数
+
+编辑 `/config/config.json` 文件，添加或修改以下配置（根据您的实际需求修改）：
+
+```json
+"phone_sms": true
 ```
 
 ## 使用说明
@@ -530,11 +551,6 @@ docker-compose restart
 - Edge
 - via
 - 主流浏览器
-- 声明 : 请确保系统和浏览器支持网页功能否则将导致部分功能不可用，
-- 支持设备：
-- Windows：推荐使用Windows7 64位等以上版本系统
-- Linux：无限制
-- android：无限制（Edge浏览器可能无法显示聊天框输入UI，请更换浏览器）
-- IOS：无限制（Edge浏览器可能无法显示聊天框输入UI，请更换浏览器）
+- 声明 : 请确保系统和浏览器支持网页功能否则将导致部分功能不可用，Windows：推荐使用Windows7 64位等以上版本系统 Linux：无限制 android：无限制 IOS：无限制
 ## 许可证
 MIT License

@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/install_check.php';
 // 启用错误报告以便调试
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
@@ -431,12 +432,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 <p class="password-requirements">密码必须包含至少2种字符类型（大小写字母、数字、特殊符号）</p>
                 
                 <div style="display: flex; gap: 10px; margin-top: 20px;">
-                    <button type="submit" class="btn" style="flex: 1;">确定</button>
+                    <button type="submit" class="btn" style="flex: 1; padding: 14px; border-radius: 12px; font-weight: 600;">确定</button>
                     <button type="button" id="close-modal-btn" class="btn" style="
+                        flex: 1;
+                        padding: 14px;
                         background: #f8f9fa;
                         color: #333;
                         border: 1px solid #eaeaea;
                         box-shadow: none;
+                        border-radius: 12px;
+                        font-weight: 600;
                     ">取消</button>
                 </div>
             </form>
