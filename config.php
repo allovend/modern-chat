@@ -4,6 +4,12 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+// 加载安全辅助函数
+require_once __DIR__ . '/includes/security_helper.php';
+
+// 设置安全响应头
+setSecurityHeaders();
+
 // 缓存.env文件内容
 $env_vars = [];
 $env_file = __DIR__ . '/.env';
@@ -120,19 +126,50 @@ function getUserNameMaxLength() {
     return getConfig('user_name_max', 12);
 }
 
-// IP地址获取函数
+// IP地址获取函数 - 安全版本，防止IP欺骗攻击
 function getUserIP() {
-    $ip = $_SERVER['HTTP_CLIENT_IP'] ?? 
-          (isset($_SERVER['HTTP_X_FORWARDED_FOR']) ? explode(',', $_SERVER['HTTP_X_FORWARDED_FOR'])[0] : null) ?? 
-          $_SERVER['REMOTE_ADDR'] ?? '';
-    return trim($ip);
+    $ip = '';
+    $trusted_proxies = getEnvVar('TRUSTED_PROXIES', '');
+    $trusted_proxy_list = $trusted_proxies ? array_map('trim', explode(',', $trusted_proxies)) : [];
+    
+    $remote_addr = $_SERVER['REMOTE_ADDR'] ?? '';
+    
+    if (in_array($remote_addr, $trusted_proxy_list) || !empty($trusted_proxy_list)) {
+        if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+            $forwarded_ips = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
+            $forwarded_ips = array_map('trim', $forwarded_ips);
+            $forwarded_ips = array_filter($forwarded_ips, function($ip) {
+                return filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE);
+            });
+            if (!empty($forwarded_ips)) {
+                $ip = end($forwarded_ips);
+            }
+        }
+        if (empty($ip) && !empty($_SERVER['HTTP_CLIENT_IP'])) {
+            $client_ip = trim($_SERVER['HTTP_CLIENT_IP']);
+            if (filter_var($client_ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+                $ip = $client_ip;
+            }
+        }
+    }
+    
+    if (empty($ip)) {
+        $ip = $remote_addr;
+    }
+    
+    $ip = filter_var($ip, FILTER_VALIDATE_IP);
+    return $ip ?: '0.0.0.0';
 }
 
-// 数据库配置
+// 数据库配置 - 必须通过环境变量或配置文件设置，不再使用硬编码默认密码
 define('DB_HOST', getEnvVar('DB_HOST') ?: getEnvVar('DB_HOSTNAME') ?: 'localhost');
 define('DB_NAME', getEnvVar('DB_NAME') ?: getEnvVar('DATABASE_NAME') ?: 'chat');
 define('DB_USER', getEnvVar('DB_USER') ?: getEnvVar('DB_USERNAME') ?: 'root');
-define('DB_PASS', getEnvVar('DB_PASS') ?: getEnvVar('DB_PASSWORD') ?: getEnvVar('MYSQL_ROOT_PASSWORD') ?: getConfig('db_password') ?: 'cf211396ab9363ad');
+$db_pass = getEnvVar('DB_PASS') ?: getEnvVar('DB_PASSWORD') ?: getEnvVar('MYSQL_ROOT_PASSWORD') ?: getConfig('db_password');
+if (empty($db_pass)) {
+    error_log("SECURITY WARNING: Database password not configured. Please set DB_PASS in .env file or db_password in config.json");
+}
+define('DB_PASS', $db_pass ?: '');
 
 // 应用配置
 define('APP_NAME', 'Modern Chat');

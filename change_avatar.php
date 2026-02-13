@@ -1,8 +1,10 @@
 <?php
-// 启动会话
 if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
+
+require_once 'config.php';
+require_once 'db.php';
 
 // 检查用户是否登录
 if (!isset($_SESSION['user_id'])) {
@@ -34,9 +36,25 @@ $file_tmp = $file['tmp_name'];
 $file_info = pathinfo($file['name']);
 $file_extension = strtolower($file_info['extension']);
 
-// 检查文件类型
+// 安全获取真实MIME类型
+$real_mime_type = 'application/octet-stream';
+if (function_exists('finfo_open')) {
+    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+    if ($finfo) {
+        $real_mime_type = finfo_file($finfo, $file_tmp);
+        finfo_close($finfo);
+    }
+}
+
+// 检查文件类型（同时检查浏览器提供的和真实的MIME类型）
 if (!in_array($file_type, $allowed_types) || !in_array($file_extension, $allowed_extensions)) {
     echo json_encode(['success' => false, 'message' => '只允许上传JPG、PNG或GIF格式的图片']);
+    exit;
+}
+
+// 额外验证：确保真实MIME类型也是图片
+if (!in_array($real_mime_type, $allowed_types)) {
+    echo json_encode(['success' => false, 'message' => '文件类型验证失败']);
     exit;
 }
 
@@ -67,7 +85,7 @@ $new_width = 32;
 $new_height = 32;
 
 // 根据文件类型创建图片资源
-switch ($file_type) {
+switch ($real_mime_type) {
     case 'image/jpeg':
         $source_image = imagecreatefromjpeg($file_tmp);
         break;
@@ -86,7 +104,7 @@ switch ($file_type) {
 $destination_image = imagecreatetruecolor($new_width, $new_height);
 
 // 保留PNG和GIF的透明度
-if ($file_type == 'image/png' || $file_type == 'image/gif') {
+if ($real_mime_type == 'image/png' || $real_mime_type == 'image/gif') {
     imagealphablending($destination_image, false);
     imagesavealpha($destination_image, true);
     $transparent = imagecolorallocatealpha($destination_image, 255, 255, 255, 127);
@@ -97,7 +115,7 @@ if ($file_type == 'image/png' || $file_type == 'image/gif') {
 imagecopyresampled($destination_image, $source_image, 0, 0, 0, 0, $new_width, $new_height, $original_width, $original_height);
 
 // 保存调整后的图片
-switch ($file_type) {
+switch ($real_mime_type) {
     case 'image/jpeg':
         imagejpeg($destination_image, $file_path, 90);
         break;
@@ -113,44 +131,29 @@ switch ($file_type) {
 imagedestroy($source_image);
 imagedestroy($destination_image);
 
-// 连接数据库
-$conn = new mysqli('localhost', 'root', '', 'chatroom');
-
-// 检查数据库连接
-if ($conn->connect_error) {
-    echo json_encode(['success' => false, 'message' => '数据库连接失败']);
-    exit;
-}
-
-// 更新用户头像
-$avatar_url = $file_path;
-$sql = "UPDATE users SET avatar = ? WHERE id = ?";
-$stmt = $conn->prepare($sql);
-$stmt->bind_param("si", $avatar_url, $user_id);
-
-if ($stmt->execute()) {
-    // 删除旧头像（如果存在）
-    $sql = "SELECT avatar FROM users WHERE id = ?";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("i", $user_id);
-    $stmt->execute();
-    $stmt->bind_result($old_avatar);
-    $stmt->fetch();
-    $stmt->close();
+// 使用PDO连接数据库（使用config.php中的配置）
+try {
+    // 更新用户头像
+    $avatar_url = $file_path;
+    $stmt = $conn->prepare("UPDATE users SET avatar = ? WHERE id = ?");
+    $stmt->execute([$avatar_url, $user_id]);
     
-    if ($old_avatar && $old_avatar !== $avatar_url && file_exists($old_avatar)) {
-        unlink($old_avatar);
+    // 删除旧头像（如果存在）
+    $stmt = $conn->prepare("SELECT avatar FROM users WHERE id = ?");
+    $stmt->execute([$user_id]);
+    $user = $stmt->fetch();
+    
+    if ($user && $user['avatar'] && $user['avatar'] !== $avatar_url && file_exists($user['avatar'])) {
+        unlink($user['avatar']);
     }
     
     echo json_encode(['success' => true, 'message' => '头像修改成功']);
-} else {
+} catch (PDOException $e) {
     // 删除已上传的图片
     if (file_exists($file_path)) {
         unlink($file_path);
     }
-    echo json_encode(['success' => false, 'message' => '数据库更新失败：' . $conn->error]);
+    error_log("Avatar update error: " . $e->getMessage());
+    echo json_encode(['success' => false, 'message' => '数据库更新失败']);
 }
-
-// 关闭数据库连接
-$conn->close();
 ?>
