@@ -54,8 +54,8 @@ try {
     $result = [];
     foreach ($members as $member) {
         $result[] = [
-            'id' => $member['user_id'],
-            'username' => $member['username'],
+            'id' => $member['id'] ?? null,
+            'username' => $member['username'] ?? '',
             'nickname' => $member['nickname'] ?? '',
             'avatar' => $member['avatar'] ?? ''
         ];
