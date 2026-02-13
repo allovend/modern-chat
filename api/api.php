@@ -293,6 +293,56 @@ try {
                     response_success($users);
                     break;
                     
+                case 'update_password':
+                    $old_password = $data['old_password'] ?? '';
+                    $new_password = $data['new_password'] ?? '';
+                    
+                    if (empty($old_password) || empty($new_password)) {
+                        response_error('原密码和新密码不能为空');
+                    }
+                    
+                    $current_user = $user->getUserById($current_user_id);
+                    if (!$current_user) {
+                        response_error('用户不存在', 404);
+                    }
+                    
+                    if (!password_verify($old_password, $current_user['password'])) {
+                        response_error('原密码不正确');
+                    }
+                    
+                    $hashed_password = password_hash($new_password, PASSWORD_DEFAULT, ['cost' => 12]);
+                    $stmt = $conn->prepare("UPDATE users SET password = ? WHERE id = ?");
+                    $stmt->execute([$hashed_password, $current_user_id]);
+                    
+                    response_success([], '密码修改成功');
+                    break;
+                    
+                case 'delete_account':
+                    $password = $data['password'] ?? '';
+                    
+                    if (empty($password)) {
+                        response_error('请输入密码确认注销');
+                    }
+                    
+                    $current_user = $user->getUserById($current_user_id);
+                    if (!$current_user) {
+                        response_error('用户不存在', 404);
+                    }
+                    
+                    if (!password_verify($password, $current_user['password'])) {
+                        response_error('密码不正确');
+                    }
+                    
+                    $result = $user->deleteUser($current_user_id);
+                    if ($result) {
+                        session_unset();
+                        session_destroy();
+                        response_success([], '账号已注销');
+                    } else {
+                        response_error('注销账号失败');
+                    }
+                    break;
+                    
                 default:
                     response_error("User 模块不支持操作: $action");
             }
@@ -639,6 +689,76 @@ try {
                     
                     response_success([], '已标记为已读');
                     break;
+                    
+                case 'update_name':
+                    // 修改群名称（仅群主可用）
+                    $group_id = $data['group_id'] ?? 0;
+                    $name = trim($data['name'] ?? '');
+                    
+                    if (empty($group_id) || empty($name)) {
+                        response_error('参数不完整');
+                    }
+                    
+                    // 检查是否是群主
+                    $group_info = $group->getGroupInfo($group_id);
+                    if (!$group_info) {
+                        response_error('群聊不存在');
+                    }
+                    
+                    if ($group_info['owner_id'] != $current_user_id) {
+                        response_error('只有群主可以修改群名称');
+                    }
+                    
+                    $stmt = $conn->prepare("UPDATE groups SET name = ? WHERE id = ?");
+                    $stmt->execute([$name, $group_id]);
+                    
+                    response_success([], '群名称修改成功');
+                    break;
+                    
+                case 'delete':
+                    // 解散群聊（仅群主可用）
+                    $group_id = $data['group_id'] ?? 0;
+                    if (empty($group_id)) response_error('群聊ID不能为空');
+                    
+                    // 检查是否是群主
+                    $group_info = $group->getGroupInfo($group_id);
+                    if (!$group_info) {
+                        response_error('群聊不存在');
+                    }
+                    
+                    if ($group_info['owner_id'] != $current_user_id) {
+                        response_error('只有群主可以解散群聊');
+                    }
+                    
+                    $result = $group->deleteGroup($group_id, $current_user_id);
+                    if ($result) {
+                        response_success([], '群聊已解散');
+                    } else {
+                        response_error('解散群聊失败');
+                    }
+                    break;
+                    
+                case 'invite':
+                    // 邀请好友加入群聊
+                    $group_id = $data['group_id'] ?? 0;
+                    $friend_id = $data['friend_id'] ?? 0;
+                    
+                    if (empty($group_id) || empty($friend_id)) {
+                        response_error('参数不完整');
+                    }
+                    
+                    // 检查当前用户是否是群成员
+                    if (!$group->isUserInGroup($group_id, $current_user_id)) {
+                        response_error('您不是该群聊的成员');
+                    }
+                    
+                    $result = $group->inviteFriendToGroup($group_id, $current_user_id, $friend_id);
+                    if ($result) {
+                        response_success([], '邀请已发送');
+                    } else {
+                        response_error('发送邀请失败');
+                    }
+                    break;
 
                 default:
                     response_error("Groups 模块不支持操作: $action");
@@ -746,6 +866,107 @@ try {
                     
                 default:
                     response_error("Sessions 模块不支持操作: $action");
+            }
+            break;
+        
+        // ------------------------------------------
+        // 系统公告模块 (Announcements)
+        // ------------------------------------------
+        case 'announcements':
+            switch ($action) {
+                case 'get':
+                    // 获取最新公告（无需登录也可访问，但已读状态需要登录）
+                    if (session_status() === PHP_SESSION_NONE) {
+                        session_start();
+                    }
+                    $user_id = $_SESSION['user_id'] ?? null;
+                    
+                    // 获取最新的活跃公告
+                    $stmt = $conn->prepare("SELECT a.*, u.username as admin_name FROM announcements a 
+                                         JOIN users u ON a.admin_id = u.id 
+                                         WHERE a.is_active = TRUE 
+                                         ORDER BY a.created_at DESC 
+                                         LIMIT 1");
+                    $stmt->execute();
+                    $announcement = $stmt->fetch();
+                    
+                    if (!$announcement) {
+                        response_success(['has_new_announcement' => false]);
+                    }
+                    
+                    $has_read = false;
+                    
+                    // 检查用户是否已经读过该公告
+                    if ($user_id) {
+                        $stmt = $conn->prepare("SELECT id FROM user_announcement_read WHERE user_id = ? AND announcement_id = ?");
+                        $stmt->execute([$user_id, $announcement['id']]);
+                        $has_read = $stmt->fetch() !== false;
+                    }
+                    
+                    response_success([
+                        'has_new_announcement' => true,
+                        'announcement' => [
+                            'id' => $announcement['id'],
+                            'title' => $announcement['title'],
+                            'content' => $announcement['content'],
+                            'created_at' => $announcement['created_at'],
+                            'admin_name' => $announcement['admin_name']
+                        ],
+                        'has_read' => $has_read
+                    ]);
+                    break;
+                    
+                case 'mark_read':
+                    // 标记公告为已读
+                    $current_user_id = check_auth();
+                    $announcement_id = $data['announcement_id'] ?? 0;
+                    
+                    if (empty($announcement_id)) {
+                        response_error('公告ID不能为空');
+                    }
+                    
+                    // 检查是否已读
+                    $stmt = $conn->prepare("SELECT id FROM user_announcement_read WHERE user_id = ? AND announcement_id = ?");
+                    $stmt->execute([$current_user_id, $announcement_id]);
+                    
+                    if (!$stmt->fetch()) {
+                        // 标记为已读
+                        $stmt = $conn->prepare("INSERT INTO user_announcement_read (user_id, announcement_id, read_at) VALUES (?, ?, NOW())");
+                        $stmt->execute([$current_user_id, $announcement_id]);
+                    }
+                    
+                    response_success([], '已标记为已读');
+                    break;
+                    
+                default:
+                    response_error("Announcements 模块不支持操作: $action");
+            }
+            break;
+        
+        // ------------------------------------------
+        // 音乐模块 (Music)
+        // ------------------------------------------
+        case 'music':
+            switch ($action) {
+                case 'list':
+                    // 获取音乐列表（无需登录）
+                    $stmt = $conn->prepare("SELECT * FROM music WHERE is_active = TRUE ORDER BY sort_order ASC, created_at DESC");
+                    $stmt->execute();
+                    $music_list = $stmt->fetchAll();
+                    
+                    // 移除敏感信息
+                    foreach ($music_list as &$music) {
+                        unset($music['file_path']);
+                    }
+                    
+                    response_success([
+                        'code' => 200,
+                        'data' => $music_list
+                    ]);
+                    break;
+                    
+                default:
+                    response_error("Music 模块不支持操作: $action");
             }
             break;
 

@@ -668,6 +668,70 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_agreement') {
             font-size: 13px;
             color: #666;
         }
+
+        /* 阅读进度提示 */
+        .read-progress {
+            position: sticky;
+            top: 0;
+            background: white;
+            padding: 12px 24px;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 13px;
+            color: #666;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 10;
+        }
+
+        .read-progress-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 180px;
+        }
+
+        .read-progress-bar {
+            flex: 1;
+            height: 4px;
+            background: #e0e0e0;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .read-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #12b7f5, #00a2e8);
+            width: 0;
+            transition: width 0.3s ease;
+        }
+
+        .read-progress-text {
+            min-width: 80px;
+            text-align: right;
+            font-size: 12px;
+            color: #999;
+        }
+
+        .read-progress .check-icon {
+            display: none;
+            color: #52c41a;
+            font-size: 14px;
+        }
+
+        .read-progress.completed .check-icon {
+            display: block;
+        }
+
+        .read-progress.completed .read-progress-text {
+            color: #52c41a;
+            font-weight: 600;
+        }
+
+        .modal-btn-primary:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
@@ -722,6 +786,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_agreement') {
                             <input type="checkbox" id="agree-terms" style="margin-right: 8px;">
                             <span>我已阅读并同意 <a href="javascript:void(0)" onclick="showAgreement('tos')" style="color: #12b7f5; text-decoration: none;">《用户协议》</a> 和 <a href="javascript:void(0)" onclick="showAgreement('privacy')" style="color: #12b7f5; text-decoration: none;">《隐私协议》</a></span>
                         </label>
+                        <div id="agreement-hint" style="font-size: 12px; color: #999; margin-top: 8px; margin-left: 26px;">
+                            请点击链接完整阅读两个协议后勾选同意
+                        </div>
                     </div>
                     <div class="version-info" id="version-info">
                         <p>正在加载版本信息...</p>
@@ -891,30 +958,78 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_agreement') {
                 <h3 id="agreement-title" style="margin: 0; font-size: 18px; color: #333;">协议条款</h3>
                 <button onclick="closeAgreement()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #999; padding: 0 10px;">&times;</button>
             </div>
-            <div style="flex: 1; overflow-y: auto; padding: 30px; background: #f9f9f9;">
-                <div id="agreement-content" style="white-space: pre-wrap; font-family: inherit; color: #444; line-height: 1.8; font-size: 15px;"></div>
+            <div class="read-progress" id="readProgress">
+                <div class="read-progress-info">
+                    <span class="check-icon">✓</span>
+                    <span>阅读进度</span>
+                    <span id="timeRemaining" style="font-size: 12px; color: #999;">还需阅读 10 秒</span>
+                </div>
+                <div class="read-progress-bar">
+                    <div class="read-progress-fill" id="progressFill"></div>
+                </div>
+                <span class="read-progress-text" id="progressText">0%</span>
             </div>
+            <div id="agreement-content" style="flex: 1; overflow-y: auto; padding: 30px; background: #f9f9f9; white-space: pre-wrap; font-family: inherit; color: #444; line-height: 1.8; font-size: 15px;"></div>
             <div style="padding: 20px; border-top: 1px solid #eee; text-align: right; background: white; border-radius: 0 0 12px 12px;">
-                <button onclick="closeAgreement()" class="btn btn-primary">我已阅读并关闭</button>
+                <button onclick="closeAgreement()" class="btn btn-secondary" style="margin-right: 10px;">关闭</button>
+                <button onclick="agreeAndClose()" class="btn btn-primary" id="agreeBtn" disabled>请先完整阅读协议</button>
             </div>
         </div>
     </div>
 
     <script>
-        // 协议相关函数
+        // 协议相关变量
+        const MIN_READ_TIME = 10;
+        let currentAgreementType = null;
+        let readStatus = {
+            tos: { scrolledToBottom: false, readTime: 0, completed: false },
+            privacy: { scrolledToBottom: false, readTime: 0, completed: false }
+        };
+        let readTimer = null;
+        let readStartTime = null;
+
+        // 显示协议弹窗
         function showAgreement(type) {
+            currentAgreementType = type;
             const modal = document.getElementById('agreement-modal');
             const title = document.getElementById('agreement-title');
             const content = document.getElementById('agreement-content');
             const modalContent = modal.querySelector('div');
+            const agreeBtn = document.getElementById('agreeBtn');
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            const timeRemaining = document.getElementById('timeRemaining');
+            const readProgress = document.getElementById('readProgress');
             
             title.textContent = type === 'tos' ? '用户协议' : '隐私协议';
-            content.innerHTML = '<div class="loading" style="border-color: rgba(0,0,0,0.1); border-top-color: #12b7f5;"></div> 正在加载协议内容...';
-            content.style.textAlign = 'center';
-            content.style.paddingTop = '50px';
+            content.innerHTML = '<div style="text-align: center; padding: 50px;"><div class="loading" style="border-color: rgba(0,0,0,0.1); border-top-color: #12b7f5;"></div> 正在加载协议内容...</div>';
+            
+            // 重置进度
+            progressFill.style.width = '0%';
+            progressText.textContent = '0%';
+            readProgress.classList.remove('completed');
+            timeRemaining.textContent = '还需阅读 ' + MIN_READ_TIME + ' 秒';
+
+            // 清除之前的计时器
+            if (readTimer) {
+                clearInterval(readTimer);
+                readTimer = null;
+            }
+
+            // 根据阅读状态设置按钮
+            if (readStatus[type].completed) {
+                agreeBtn.disabled = false;
+                agreeBtn.textContent = '已阅读并同意';
+                readProgress.classList.add('completed');
+                progressFill.style.width = '100%';
+                progressText.textContent = '100%';
+                timeRemaining.textContent = '已完成阅读';
+            } else {
+                agreeBtn.disabled = true;
+                agreeBtn.textContent = '请先完整阅读协议';
+            }
             
             modal.style.display = 'flex';
-            // 强制重绘
             modal.offsetHeight;
             modal.style.opacity = '1';
             modalContent.style.transform = 'scale(1)';
@@ -925,20 +1040,101 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_agreement') {
                     return res.text();
                 })
                 .then(text => {
-                    content.style.textAlign = 'left';
-                    content.style.paddingTop = '0';
-                    // 简单的 Markdown 处理 (将 # 转换为标题样式，其他保持文本)
-                    // 这里为了保持格式，我们直接显示文本，但做一些简单的样式美化
                     content.textContent = text;
+                    // 添加滚动监听
+                    setTimeout(() => {
+                        setupScrollListener(type);
+                    }, 100);
                 })
                 .catch(err => {
-                    content.innerHTML = `<div style="color: #ff4d4f; text-align: center;">加载失败: ${err.message}</div>`;
+                    content.innerHTML = `<div style="color: #ff4d4f; text-align: center; padding: 50px;">加载失败: ${err.message}</div>`;
                 });
         }
 
+        // 设置滚动监听
+        function setupScrollListener(type) {
+            const content = document.getElementById('agreement-content');
+            const progressFill = document.getElementById('progressFill');
+            const progressText = document.getElementById('progressText');
+            const agreeBtn = document.getElementById('agreeBtn');
+            const readProgress = document.getElementById('readProgress');
+            const timeRemaining = document.getElementById('timeRemaining');
+
+            // 如果该协议尚未完成，开始计时
+            if (!readStatus[type].completed) {
+                readStartTime = Date.now();
+                readTimer = setInterval(() => {
+                    const elapsed = Math.floor((Date.now() - readStartTime) / 1000);
+                    const remaining = Math.max(0, MIN_READ_TIME - elapsed);
+
+                    if (remaining > 0) {
+                        timeRemaining.textContent = '还需阅读 ' + remaining + ' 秒';
+                    } else {
+                        timeRemaining.textContent = '阅读时间已达要求';
+                        checkCanAgree(type);
+                    }
+                }, 1000);
+            }
+
+            content.onscroll = function() {
+                const scrollTop = content.scrollTop;
+                const scrollHeight = content.scrollHeight;
+                const clientHeight = content.clientHeight;
+
+                // 计算滚动百分比
+                const scrollPercent = Math.min(100, Math.round((scrollTop / (scrollHeight - clientHeight)) * 100));
+
+                progressFill.style.width = scrollPercent + '%';
+                progressText.textContent = scrollPercent + '%';
+
+                // 判断是否滚动到底部（允许5px误差）
+                if (scrollTop + clientHeight >= scrollHeight - 5) {
+                    readStatus[type].scrolledToBottom = true;
+                    checkCanAgree(type);
+                }
+            };
+        }
+
+        // 检查是否可以同意
+        function checkCanAgree(type) {
+            const agreeBtn = document.getElementById('agreeBtn');
+            const readProgress = document.getElementById('readProgress');
+            const timeRemaining = document.getElementById('timeRemaining');
+
+            const elapsed = Math.floor((Date.now() - readStartTime) / 1000);
+            const timeMet = elapsed >= MIN_READ_TIME;
+            const scrolled = readStatus[type].scrolledToBottom;
+
+            if (scrolled && timeMet) {
+                readStatus[type].completed = true;
+                readStatus[type].readTime = elapsed;
+
+                agreeBtn.disabled = false;
+                agreeBtn.textContent = '已阅读并同意';
+                readProgress.classList.add('completed');
+                timeRemaining.textContent = '已完成阅读';
+
+                // 清除计时器
+                if (readTimer) {
+                    clearInterval(readTimer);
+                    readTimer = null;
+                }
+            }
+        }
+
+        // 关闭协议弹窗
         function closeAgreement() {
             const modal = document.getElementById('agreement-modal');
             const modalContent = modal.querySelector('div');
+            const content = document.getElementById('agreement-content');
+            
+            if (content.onscroll) {
+                content.onscroll = null;
+            }
+            if (readTimer) {
+                clearInterval(readTimer);
+                readTimer = null;
+            }
             
             modal.style.opacity = '0';
             modalContent.style.transform = 'scale(0.9)';
@@ -946,6 +1142,30 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_agreement') {
             setTimeout(() => {
                 modal.style.display = 'none';
             }, 300);
+            
+            currentAgreementType = null;
+        }
+
+        // 同意并关闭
+        function agreeAndClose() {
+            // 勾选复选框
+            const checkbox = document.getElementById('agree-terms');
+            if (checkbox && !checkbox.checked) {
+                checkbox.checked = true;
+            }
+            
+            // 更新提示信息
+            const hint = document.getElementById('agreement-hint');
+            if (hint) {
+                const completedCount = (readStatus.tos.completed ? 1 : 0) + (readStatus.privacy.completed ? 1 : 0);
+                if (completedCount === 2) {
+                    hint.innerHTML = '<span style="color: #52c41a;">✓ 已完成所有协议阅读</span>';
+                } else {
+                    hint.innerHTML = `已阅读 ${completedCount}/2 个协议，请继续阅读剩余协议`;
+                }
+            }
+            
+            closeAgreement();
         }
 
         // 点击模态框背景关闭
@@ -1062,10 +1282,16 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_agreement') {
 
             switch (currentStep) {
                 case 1:
-                    // 检查是否同意用户协议
+                    // 检查是否完成两个协议的阅读
+                    if (!readStatus.tos.completed || !readStatus.privacy.completed) {
+                        const completedCount = (readStatus.tos.completed ? 1 : 0) + (readStatus.privacy.completed ? 1 : 0);
+                        showAlert('error', `请先完整阅读用户协议和隐私协议（已阅读 ${completedCount}/2 个）`);
+                        return;
+                    }
+                    // 检查是否勾选同意
                     const agreeTerms = document.getElementById('agree-terms');
                     if (!agreeTerms.checked) {
-                        showAlert('error', '请先阅读并同意用户协议');
+                        showAlert('error', '请勾选同意用户协议和隐私协议');
                         return;
                     }
                     showStep(2);
