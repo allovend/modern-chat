@@ -536,6 +536,25 @@ try {
                     }
                     break;
                     
+                case 'delete':
+                    // 删除私聊消息（仅删除自己的消息记录）
+                    $message_id = $data['message_id'] ?? 0;
+                    if (empty($message_id)) response_error('消息ID不能为空');
+                    
+                    // 验证消息是否属于当前用户
+                    $stmt = $conn->prepare("SELECT id FROM messages WHERE id = ? AND sender_id = ?");
+                    $stmt->execute([$message_id, $current_user_id]);
+                    if (!$stmt->fetch()) {
+                        response_error('无权删除此消息');
+                    }
+                    
+                    // 软删除：标记为已删除
+                    $stmt = $conn->prepare("UPDATE messages SET is_deleted = 1 WHERE id = ?");
+                    $stmt->execute([$message_id]);
+                    
+                    response_success([], '消息已删除');
+                    break;
+                    
                 case 'mark_read':
                     // 标记消息为已读
                     $friend_id = $data['friend_id'] ?? 0;
@@ -663,6 +682,25 @@ try {
                     } else {
                         response_error($result['message']);
                     }
+                    break;
+                    
+                case 'delete_message':
+                    // 删除群聊消息（仅删除自己的消息记录）
+                    $message_id = $data['message_id'] ?? 0;
+                    if (empty($message_id)) response_error('消息ID不能为空');
+                    
+                    // 验证消息是否属于当前用户
+                    $stmt = $conn->prepare("SELECT id FROM group_messages WHERE id = ? AND sender_id = ?");
+                    $stmt->execute([$message_id, $current_user_id]);
+                    if (!$stmt->fetch()) {
+                        response_error('无权删除此消息');
+                    }
+                    
+                    // 软删除：标记为已删除
+                    $stmt = $conn->prepare("UPDATE group_messages SET is_deleted = 1 WHERE id = ?");
+                    $stmt->execute([$message_id]);
+                    
+                    response_success([], '消息已删除');
                     break;
                     
                 case 'leave':
