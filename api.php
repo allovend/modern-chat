@@ -66,8 +66,8 @@ if (empty($resource)) {
             'auth' => ['login', 'register', 'logout', 'check_status', 'get_public_key'],
             'user' => ['get_info', 'update_info', 'search', 'update_password', 'delete_account'],
             'friends' => ['list', 'send_request', 'delete', 'get_requests', 'accept_request', 'reject_request'],
-            'messages' => ['history', 'send', 'recall', 'mark_read', 'get_unread'],
-            'groups' => ['list', 'info', 'create', 'members', 'add_members', 'messages', 'send_message', 'recall', 'leave', 'remove_member', 'set_admin', 'transfer', 'mark_read', 'update_name', 'delete', 'invite'],
+            'messages' => ['history', 'send', 'send_file', 'recall', 'mark_read', 'get_unread', 'delete'],
+            'groups' => ['list', 'info', 'create', 'members', 'add_members', 'messages', 'send_message', 'send_file', 'recall', 'leave', 'remove_member', 'set_admin', 'transfer', 'mark_read', 'update_name', 'delete', 'invite', 'delete_message'],
             'sessions' => ['list', 'clear_unread'],
             'upload' => ['file'],
             'avatar' => ['upload'],
@@ -523,6 +523,24 @@ try {
                     }
                     break;
                     
+                case 'send_file':
+                    $receiver_id = $data['receiver_id'] ?? 0;
+                    $file_path = $data['file_path'] ?? '';
+                    $file_name = $data['file_name'] ?? '';
+                    $file_size = $data['file_size'] ?? 0;
+                    $file_type = $data['file_type'] ?? '';
+                    
+                    if (empty($receiver_id)) response_error('接收者ID不能为空');
+                    if (empty($file_path)) response_error('文件路径不能为空');
+                    
+                    $result = $message->sendFileMessage($current_user_id, $receiver_id, $file_path, $file_name, $file_size, $file_type);
+                    if ($result['success']) {
+                        response_success(['message_id' => $result['message_id']], '文件发送成功');
+                    } else {
+                        response_error('文件发送失败');
+                    }
+                    break;
+                    
                 case 'recall':
                     // 撤回私聊消息
                     $message_id = $data['message_id'] ?? 0;
@@ -668,6 +686,31 @@ try {
                         response_success(['message_id' => $result['message_id']], '消息发送成功');
                     } else {
                         response_error($result['message'] ?? '消息发送失败');
+                    }
+                    break;
+                    
+                case 'send_file':
+                    $group_id = $data['group_id'] ?? 0;
+                    $file_path = $data['file_path'] ?? '';
+                    $file_name = $data['file_name'] ?? '';
+                    $file_size = $data['file_size'] ?? 0;
+                    $file_type = $data['file_type'] ?? '';
+                    
+                    if (empty($group_id)) response_error('群聊ID不能为空');
+                    if (empty($file_path)) response_error('文件路径不能为空');
+                    
+                    $file_info = [
+                        'file_path' => $file_path,
+                        'file_name' => $file_name,
+                        'file_size' => $file_size,
+                        'file_type' => $file_type
+                    ];
+                    
+                    $result = $group->sendGroupMessage($group_id, $current_user_id, '', $file_info);
+                    if ($result['success']) {
+                        response_success(['message_id' => $result['message_id']], '文件发送成功');
+                    } else {
+                        response_error($result['message'] ?? '文件发送失败');
                     }
                     break;
                     
