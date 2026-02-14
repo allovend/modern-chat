@@ -4,6 +4,18 @@
  * Redis管理器类，用于管理Redis连接和在线人数存储
  * 支持降级方案，当Redis不可用时回退到数据库存储
  */
+
+if (!class_exists('Redis')) {
+    class Redis {
+        public function connect($host, $port, $timeout = 0) { return false; }
+        public function zAdd($key, $score, $value) { return false; }
+        public function zRem($key, $member) { return false; }
+        public function zRemRangeByScore($key, $min, $max) { return false; }
+        public function zCard($key) { return 0; }
+        public function zRange($key, $start, $end) { return []; }
+    }
+}
+
 class RedisManager {
     /** @var Redis|null $redis Redis实例 */
     private $redis;
