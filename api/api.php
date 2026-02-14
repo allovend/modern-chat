@@ -37,7 +37,61 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// 包含核心文件
+// 获取请求数据 (兼容 JSON 和 Form Data)
+function get_request_data() {
+    $content_type = $_SERVER['CONTENT_TYPE'] ?? '';
+    
+    if (strpos($content_type, 'application/json') !== false) {
+        $json = file_get_contents('php://input');
+        $data = json_decode($json, true);
+        return is_array($data) ? $data : [];
+    }
+    
+    return $_POST;
+}
+
+// 检测是否为状态检测请求（无参数或特定参数）
+$request_data = get_request_data();
+$resource = $request_data['resource'] ?? $_GET['resource'] ?? '';
+$action = $request_data['action'] ?? $_GET['action'] ?? '';
+
+// 如果没有 resource 参数，返回 API 状态信息
+if (empty($resource)) {
+    echo json_encode([
+        'success' => true,
+        'message' => 'Modern Chat API 已正常运行',
+        'version' => '2.2',
+        'timestamp' => date('Y-m-d H:i:s'),
+        'endpoints' => [
+            'auth' => ['login', 'register', 'logout', 'check_status', 'get_public_key'],
+            'user' => ['get_info', 'update_info', 'search', 'update_password', 'delete_account'],
+            'friends' => ['list', 'send_request', 'delete', 'get_requests', 'accept_request', 'reject_request'],
+            'messages' => ['history', 'send', 'recall', 'mark_read', 'get_unread'],
+            'groups' => ['list', 'info', 'create', 'members', 'add_members', 'messages', 'send_message', 'recall', 'leave', 'remove_member', 'set_admin', 'transfer', 'mark_read', 'update_name', 'delete', 'invite'],
+            'sessions' => ['list', 'clear_unread'],
+            'upload' => ['file'],
+            'avatar' => ['upload'],
+            'announcements' => ['get', 'mark_read'],
+            'music' => ['list']
+        ],
+        'usage' => 'POST/GET with resource and action parameters'
+    ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+    exit;
+}
+
+// 智能检测基础路径
+// 支持两种部署方式：
+// 1. api.php 在 /api/ 子目录中，其他文件在父目录
+// 2. api.php 和其他文件都在根目录（扁平化部署）
+$base_dir = __DIR__;
+$api_subdir = basename(__DIR__) === 'api';
+
+if ($api_subdir) {
+    // 方式1：api.php 在 api/ 目录，其他文件在父目录
+    $base_dir = dirname(__DIR__);
+}
+
+// 定义需要加载的核心文件
 $required_files = [
     'config.php',
     'db.php',
@@ -49,9 +103,10 @@ $required_files = [
     'RSAUtil.php'
 ];
 
+// 检查文件是否存在
 $missing_files = [];
 foreach ($required_files as $file) {
-    $file_path = __DIR__ . '/../' . $file;
+    $file_path = $base_dir . '/' . $file;
     if (!file_exists($file_path)) {
         $missing_files[] = $file;
     }
@@ -62,21 +117,24 @@ if (!empty($missing_files)) {
     echo json_encode([
         'success' => false,
         'message' => '服务器初始化失败: 以下文件不存在: ' . implode(', ', $missing_files),
+        'base_dir' => $base_dir,
         'api_dir' => __DIR__,
-        'parent_dir' => dirname(__DIR__)
+        'api_subdir' => $api_subdir,
+        'tip' => '请确保以下文件存在于 ' . $base_dir . ' 目录: ' . implode(', ', $required_files)
     ], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
+// 加载核心文件
 try {
-    require_once __DIR__ . '/../config.php';
-    require_once __DIR__ . '/../db.php';
-    require_once __DIR__ . '/../User.php';
-    require_once __DIR__ . '/../Friend.php';
-    require_once __DIR__ . '/../Message.php';
-    require_once __DIR__ . '/../Group.php';
-    require_once __DIR__ . '/../FileUpload.php';
-    require_once __DIR__ . '/../RSAUtil.php';
+    require_once $base_dir . '/config.php';
+    require_once $base_dir . '/db.php';
+    require_once $base_dir . '/User.php';
+    require_once $base_dir . '/Friend.php';
+    require_once $base_dir . '/Message.php';
+    require_once $base_dir . '/Group.php';
+    require_once $base_dir . '/FileUpload.php';
+    require_once $base_dir . '/RSAUtil.php';
 } catch (Throwable $e) {
     error_log("API 文件加载失败: " . $e->getMessage());
     http_response_code(500);
@@ -155,29 +213,13 @@ function check_auth() {
     return $_SESSION['user_id'];
 }
 
-/**
- * 获取请求数据 (兼容 JSON 和 Form Data)
- */
-function get_request_data() {
-    $content_type = $_SERVER['CONTENT_TYPE'] ?? '';
-    
-    if (strpos($content_type, 'application/json') !== false) {
-        $json = file_get_contents('php://input');
-        $data = json_decode($json, true);
-        return is_array($data) ? $data : [];
-    }
-    
-    return $_POST;
-}
-
 // ==========================================
 // 请求处理逻辑
 // ==========================================
 
 try {
-    $data = get_request_data();
-    $resource = $data['resource'] ?? '';
-    $action = $data['action'] ?? '';
+    // 使用已定义的变量
+    $data = $request_data;
     
     // 全局参数
     $id = $data['id'] ?? null;
