@@ -421,6 +421,20 @@ class Group {
             if (!$stmt->fetch()) {
                 $this->conn->exec("ALTER TABLE group_messages ADD COLUMN file_type VARCHAR(50) NULL");
             }
+            
+            // 确保messages表有is_deleted列
+            $stmt = $this->conn->prepare("SHOW COLUMNS FROM messages LIKE 'is_deleted'");
+            $stmt->execute();
+            if (!$stmt->fetch()) {
+                $this->conn->exec("ALTER TABLE messages ADD COLUMN is_deleted TINYINT(1) DEFAULT 0");
+            }
+            
+            // 确保group_messages表有is_deleted列
+            $stmt = $this->conn->prepare("SHOW COLUMNS FROM group_messages LIKE 'is_deleted'");
+            $stmt->execute();
+            if (!$stmt->fetch()) {
+                $this->conn->exec("ALTER TABLE group_messages ADD COLUMN is_deleted TINYINT(1) DEFAULT 0");
+            }
         } catch (PDOException $e) {
             error_log("Ensure tables exist error: " . $e->getMessage());
         }
@@ -462,6 +476,9 @@ class Group {
      * @return array 消息列表
      */
     public function getGroupMessages($group_id, $user_id, $last_message_id = 0, $limit = 50) {
+        // 确保必要的表和列存在
+        $this->ensureTablesExist();
+        
         // 验证用户是否可以访问该群聊
         $is_member = false;
         
@@ -492,9 +509,10 @@ class Group {
                                          FROM group_messages gm 
                                          JOIN users u ON gm.sender_id = u.id 
                                          WHERE gm.group_id = ? AND gm.id > ? 
+                                         AND (gm.is_deleted = 0 OR gm.sender_id != ?)
                                          ORDER BY gm.created_at ASC 
                                          LIMIT ?");
-            $stmt->execute([$group_id, $last_message_id, $limit]);
+            $stmt->execute([$group_id, $last_message_id, $user_id, $limit]);
             $messages = $stmt->fetchAll();
         } else {
             // 如果没有last_message_id，返回最新的消息
@@ -503,9 +521,10 @@ class Group {
                                          FROM group_messages gm 
                                          JOIN users u ON gm.sender_id = u.id 
                                          WHERE gm.group_id = ? 
+                                         AND (gm.is_deleted = 0 OR gm.sender_id != ?)
                                          ORDER BY gm.created_at ASC 
                                          LIMIT ?");
-            $stmt->execute([$group_id, $limit]);
+            $stmt->execute([$group_id, $user_id, $limit]);
             $messages = $stmt->fetchAll();
         }
         

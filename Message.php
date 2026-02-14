@@ -112,6 +112,20 @@ class Message {
             if (!$stmt->fetch()) {
                 $this->conn->exec("ALTER TABLE group_messages ADD COLUMN file_type VARCHAR(50) NULL");
             }
+            
+            // 确保messages表有is_deleted列
+            $stmt = $this->conn->prepare("SHOW COLUMNS FROM messages LIKE 'is_deleted'");
+            $stmt->execute();
+            if (!$stmt->fetch()) {
+                $this->conn->exec("ALTER TABLE messages ADD COLUMN is_deleted TINYINT(1) DEFAULT 0");
+            }
+            
+            // 确保group_messages表有is_deleted列
+            $stmt = $this->conn->prepare("SHOW COLUMNS FROM group_messages LIKE 'is_deleted'");
+            $stmt->execute();
+            if (!$stmt->fetch()) {
+                $this->conn->exec("ALTER TABLE group_messages ADD COLUMN is_deleted TINYINT(1) DEFAULT 0");
+            }
         } catch (PDOException $e) {
             error_log("Ensure tables exist error: " . $e->getMessage());
         }
@@ -120,15 +134,19 @@ class Message {
     // 获取聊天记录
     public function getChatHistory($user1_id, $user2_id, $limit = 50, $offset = 0) {
         try {
+            // 确保必要的表和列存在
+            $this->ensureTablesExist();
+            
             $stmt = $this->conn->prepare(
                 "SELECT m.*, u.username as sender_username, u.avatar 
                  FROM messages m 
                  JOIN users u ON m.sender_id = u.id
-                 WHERE (m.sender_id = ? AND m.receiver_id = ?) OR (m.sender_id = ? AND m.receiver_id = ?) 
+                 WHERE ((m.sender_id = ? AND m.receiver_id = ?) OR (m.sender_id = ? AND m.receiver_id = ?))
+                 AND (m.is_deleted = 0 OR m.sender_id != ?)
                  ORDER BY m.created_at DESC 
                  LIMIT ? OFFSET ?"
             );
-            $stmt->execute([$user1_id, $user2_id, $user2_id, $user1_id, $limit, $offset]);
+            $stmt->execute([$user1_id, $user2_id, $user2_id, $user1_id, $user1_id, $limit, $offset]);
             
             $messages = $stmt->fetchAll();
             
