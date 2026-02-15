@@ -427,6 +427,13 @@
         <h1>创建账户</h1>
         
         <?php
+        $phone_sms_enabled = getConfig('phone_sms', false);
+        if ($phone_sms_enabled === 'true' || $phone_sms_enabled === true) {
+            $phone_sms_enabled = true;
+        } else {
+            $phone_sms_enabled = false;
+        }
+        
         if (isset($_GET['error'])) {
             echo '<div class="error-message">' . htmlspecialchars($_GET['error']) . '</div>';
         }
@@ -451,6 +458,7 @@
                 <input type="tel" id="phone" name="phone" required pattern="^1[3-9]\d{9}$" placeholder="请输入11位手机号">
             </div>
             
+            <?php if ($phone_sms_enabled): ?>
             <div class="form-group">
                 <label for="sms_code">短信验证码</label>
                 <div style="display: flex; gap: 10px;">
@@ -458,6 +466,7 @@
                     <button type="button" id="send_sms_btn" class="btn" style="width: auto; padding: 0 20px; margin-bottom: 0; background: #ccc; cursor: not-allowed;" disabled>获取验证码</button>
                 </div>
             </div>
+            <?php endif; ?>
             
             <div class="form-group">
                 <label for="password">密码</label>
@@ -534,6 +543,16 @@
         let geetestCaptcha = null;
         let smsCountdownTimer = null;
         const SMS_COOLDOWN_KEY = 'sms_cooldown_end_time';
+        const phoneSmsEnabled = <?php echo $phone_sms_enabled ? 'true' : 'false'; ?>;
+        
+        // 如果短信验证码未启用，直接通过验证
+        if (!phoneSmsEnabled) {
+            const registerBtn = document.getElementById('registerBtn');
+            if (registerBtn) {
+                registerBtn.disabled = false;
+                registerBtn.textContent = '注册';
+            }
+        }
         
         // 检查是否有未完成的倒计时
         function checkSmsCooldown() {
@@ -709,6 +728,17 @@
         
         // 表单提交处理
         async function handleRegisterSubmit(form) {
+            // 如果短信验证码未启用，则跳过极验验证码验证
+            if (!phoneSmsEnabled) {
+                // 生成浏览器指纹
+                const fingerprintInput = document.getElementById('browser_fingerprint');
+                if (!fingerprintInput.value) {
+                    const fingerprint = await generateBrowserFingerprint();
+                    fingerprintInput.value = fingerprint;
+                }
+                return true;
+            }
+            
             // 检查极验验证码是否通过
             if (!geetestCaptcha || !geetestCaptcha.getValidate()) {
                 alert('请完成验证码验证');

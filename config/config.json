@@ -12,6 +12,7 @@
     "email_verify_api": "https://api.nbhao.org/v1/email/verify",
     "email_verify_api_Request": "POST",
     "email_verify_api_Verify_parameters": "message.result",
+    "phone_sms": false,
     "System_Maintenance": 0,
     "Random_song": false
 }

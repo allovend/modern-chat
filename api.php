@@ -4,6 +4,10 @@
  * 
  * 统一API入口，处理所有客户端请求。
  * 采用 RESTful 风格设计（尽管使用 POST 参数模拟资源和动作）。
+ * 支持跨域请求（CORS），并配置了安全的 HTTP 头。
+ * 实现了基本的身份验证机制（基于 Session Cookie）。
+ * 提供了错误处理机制，返回 JSON 格式错误信息。
+ * 支持 JSONP 跨域请求（可选）。
  * 
  * 使用说明:
  * 1. 所有请求均应发送至 api.php
@@ -72,6 +76,7 @@ if (empty($resource)) {
             'upload' => ['file'],
             'avatar' => ['upload'],
             'announcements' => ['get', 'mark_read'],
+            'scan_login' => ['confirm', 'status', 'generate', 'update_status', 'get_ip'],
             'music' => ['list']
         ],
         'usage' => 'POST/GET with resource and action parameters'
@@ -165,6 +170,7 @@ try {
     $message = new Message($conn);
     $group = new Group($conn);
     $fileUpload = new FileUpload($conn);
+    $rsaUtil = new RSAUtil();
 } catch (Throwable $e) {
     error_log("API 服务初始化失败: " . $e->getMessage());
     http_response_code(500);
@@ -237,8 +243,7 @@ try {
                     
                     // 处理 RSA 加密密码
                     if (isset($data['encrypted_password']) && !empty($data['encrypted_password'])) {
-                        // 使用 RSA 解密密码
-                        $rsaUtil = new RSAUtil();
+                        // 使用 RSA 解密密码（使用全局初始化的rsaUtil对象）
                         $decryptedPassword = $rsaUtil->decrypt($data['encrypted_password']);
                         if ($decryptedPassword !== false) {
                             $password = $decryptedPassword;
@@ -309,8 +314,7 @@ try {
                     break;
                     
                 case 'get_public_key':
-                    // 获取 RSA 公钥，用于前端加密
-                    $rsaUtil = new RSAUtil();
+                    // 获取 RSA 公钥，用于前端加密（使用全局初始化的rsaUtil对象）
                     $publicKey = $rsaUtil->getPublicKeyForJS();
                     response_success(['public_key' => $publicKey]);
                     break;
@@ -1095,6 +1099,153 @@ try {
                     
                 default:
                     response_error("Announcements 模块不支持操作: $action");
+            }
+            break;
+        
+        // ------------------------------------------
+        // 扫码登录模块 (Scan Login)
+        // ------------------------------------------
+        case 'scan_login':
+            switch ($action) {
+                case 'confirm':
+                    // 确认扫码登录
+                    $qid = $data['qid'] ?? '';
+                    $user_id = $data['user_id'] ?? 0;
+                    
+                    if (empty($qid)) {
+                        response_error('登录标识不能为空');
+                    }
+                    if (empty($user_id)) {
+                        response_error('用户ID不能为空');
+                    }
+                    
+                    // 检查qid是否存在且未过期
+                    $stmt = $conn->prepare("SELECT * FROM scan_login WHERE qid = ? AND expire_at > NOW() AND status IN ('pending', 'scanned')");
+                    $stmt->execute([$qid]);
+                    $token_data = $stmt->fetch();
+                    
+                    if (!$token_data) {
+                        response_error('登录二维码无效或已过期');
+                    }
+                    
+                    // 更新状态为成功
+                    $stmt = $conn->prepare("UPDATE scan_login SET status = 'success', user_id = ? WHERE qid = ?");
+                    $stmt->execute([$user_id, $qid]);
+                    
+                    response_success([], '登录确认成功');
+                    break;
+                    
+                case 'status':
+                    // 查询扫码登录状态（PC端轮询）
+                    $qid = $data['qid'] ?? '';
+                    
+                    if (empty($qid)) {
+                        response_error('登录标识不能为空');
+                    }
+                    
+                    $stmt = $conn->prepare("SELECT s.*, u.username, u.email, u.avatar FROM scan_login s LEFT JOIN users u ON s.user_id = u.id WHERE s.qid = ?");
+                    $stmt->execute([$qid]);
+                    $token_data = $stmt->fetch();
+                    
+                    if (!$token_data) {
+                        response_error('登录标识无效');
+                    }
+                    
+                    if ($token_data['expire_at'] < date('Y-m-d H:i:s')) {
+                        response_error('登录二维码已过期');
+                    }
+                    
+                    if ($token_data['status'] === 'success') {
+                        // 登录成功，设置session
+                        if (session_status() === PHP_SESSION_NONE) {
+                            session_start();
+                        }
+                        $_SESSION['user_id'] = $token_data['user_id'];
+                        $_SESSION['username'] = $token_data['username'];
+                        
+                        // 更新状态为已使用
+                        $stmt = $conn->prepare("UPDATE scan_login SET status = 'used' WHERE qid = ?");
+                        $stmt->execute([$qid]);
+                        
+                        response_success([
+                            'status' => 'success',
+                            'user' => [
+                                'id' => $token_data['user_id'],
+                                'username' => $token_data['username'],
+                                'email' => $token_data['email'],
+                                'avatar' => $token_data['avatar']
+                            ]
+                        ]);
+                    } else {
+                        response_success([
+                            'status' => $token_data['status']
+                        ]);
+                    }
+                    break;
+                    
+                case 'update_status':
+                    // 更新扫码状态（APP端调用）
+                    $qid = $data['qid'] ?? '';
+                    $action_type = $data['action'] ?? '';
+                    
+                    if (empty($qid)) {
+                        response_error('登录标识不能为空');
+                    }
+                    
+                    if ($action_type === 'scan') {
+                        // 更新为已扫描状态
+                        $stmt = $conn->prepare("UPDATE scan_login SET status = 'scanned' WHERE qid = ? AND status = 'pending'");
+                        $stmt->execute([$qid]);
+                    } else if ($action_type === 'reject') {
+                        // 更新为已拒绝状态
+                        $stmt = $conn->prepare("UPDATE scan_login SET status = 'rejected' WHERE qid = ?");
+                        $stmt->execute([$qid]);
+                    }
+                    
+                    response_success([], '状态更新成功');
+                    break;
+                    
+                case 'get_ip':
+                    // 获取扫码登录的IP地址
+                    $qid = $data['qid'] ?? '';
+                    
+                    if (empty($qid)) {
+                        response_error('登录标识不能为空');
+                    }
+                    
+                    $stmt = $conn->prepare("SELECT ip_address FROM scan_login WHERE qid = ?");
+                    $stmt->execute([$qid]);
+                    $token_data = $stmt->fetch();
+                    
+                    if (!$token_data) {
+                        response_error('登录标识无效');
+                    }
+                    
+                    response_success([
+                        'ip_address' => $token_data['ip_address'] ?? '未知'
+                    ]);
+                    break;
+                    
+                case 'generate':
+                    // 生成登录二维码（PC端调用）
+                    $qid = uniqid('scan_', true) . rand(1000, 9999);
+                    $token = bin2hex(random_bytes(32));
+                    $expire_at = date('Y-m-d H:i:s', strtotime('+5 minutes'));
+                    $ip_address = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+                    
+                    $stmt = $conn->prepare("INSERT INTO scan_login (qid, token, expire_at, status, ip_address, created_at) VALUES (?, ?, ?, 'pending', ?, NOW())");
+                    $stmt->execute([$qid, $token, $expire_at, $ip_address]);
+                    
+                    response_success([
+                        'token' => $token,
+                        'qid' => $qid,
+                        'expires_at' => $expire_at,
+                        'qr_url' => 'https://chat.hyacine.com.cn/chat/scan_login.php?qid=' . $qid
+                    ]);
+                    break;
+                    
+                default:
+                    response_error("Scan Login 模块不支持操作: $action");
             }
             break;
         
