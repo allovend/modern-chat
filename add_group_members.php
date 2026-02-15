@@ -95,7 +95,7 @@ try {
         }
         
         // 检查是否为好友关系
-        if (!$friend->areFriends($user_id, $friend_id)) {
+        if (!$friend->isFriend($user_id, $friend_id)) {
             echo json_encode(['success' => false, 'message' => '只能添加好友到群组']);
             exit;
         }
