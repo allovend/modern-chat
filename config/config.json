@@ -14,5 +14,8 @@
     "email_verify_api_Verify_parameters": "message.result",
     "phone_sms": false,
     "System_Maintenance": 0,
-    "Random_song": false
+    "Random_song": false,
+    "update_source": "github",
+    "github_repo": "LzdqesjG/modern-chat",
+    "github_branch": "main"
 }

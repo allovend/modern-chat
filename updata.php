@@ -4,6 +4,76 @@ require_once 'config.php';
 require_once 'db.php';
 require_once 'User.php';
 
+// 获取 GitHub 仓库文件列表的递归函数
+function getGithubFiles($apiUrl, $repo, $branch, $path = '', $excludeDirs = ['vendor', 'node_modules', '.git', 'uploads', 'avatars', 'new_music', 'new_year_pic', 'keys']) {
+    $files = [];
+    
+    $url = $apiUrl;
+    if (!empty($path)) {
+        $url .= '?path=' . $path;
+    }
+    
+    $context = stream_context_create([
+        'http' => [
+            'method' => 'GET',
+            'header' => "User-Agent: Modern-Chat-Update\r\n"
+        ]
+    ]);
+    
+    $response = @file_get_contents($url, false, $context);
+    
+    if ($response === false) {
+        return $files;
+    }
+    
+    $contents = json_decode($response, true);
+    
+    if (!is_array($contents)) {
+        return $files;
+    }
+    
+    foreach ($contents as $item) {
+        if ($item['type'] === 'file') {
+            // 排除特定文件
+            $fileName = $item['name'];
+            if (!in_array($fileName, ['.env', 'config.json']) && 
+                !preg_match('/\.(sql|md|txt|json|xml|yml|yaml|gitignore|htaccess|dockerignore)$/i', $fileName)) {
+                $filePath = !empty($path) ? $path . '/' . $item['name'] : $item['name'];
+                $files[] = $filePath;
+            }
+        } elseif ($item['type'] === 'dir') {
+            // 排除特定目录
+            if (!in_array($item['name'], $excludeDirs)) {
+                $subPath = !empty($path) ? $path . '/' . $item['name'] : $item['name'];
+                $files = array_merge($files, getGithubFiles($apiUrl, $repo, $branch, $subPath, $excludeDirs));
+            }
+        }
+    }
+    
+    return $files;
+}
+
+// 辅助函数：获取 GitHub 仓库的最新 commit hash
+function getGithubLatestCommit($repo, $branch) {
+    $url = "https://api.github.com/repos/{$repo}/commits/{$branch}";
+    $context = stream_context_create([
+        'http' => [
+            'method' => 'GET',
+            'header' => "User-Agent: Modern-Chat-Update\r\n"
+        ]
+    ]);
+    
+    $response = @file_get_contents($url, false, $context);
+    
+    if ($response === false) {
+        return null;
+    }
+    
+    $data = json_decode($response, true);
+    
+    return $data['sha'] ?? null;
+}
+
 // 检查用户是否登录
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
@@ -128,6 +198,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax']) && $_POST['aj
         
         $updateSuccess = true;
         
+        // 获取配置中的更新源设置
+        $updateSource = 'hyacine';
+        $githubRepo = '';
+        $githubBranch = 'main';
+        
+        $configFile = 'config/config.json';
+        if (file_exists($configFile)) {
+            $configJson = file_get_contents($configFile);
+            $config = json_decode($configJson, true);
+            if ($config) {
+                if (isset($config['update_source'])) {
+                    $updateSource = $config['update_source'];
+                }
+                if (isset($config['github_repo'])) {
+                    $githubRepo = $config['github_repo'];
+                }
+                if (isset($config['github_branch'])) {
+                    $githubBranch = $config['github_branch'];
+                }
+            }
+        }
+        
         // 创建old目录
         sendMsg(["status" => "progress", "progress" => 5, "message" => "准备更新环境..."]);
         usleep(50000);
@@ -141,18 +233,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax']) && $_POST['aj
         
         // 获取更新信息
         $updateUrl = 'https://updata.hyacine.com.cn/updata.json';
-        $updateJson = file_get_contents($updateUrl);
+        $githubRawUrl = '';
         
-        if ($updateJson === false) {
-            sendMsg(["status" => "complete", "success" => false, "message" => "无法连接到更新服务器"]);
-            exit;
-        }
-        
-        $updateInfo = json_decode($updateJson, true);
-        
-        if ($updateInfo === null || !isset($updateInfo['updatafiles'])) {
-            sendMsg(["status" => "complete", "success" => false, "message" => "更新信息格式错误"]);
-            exit;
+        if ($updateSource === 'github' && !empty($githubRepo)) {
+            // 使用 GitHub 作为更新源
+            $githubRawUrl = 'https://raw.githubusercontent.com/' . $githubRepo . '/' . $githubBranch . '/';
+            $githubApiUrl = 'https://api.github.com/repos/' . $githubRepo . '/contents';
+            
+            // 从 GitHub 获取 version.json 获取文件列表
+            $githubVersionJson = @file_get_contents($githubRawUrl . 'version.json');
+            if ($githubVersionJson === false) {
+                sendMsg(["status" => "complete", "success" => false, "message" => "无法连接到 GitHub 仓库"]);
+                exit;
+            }
+            
+            $versionData = json_decode($githubVersionJson, true);
+            if (!$versionData || !isset($versionData['Version'])) {
+                sendMsg(["status" => "complete", "success" => false, "message" => "无法获取版本信息"]);
+                exit;
+            }
+            
+            $updateInfo['updatafiles'] = getGithubFiles($githubApiUrl, $githubRepo, $githubBranch);
+        } else {
+            // 使用默认 hyacine 服务器
+            $updateJson = file_get_contents($updateUrl);
+            
+            if ($updateJson === false) {
+                sendMsg(["status" => "complete", "success" => false, "message" => "无法连接到更新服务器"]);
+                exit;
+            }
+            
+            $updateInfo = json_decode($updateJson, true);
+            
+            if ($updateInfo === null || !isset($updateInfo['updatafiles'])) {
+                sendMsg(["status" => "complete", "success" => false, "message" => "更新信息格式错误"]);
+                exit;
+            }
         }
         
         $totalFiles = count($updateInfo['updatafiles']);
@@ -171,7 +287,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax']) && $_POST['aj
             $checkProgress = 10 + round(($checkedCount / $totalFiles) * 10);
             sendMsg(["status" => "progress", "progress" => $checkProgress, "message" => "检查文件: {$file}"]);
             
-            $fileUrl = 'https://updata.hyacine.com.cn/' . $file;
+            if ($updateSource === 'github' && !empty($githubRawUrl)) {
+                $fileUrl = $githubRawUrl . $file;
+            } else {
+                $fileUrl = 'https://updata.hyacine.com.cn/' . $file;
+            }
             $fileSize = 0;
             
             // 使用curl获取远程文件大小
@@ -180,6 +300,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax']) && $_POST['aj
             curl_setopt($ch, CURLOPT_NOBODY, true); // 只获取头部信息
             curl_setopt($ch, CURLOPT_HEADER, true);
             curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true); // 跟随重定向
+            if ($updateSource === 'github' && !empty($githubRawUrl)) {
+                curl_setopt($ch, CURLOPT_USERAGENT, 'Modern-Chat-Update');
+            }
             $headers = curl_exec($ch);
             if ($headers !== false) {
                 $contentLength = curl_getinfo($ch, CURLINFO_CONTENT_LENGTH_DOWNLOAD);
@@ -260,8 +383,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax']) && $_POST['aj
             sendMsg(["status" => "progress", "progress" => $progress, "message" => "更新文件: {$file}"]);
             usleep(50000);
             
-            $fileUrl = 'https://updata.hyacine.com.cn/' . $file;
-            $fileContent = file_get_contents($fileUrl);
+            if ($updateSource === 'github' && !empty($githubRawUrl)) {
+                $fileUrl = $githubRawUrl . $file;
+            } else {
+                $fileUrl = 'https://updata.hyacine.com.cn/' . $file;
+            }
+            
+            $options = [];
+            if ($updateSource === 'github' && !empty($githubRawUrl)) {
+                $options = [
+                    'http' => [
+                        'method' => 'GET',
+                        'header' => "User-Agent: Modern-Chat-Update\r\n"
+                    ]
+                ];
+            }
+            
+            $context = stream_context_create($options);
+            $fileContent = file_get_contents($fileUrl, false, $context);
             
             if ($fileContent !== false) {
                 // 确保目标目录存在
@@ -317,28 +456,92 @@ elseif (file_exists('version.txt')) {
     $currentVersion = trim(file_get_contents('version.txt'));
 }
 
-// 获取最新版本信息
-$isLatestVersion = false;
-$updateUrl = 'https://updata.hyacine.com.cn/updata.json';
-$updateJson = file_get_contents($updateUrl);
+// 获取配置中的更新源设置
+$updateSource = 'hyacine'; // 默认使用 hyacine 服务器
+$githubRepo = 'https://github.com/LzdqesjG/modern-chat.git'; // GitHub 仓库地址
+$githubBranch = 'main'; // GitHub 分支
 
-$error = '';
-$updateInfo = null;
-
-if ($updateJson === false) {
-    $error = '无法连接到更新服务器';
-} else {
-    $updateInfo = json_decode($updateJson, true);
-    
-    if ($updateInfo === null) {
-        $error = '更新信息格式错误';
-    } else {
-        // 检查是否为最新版本
-        if (isset($updateInfo['version']) && $updateInfo['version'] === $currentVersion) {
-            $isLatestVersion = true;
+$configFile = 'config/config.json';
+if (file_exists($configFile)) {
+    $configJson = file_get_contents($configFile);
+    $config = json_decode($configJson, true);
+    if ($config) {
+        if (isset($config['update_source'])) {
+            $updateSource = $config['update_source'];
+        }
+        if (isset($config['github_repo'])) {
+            $githubRepo = $config['github_repo'];
+        }
+        if (isset($config['github_branch'])) {
+            $githubBranch = $config['github_branch'];
         }
     }
 }
+
+// 根据更新源获取最新版本信息
+$isLatestVersion = false;
+$updateUrl = 'https://updata.hyacine.com.cn/updata.json';
+$updateJson = false;
+
+if ($updateSource === 'github' && !empty($githubRepo)) {
+    // 使用 GitHub 作为更新源
+    $githubApiUrl = 'https://api.github.com/repos/' . $githubRepo . '/contents';
+    $githubRawUrl = 'https://raw.githubusercontent.com/' . $githubRepo . '/' . $githubBranch . '/';
+    
+    // 获取 version.json 从 GitHub
+    $githubVersionUrl = $githubRawUrl . 'version.json';
+    $githubVersionJson = @file_get_contents($githubVersionUrl);
+    
+    if ($githubVersionJson !== false) {
+        $versionData = json_decode($githubVersionJson, true);
+        if ($versionData && isset($versionData['Version'])) {
+            $githubVersion = $versionData['Version'];
+            
+            // 比较版本
+            if ($githubVersion === $currentVersion) {
+                $isLatestVersion = true;
+            }
+            
+            // 获取文件列表
+            $updateInfo = [
+                'version' => $githubVersion,
+                'updatamessage' => $versionData['update_message'] ?? '从 GitHub 获取更新',
+                'infomessage' => $versionData['infomessage'] ?? '',
+                'source' => 'github',
+                'github_repo' => $githubRepo,
+                'github_branch' => $githubBranch
+            ];
+            
+            // 获取需要更新的文件列表
+            $filesToUpdate = getGithubFiles($githubApiUrl, $githubRepo, $githubBranch);
+            $updateInfo['updatafiles'] = $filesToUpdate;
+        } else {
+            $error = '无法解析 GitHub 版本信息';
+        }
+    } else {
+        $error = '无法连接到 GitHub 仓库';
+    }
+} else {
+    // 使用默认 hyacine 服务器
+    $updateJson = file_get_contents($updateUrl);
+    
+    if ($updateJson === false) {
+        $error = '无法连接到更新服务器';
+    } else {
+        $updateInfo = json_decode($updateJson, true);
+        
+        if ($updateInfo === null) {
+            $error = '更新信息格式错误';
+        } else {
+            // 检查是否为最新版本
+            if (isset($updateInfo['version']) && $updateInfo['version'] === $currentVersion) {
+                $isLatestVersion = true;
+            }
+        }
+    }
+}
+
+$error = '';
 ?>
 <!DOCTYPE html>
 <html lang="zh-CN">
